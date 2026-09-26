@@ -11,6 +11,9 @@ services:
       # at the root. Same meaning as BASE_PATH in Relay -- once built in
       # there, Relay supplies this value.
       - BASE_PATH=${BASE_PATH:-}
+      # Public address including BASE_PATH. Only needed so that link preview
+      # cards point at a host that is actually reachable from outside.
+      - PUBLIC_URL=${PUBLIC_URL:-}
       - NODE_ENV=production
       # A fixed path INSIDE the container. Where the decks live on the host
       # is what DECKS_HOST below says -- the two are named apart on purpose,

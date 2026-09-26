@@ -9,7 +9,7 @@
 // with authentication, layout and sharing all coming from Relay.
 const path = require("path");
 const express = require("express");
-const { BASE, PORT } = require("./config");
+const { BASE, PORT, PUBLIC_URL } = require("./config");
 const pdf = require("./pdf");
 const storage = require("./storage");
 
@@ -28,6 +28,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(BASE + "/static", express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 app.use(BASE + "/reveal", express.static(path.join(__dirname, "node_modules", "reveal.js", "dist"), { maxAge: "1h" }));
 app.use(BASE + "/reveal-plugin", express.static(path.join(__dirname, "node_modules", "reveal.js", "plugin"), { maxAge: "1h" }));
+
+// Absolute addresses for the link preview cards (see views/partials/head.ejs).
+// PUBLIC_URL wins; without it the requested host is the best guess there is.
+// Deliberately no "trust proxy": that would mean believing X-Forwarded-*
+// headers from anyone, and PUBLIC_URL answers the same question without the
+// risk.
+app.use((req, res, next) => {
+  const basis = PUBLIC_URL || `${req.protocol}://${req.get("host")}${BASE}`;
+  res.locals.ABS = (pfad) => basis + pfad;
+  res.locals.HIER = basis + (req.originalUrl.slice(BASE.length).split("?")[0] || "/");
+  next();
+});
 
 app.use(BASE || "/", require("./routes/decks"));
 

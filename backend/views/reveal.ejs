@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= deck.titel %></title>
+<!-- The SVG is the actual icon; the PNG is there for Safari, which does
+     not render SVG favicons. A browser picks the last format it
+     understands, so the PNG comes first. -->
+<link rel="icon" href="<%= BASE %>/static/trivialSlides.png" sizes="48x48">
+<link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
 <link rel="stylesheet" href="<%= BASE %>/reveal/reset.css">
 <link rel="stylesheet" href="<%= BASE %>/reveal/reveal.css">
 <link rel="stylesheet" href="<%= BASE %>/reveal/theme/<%= deck.theme %>.css">

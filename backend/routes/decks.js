@@ -46,6 +46,30 @@ function bildBasis(slug) {
   return `${BASE}/d/${slug}/bilder/`;
 }
 
+// The web app manifest, which lets the editor be placed on a home screen
+// and started in a window of its own. Rendered rather than served as a
+// file, because BASE_PATH has to appear in the paths inside it.
+//
+// The icons say "any maskable": they carry their own opaque background and
+// keep the arrows well inside the edge, so Android may crop them to
+// whatever shape it likes without cutting into the mark.
+router.get("/manifest.webmanifest", (req, res) => {
+  res.type("application/manifest+json").json({
+    name: "trivialSlides",
+    short_name: "trivialSlides",
+    description: "A presentation editor on reveal.js that stores nothing but Markdown.",
+    start_url: BASE + "/",
+    scope: BASE + "/",
+    display: "standalone",
+    background_color: "#1c1f23",
+    theme_color: "#1c1f23",
+    icons: [
+      { src: BASE + "/static/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+      { src: BASE + "/static/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+    ],
+  });
+});
+
 // --- Overview ----------------------------------------------------------
 router.get("/", (req, res) => {
   res.render("index", { decks: storage.liste() });
