@@ -8,6 +8,15 @@
   var SCHLUESSEL = "trivialslides:theme";
   var wurzel = document.documentElement;
 
+  // A plain script, not a module, so it cannot import base.js -- it reads
+  // the same table the page carries for everyone else.
+  var TEXTE = {};
+  try {
+    var tafel = document.getElementById("daten-texte");
+    if (tafel) TEXTE = JSON.parse(tafel.textContent);
+  } catch (e) { /* the key showing through is loud enough */ }
+  function t(k) { return TEXTE[k] === undefined ? k : TEXTE[k]; }
+
   function gewaehlt() {
     try { return localStorage.getItem(SCHLUESSEL); } catch (e) { return null; }
   }
@@ -30,8 +39,8 @@
     var knopf = document.getElementById("theme-umschalter");
     if (!knopf) return;
     var ziel = aktuell() === "dark" ? "light" : "dark";
-    var text = ziel === "dark" ? "Auf dunkle Ansicht umschalten" : "Auf helle Ansicht umschalten";
-    knopf.title = text;
+    var text = t(ziel === "dark" ? "thema.zuDunkel" : "thema.zuHell");
+    knopf.dataset.tip = text;
     knopf.setAttribute("aria-label", text);
   }
 

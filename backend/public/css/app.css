@@ -185,6 +185,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   -webkit-mask: var(--knopf-icon) center / contain no-repeat;
   mask: var(--knopf-icon) center / contain no-repeat;
 }
+/* The language switch shows the language it is in, not the one it leads
+   to -- two letters that read as a state, with the tooltip saying where a
+   click goes. Sized like the icon buttons beside it. */
+.sprache {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.35rem;
+  color: var(--gedaempft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sprache:hover { color: var(--schrift); }
+.kopf > .sprache { margin-left: auto; }
+.kopf > .sprache + .knopf-icon { margin-left: 0; }
+
 /* Only in the header does the icon button push itself to the right edge. */
 .kopf > .knopf-icon { margin-left: auto; }
 #theme-umschalter { --knopf-icon: var(--icon-umschalten); }
@@ -499,9 +519,40 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   font-size: 13px;
   cursor: pointer;
 }
+/* The icon buttons of the toolbar. The files carry a fixed dark fill, so
+   they are masks coloured by the button -- the same treatment as every
+   other icon in this app. The two buttons without an icon keep their
+   wording and sit next to them as text; a toolbar may well hold both. */
+.werkzeugleiste .werkzeug-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--schrift);
+}
+.werkzeugleiste .werkzeug-icon::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
+  mask: var(--knopf-icon) center / contain no-repeat;
+}
+.werkzeug-icon[data-befehl="bold"] { --knopf-icon: url(../assets/toolbar/md-bold.svg); }
+.werkzeug-icon[data-befehl="italic"] { --knopf-icon: url(../assets/toolbar/md-italic.svg); }
+.werkzeug-icon[data-befehl="insertUnorderedList"] { --knopf-icon: url(../assets/toolbar/md-ul.svg); }
+.werkzeug-icon[data-befehl="insertOrderedList"] { --knopf-icon: url(../assets/toolbar/md-ol.svg); }
+.werkzeug-icon[data-befehl="strikeThrough"] { --knopf-icon: url(../assets/toolbar/md-strike.svg); }
+.werkzeug-icon[data-befehl="link"] { --knopf-icon: url(../assets/toolbar/md-link.svg); }
+.werkzeug-icon[data-befehl="fragment"] { --knopf-icon: url(../assets/toolbar/fragment.svg); }
+#quelltext-umschalten.werkzeug-icon { --knopf-icon: url(../assets/toolbar/code.svg); }
+
 .werkzeugleiste button:hover:not(:disabled) { border-color: var(--rand); background: var(--papier); }
 .werkzeugleiste button:disabled { opacity: 0.35; cursor: default; }
 .werkzeugleiste button.ist-aktiv { border-color: var(--akzent); background: var(--papier); }
+.werkzeugleiste .werkzeug-icon.ist-aktiv { color: var(--akzent); }
 .leiste-trenner { width: 1px; height: 18px; margin: 0 3px; background: var(--rand); }
 
 .feld-rahmen {
@@ -540,17 +591,53 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .bild-vorschau { width: 120px; height: 72px; object-fit: cover; border: 1px solid var(--rand); border-radius: var(--radius); }
 .bild-knoepfe { display: flex; flex-direction: column; gap: 5px; }
 
-.farbwahl { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-.farbe {
-  width: 26px;
-  height: 26px;
+/* The colour choice is a single round dot in the chosen colour. Coloris
+   supplies the machinery, not the look: it wraps the input in a .clr-field,
+   paints that wrapper in the current colour and lays a decorative button
+   over it. The button has pointer-events: none of its own -- the picker
+   opens from the input underneath -- so the input is stretched across the
+   whole dot and made invisible, and the button becomes the dot.
+
+   The hex value is not on display anywhere: it is in the tooltip and in
+   the picker, which is where someone who wants the number looks. */
+/* Both dots on one line, each with its word beside it -- a fieldset per
+   dot left two large boxes almost empty. */
+.farbzeile { display: flex; flex-wrap: wrap; gap: 20px; }
+.farbwahl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gedaempft);
+  cursor: pointer;
+}
+.clr-field {
+  width: 1.75rem;
+  height: 1.75rem;
+  vertical-align: middle;
+}
+.clr-field input.farbfeld {
+  width: 100%;
+  height: 100%;
   padding: 0;
   border: 1px solid var(--rand);
   border-radius: 50%;
+  background: none;
+  color: transparent;
   cursor: pointer;
 }
-.farbe.ist-aktiv { outline: 2px solid var(--akzent); outline-offset: 2px; }
-.farbe-standard {
+.clr-field input.farbfeld:hover { border-color: var(--akzent); }
+.clr-field button {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border-radius: 50%;
+}
+/* No colour of its own: a struck-through circle, the way the option used
+   to look before the picker arrived. */
+.clr-field.ist-leer button { display: none; }
+.clr-field.ist-leer input.farbfeld {
   background:
     linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px)),
     var(--papier);
@@ -569,6 +656,30 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 .vorschau-rahmen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .vorschau-hilfe { text-align: center; }
+
+/* --- Tooltips ---------------------------------------------------------
+   Ours rather than the browser's, so they carry the same paper, border and
+   radius as everything else and follow the light and dark modes. Fixed
+   rather than absolute: the editor's columns scroll, and a bubble inside
+   one would be clipped at its edge. */
+.tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 260px;
+  padding: 5px 9px;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--papier);
+  color: var(--schrift);
+  font-size: 12px;
+  line-height: 1.35;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  /* It must never swallow the hover that summoned it. */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.tooltip.ist-sichtbar { opacity: 1; }
 
 /* --- Dialog ----------------------------------------------------------- */
 .dialog {

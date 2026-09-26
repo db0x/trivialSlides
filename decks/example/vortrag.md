@@ -1,14 +1,14 @@
 ---
 titel: Example
 theme: white
-transition: slide
+transition: concave
 ---
 
 <!-- .slide: data-layout="titel" -->
 
 # Example
 
-Every *slide* **layout**, once
+Every **slide** ~~layout~~, *once*
 
 ---
 
@@ -26,6 +26,7 @@ and *italic* text, and a [link](https://revealjs.com).
 - Lists work the way you expect
 - Every point is plain Markdown
 - This one only appears on click
+<!-- .element: class="fragment" -->
 
 ----
 
@@ -48,7 +49,9 @@ to get here.
 - Jupiter
 - Saturn
 - Uranus
+<!-- .element: class="fragment" -->
 - Neptune
+<!-- .element: class="fragment" -->
 
 ---
 

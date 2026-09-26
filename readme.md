@@ -123,15 +123,18 @@ Thomas Schwerdt
 same convention as reveal-md and HedgeDoc.
 
 The slide attributes use reveal.js' own comment syntax. Any other reveal.js
-understands `data-background-color` directly; `data-layout` and `data-image`
-are this project's addition and do no harm there. A plain text slide gets no
-attribute line at all, so that a hand-written file is still recognisable
-after its first save.
+understands `data-background-color` directly; `data-layout`, `data-image`
+and `data-text-color` are this project's addition and do no harm there. A
+plain text slide gets no attribute line at all, so that a hand-written file
+is still recognisable after its first save.
 
-The one deviation from stock reveal.js: for *full-bleed image* the picture
-sits in the file as `data-image` and only becomes `data-background-image`
-when rendered. Another reveal.js therefore shows that one slide without its
-background image.
+Two things behave differently under a stock reveal.js. For *full-bleed
+image* the picture sits in the file as `data-image` and only becomes
+`data-background-image` when rendered, so that slide comes out without its
+background image. And `data-text-color` is ours alone -- reveal has no text
+colour of its own, so elsewhere the slide simply keeps the theme's colour.
+Links keep the theme's colour here too, deliberately: their colour is what
+makes them recognisable as links.
 
 ## When the text field is not enough
 

@@ -1,27 +1,31 @@
 <!doctype html>
-<html lang="de">
+<html lang="<%= t('html.lang') %>">
 <head>
 <%- include("partials/head", { titel: "trivialSlides" }) %>
 </head>
 <body class="seite-uebersicht">
   <header class="kopf">
     <a class="marke" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32">trivialSlides</a>
+    <button id="sprache-umschalter" class="knopf knopf-still sprache" type="button"
+            data-ziel="<%= SPRACHE === 'de' ? 'en' : 'de' %>"
+            data-tip="<%= t('kopf.spracheWechseln') %>"
+            aria-label="<%= t('kopf.spracheWechseln') %>"><%= SPRACHE === 'de' ? 'en' : 'de' %></button>
     <button id="theme-umschalter" class="knopf knopf-still knopf-icon" type="button"></button>
   </header>
 
   <main class="inhalt">
     <% if (!decks.length) { %>
-      <p class="leer">Noch kein Vortrag da. Der Kasten unten legt den ersten an.</p>
+      <p class="leer"><%= t('uebersicht.leer') %></p>
     <% } %>
     <ul class="deckliste">
       <% decks.forEach(function (d) { %>
         <li>
           <a href="<%= BASE %>/d/<%= d.slug %>">
             <span class="deck-titel"><%= d.titel %></span>
-            <span class="deck-meta"><%= d.folien %> Folien &middot; zuletzt geaendert <%= new Date(d.geaendert).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) %></span>
+            <span class="deck-meta"><%= t("uebersicht.folien", { n: d.folien }) %> &middot; <%= t("uebersicht.geaendert", { zeit: new Date(d.geaendert).toLocaleString(t("datum.locale"), { dateStyle: "medium", timeStyle: "short" }) }) %></span>
           </a>
           <span class="deck-aktionen">
-            <a class="knopf knopf-still knopf-icon deck-vorfuehren" title="Vorfuehren" aria-label="Vorfuehren"
+            <a class="knopf knopf-still knopf-icon deck-vorfuehren" data-tip="<%= t('kopf.vorfuehren') %>" aria-label="<%= t('kopf.vorfuehren') %>"
                href="<%= BASE %>/d/<%= d.slug %>/praesentation" target="_blank" rel="noopener"></a>
           </span>
         </li>
@@ -31,7 +35,7 @@
       <li class="deck-neu">
         <button type="button" id="deck-neu" class="deck-neu-knopf">
           <span class="deck-neu-zeichen" aria-hidden="true"></span>
-          <span class="deck-titel">Neuer Vortrag</span>
+          <span class="deck-titel"><%= t('uebersicht.neu') %></span>
         </button>
       </li>
     </ul>
@@ -39,19 +43,19 @@
 
   <dialog id="neu-dialog" class="dialog dialog-schmal">
     <form method="dialog" class="dialog-kopf">
-      <h2>Neuer Vortrag</h2>
-      <button class="knopf knopf-still" value="abbruch">Schliessen</button>
+      <h2><%= t('dialog.neuTitel') %></h2>
+      <button class="knopf knopf-still" value="abbruch"><%= t('dialog.schliessen') %></button>
     </form>
     <form method="post" action="<%= BASE %>/neu" class="dialog-inhalt">
       <label class="feld">
-        <span class="feld-name">Titel</span>
+        <span class="feld-name"><%= t('dialog.titel') %></span>
         <input id="neu-titel" name="titel" maxlength="120" required
-               placeholder="Woruber geht der Vortrag?" autocomplete="off">
+               placeholder="<%= t('dialog.platzhalter') %>" autocomplete="off">
       </label>
-      <p class="hilfe">Der Titel steht auf der ersten Folie und laesst sich spaeter jederzeit aendern.</p>
+      <p class="hilfe"><%= t('dialog.hinweis') %></p>
       <div class="dialog-fuss">
-        <button type="button" class="knopf" data-schliessen>Abbrechen</button>
-        <button type="submit" class="knopf knopf-haupt">Anlegen</button>
+        <button type="button" class="knopf" data-schliessen><%= t('dialog.abbrechen') %></button>
+        <button type="submit" class="knopf knopf-haupt"><%= t('dialog.anlegen') %></button>
       </div>
     </form>
   </dialog>

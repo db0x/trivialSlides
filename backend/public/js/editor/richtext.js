@@ -1,3 +1,5 @@
+import { t } from "./base.js";
+
 // The piece that hides the Markdown syntax from the user: marrying a
 // contenteditable field to Markdown in both directions.
 //
@@ -23,6 +25,10 @@ function istEinfach(md) {
     if (z.trim() === "" || z.trim() === FRAGMENT) continue;
     if (/^\s{0,3}(#{1,6}\s|>|```|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
     if (/<[a-z!/]/i.test(z)) return false;   // raw HTML (other than the fragment above)
+    // Inline code. The field cannot show it, and on the way back the
+    // backticks would be escaped into literal characters -- turning
+    // `code` into visible backticks. Source mode keeps it intact.
+    if (/`/.test(z)) return false;
     if (/^\s{4,}\S/.test(z)) return false;   // indented code block
     if (/^\s*([-*_])\s*\1\s*\1/.test(z)) return false; // horizontal rule
   }
@@ -39,6 +45,7 @@ function inlineZuHtml(text) {
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, t, url) {
     return '<a href="' + url.replace(/"/g, "%22") + '">' + t + "</a>";
   });
+  s = s.replace(/~~([^~\n]+)~~/g, "<s>$1</s>");
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
   return s;
@@ -99,7 +106,7 @@ function mdZuHtml(md) {
 // the text -- otherwise a typed "5 * 3" turns into italics on the next
 // load.
 function mdEscape(s) {
-  return String(s).replace(/([*_[\]`\\])/g, "\\$1");
+  return String(s).replace(/([*_[\]`~\\])/g, "\\$1");
 }
 
 function inlineZuMd(knoten) {
@@ -111,11 +118,17 @@ function inlineZuMd(knoten) {
     if (tag === "br") out += "\n";
     else if (tag === "strong" || tag === "b") out += "**" + inlineZuMd(k) + "**";
     else if (tag === "em" || tag === "i") out += "*" + inlineZuMd(k) + "*";
+    // The browser writes <strike>, marked reads ~~ and renders <del> -- all
+    // three mean the same thing and meet here.
+    else if (tag === "s" || tag === "strike" || tag === "del") out += "~~" + inlineZuMd(k) + "~~";
     else if (tag === "a") out += "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
     else out += inlineZuMd(k); // span, font and friends, which the browser creates on paste
   });
   return out;
 }
+
+// Elements that mean something in themselves rather than framing a block.
+var INLINE = /^(a|b|strong|i|em|s|strike|del|code|span|font)$/;
 
 function htmlZuMd(wurzel) {
   var bloecke = [];
@@ -140,7 +153,12 @@ function htmlZuMd(wurzel) {
       // a lone <br> between blocks: the browser keeps an empty line open
       // with it, in Markdown it is nothing
     } else {
-      var t = inlineZuMd(k).trim();
+      // An inline element sitting straight at top level: the browser makes
+      // one whenever formatting is applied to text in a field that had no
+      // paragraph yet. Its own tag carries meaning, so it has to go through
+      // the inline path as a CHILD -- passed as a block, only its contents
+      // would be read and the formatting would be dropped on saving.
+      var t = (INLINE.test(tag) ? inlineZuMd({ childNodes: [k] }) : inlineZuMd(k)).trim();
       if (t) bloecke.push(t + fragment(k));
     }
   });
@@ -155,7 +173,7 @@ function htmlZuMd(wurzel) {
 function befehl(feld, name) {
   feld.focus();
   if (name === "link") {
-    var url = window.prompt("Wohin soll der Link fuehren?", "https://");
+    var url = window.prompt(t("meldung.linkZiel"), "https://");
     if (url) document.execCommand("createLink", false, url);
     return;
   }
@@ -173,7 +191,24 @@ function fragmentUmschalten(feld) {
   if (!sel || !sel.rangeCount) return;
   var k = sel.getRangeAt(0).startContainer;
   while (k && k !== feld && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
-  if (!k || k === feld) return;
+  if (!k) return;
+  if (k === feld) {
+    // Bare text straight in the field: the browser only wraps a line in a
+    // paragraph once there is a second one. Without a paragraph there is
+    // nothing to hang the class on, so one is made here -- otherwise the
+    // button would quietly do nothing on a slide someone has just started.
+    if (!feld.firstChild) return;
+    var absatz = document.createElement("p");
+    while (feld.firstChild) absatz.appendChild(feld.firstChild);
+    feld.appendChild(absatz);
+    // The DOM surgery loses the caret, so it is put back at the end.
+    var bereich = document.createRange();
+    bereich.selectNodeContents(absatz);
+    bereich.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(bereich);
+    k = absatz;
+  }
   k.classList.toggle("fragment");
 }
 

@@ -69,7 +69,8 @@ function parseAttrs(zeile) {
     layout: layouts.get(attrs["data-layout"]).id,
     bild: attrs["data-image"] || "",
     quelle: attrs["data-quelle"] || "",
-    hintergrund: /^#[0-9a-fA-F]{6}$/.test(attrs["data-background-color"] || "") ? attrs["data-background-color"] : "",
+    hintergrund: /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(attrs["data-background-color"] || "") ? attrs["data-background-color"] : "",
+    textfarbe: /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(attrs["data-text-color"] || "") ? attrs["data-text-color"] : "",
   };
 }
 
@@ -86,6 +87,7 @@ function serialisiereAttrs(folie, immer) {
   if (folie.bild && layouts.hatFeld(folie.layout, "bild")) teile.push(`data-image="${folie.bild}"`);
   if (folie.quelle && layouts.hatFeld(folie.layout, "quelle")) teile.push(`data-quelle="${folie.quelle}"`);
   if (folie.hintergrund) teile.push(`data-background-color="${folie.hintergrund}"`);
+  if (folie.textfarbe) teile.push(`data-text-color="${folie.textfarbe}"`);
   return teile.length ? `<!-- .slide: ${teile.join(" ")} -->` : "";
 }
 
@@ -108,7 +110,7 @@ function trenneTitel(text) {
 
 function parseFolie(text, vertikal) {
   const zeilen = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, bild: "", quelle: "", hintergrund: "" };
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, bild: "", quelle: "", hintergrund: "", textfarbe: "" };
   let i = 0;
   while (i < zeilen.length && zeilen[i].trim() === "") i++;
   if (i < zeilen.length && ATTR_ZEILE.test(zeilen[i])) {
@@ -186,6 +188,7 @@ function neueFolie(layout) {
     bild: "",
     quelle: "",
     hintergrund: "",
+    textfarbe: "",
   };
 }
 
@@ -210,7 +213,8 @@ function normalize(roh) {
         inhalt: String((f && f.inhalt) || "").replace(/\r\n/g, "\n").slice(0, 20000),
         bild: layouts.hatFeld(layout, "bild") ? eineZeile(f && f.bild).slice(0, 200) : "",
         quelle: layouts.hatFeld(layout, "quelle") ? eineZeile(f && f.quelle).slice(0, 200) : "",
-        hintergrund: /^#[0-9a-fA-F]{6}$/.test((f && f.hintergrund) || "") ? f.hintergrund : "",
+        hintergrund: /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test((f && f.hintergrund) || "") ? f.hintergrund : "",
+        textfarbe: /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test((f && f.textfarbe) || "") ? f.textfarbe : "",
       };
     }),
   };

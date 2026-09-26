@@ -6,6 +6,24 @@ export function schreibKopf(weitere) {
   return Object.assign({ "X-Folien": "1" }, weitere || {});
 }
 
+// The strings the page builds itself. The server puts only the subset the
+// browser needs into the page (see i18n.js); everything it rendered
+// already arrived as finished text.
+var TEXTE = {};
+try {
+  var tafel = document.getElementById("daten-texte");
+  if (tafel) TEXTE = JSON.parse(tafel.textContent);
+} catch (e) { /* without the table the keys show through, which is loud enough */ }
+
+export function t(schluessel, werte) {
+  var text = TEXTE[schluessel];
+  if (text === undefined) return schluessel;
+  if (!werte) return text;
+  return text.replace(/\{(\w+)\}/g, function (ganz, name) {
+    return Object.prototype.hasOwnProperty.call(werte, name) ? String(werte[name]) : ganz;
+  });
+}
+
 // Shorthands that would otherwise run through every file.
 export function $(sel, wurzel) {
   return (wurzel || document).querySelector(sel);

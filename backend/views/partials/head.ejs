@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= typeof titel !== "undefined" ? titel : "trivialSlides" %></title>
 <link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
-<meta name="description" content="A presentation editor on reveal.js, usable by people who do not want to write Markdown -- and it still stores nothing but Markdown.">
+<meta name="description" content="<%= t('app.beschreibung') %>">
 <meta name="theme-color" content="#1c1f23">
 
 <!-- The card shown when someone pastes a link into Slack, Teams, Mastodon
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="trivialSlides">
 <meta property="og:title" content="<%= typeof titel !== "undefined" ? titel : "trivialSlides" %>">
-<meta property="og:description" content="A presentation editor on reveal.js that stores nothing but Markdown.">
+<meta property="og:description" content="<%= t('app.kurz') %>">
 <meta property="og:url" content="<%= HIER %>">
 
 <link rel="manifest" href="<%= BASE %>/manifest.webmanifest">
@@ -29,5 +29,8 @@
     if (m) document.documentElement.setAttribute("data-theme", m);
   } catch (e) { /* private window, storage blocked */ }
 </script>
+<script type="application/json" id="daten-texte"><%- JSON.stringify(TEXTE) %></script>
 <script src="<%= BASE %>/static/js/theme.js" defer></script>
+<script src="<%= BASE %>/static/js/tooltip.js" defer></script>
+<script src="<%= BASE %>/static/js/sprache.js" defer></script>
 <script type="module" src="<%= BASE %>/static/js/scrollbars.js"></script>

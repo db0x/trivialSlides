@@ -5,10 +5,11 @@
 // display. Every change takes the same route
 //   field -> ernte() -> deck -> merken() -> save + preview
 // so that no second, half-baked state can exist.
-import { $, $$, schreibKopf, verzoegert } from "./base.js";
+import { $, $$, t, schreibKopf, verzoegert } from "./base.js";
 import * as rt from "./richtext.js";
 import { createVorschau } from "./preview.js";
 import { zeichneListe, ziehenAktivieren } from "./slide-list.js";
+import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASIS = window.FOLIEN_BASIS;
 var deck = JSON.parse($("#daten-deck").textContent);
@@ -37,8 +38,8 @@ var el = {
   bildEntfernen: $("#bild-entfernen"),
   layoutHilfe: $("#layout-hilfe"),
   stand: $("#speicherstand"),
-  farben: $("#hintergrund-farben"),
   eigenfarbe: $("#hintergrund-eigen"),
+  eigenTextfarbe: $("#textfarbe-eigen"),
 };
 
 var vorschau = createVorschau($("#vorschau"), BASIS);
@@ -51,7 +52,7 @@ function standAnzeigen(text, klasse) {
 
 function speichernJetzt() {
   ernte();
-  standAnzeigen("Wird gespeichert …", "ist-aktiv");
+  standAnzeigen(t("stand.speichert"), "ist-aktiv");
   return fetch(BASIS + "/deck.json", {
     method: "PUT",
     headers: schreibKopf({ "Content-Type": "application/json" }),
@@ -67,20 +68,27 @@ function speichernJetzt() {
       // editor would show something other than what the file holds.
       deck = d.deck;
       schmutzig = false;
-      standAnzeigen("Gespeichert");
+      standAnzeigen(t("stand.gespeichert"));
     })
     .catch(function (e) {
       console.error(e);
-      standAnzeigen("Nicht gespeichert — keine Verbindung?", "ist-fehler");
+      standAnzeigen(t("stand.offline"), "ist-fehler");
     });
 }
 
 var speichernBald = verzoegert(900, speichernJetzt);
 
+// Anything that wants to leave the page -- the language switch, for one --
+// has to be able to flush what is still owed. Saving is on a delay, and a
+// reload inside that window would throw the last keystroke away.
+window.trivialSlidesSpeichern = function () {
+  return schmutzig ? speichernJetzt() : Promise.resolve();
+};
+
 function merken() {
   ernte();
   schmutzig = true;
-  standAnzeigen("Nicht gespeichert", "ist-offen");
+  standAnzeigen(t("stand.fehler"), "ist-offen");
   speichernBald();
   vorschauBald();
 }
@@ -141,10 +149,8 @@ function zeigeFolie() {
   el.feldQuelle.hidden = def.felder.indexOf("quelle") === -1;
   zeigeBild(folie.bild);
 
-  $$(".farbe", el.farben).forEach(function (f) {
-    f.classList.toggle("ist-aktiv", (f.dataset.farbe || "") === (folie.hintergrund || ""));
-  });
-  if (folie.hintergrund) el.eigenfarbe.value = folie.hintergrund;
+  farbfeldZeigen(el.eigenfarbe, folie.hintergrund);
+  farbfeldZeigen(el.eigenTextfarbe, folie.textfarbe);
 }
 
 function setzeInhaltsModus(folie) {
@@ -176,7 +182,7 @@ function waehle(i) {
 
 // --- Slide list --------------------------------------------------------
 function leereFolie(layout) {
-  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", hintergrund: "" };
+  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", hintergrund: "", textfarbe: "" };
 }
 
 el.liste.addEventListener("click", function (ev) {
@@ -189,8 +195,8 @@ el.liste.addEventListener("click", function (ev) {
   var aktion = knopf.dataset.aktion;
   ernte();
   if (aktion === "loeschen") {
-    if (deck.folien.length === 1) { window.alert("Ein Vortrag braucht mindestens eine Folie."); return; }
-    if (!window.confirm("Diese Folie loeschen?")) return;
+    if (deck.folien.length === 1) { window.alert(t("meldung.mindestensEine")); return; }
+    if (!window.confirm(t("meldung.folieLoeschen"))) return;
     deck.folien.splice(i, 1);
     aufbauGeaendert(Math.min(i, deck.folien.length - 1));
   } else if (aktion === "doppeln") {
@@ -260,7 +266,7 @@ el.quelltextKnopf.addEventListener("click", function () {
   ernte();
   var folie = deck.folien[aktiv];
   if (quelltextModus && !rt.istEinfach(folie.inhalt)) {
-    window.alert("Diese Folie enthaelt Markdown, das die Knoepfe nicht abbilden koennen. Sie bleibt im Quelltext.");
+    window.alert(t("meldung.bleibtQuelltext"));
     return;
   }
   quelltextModus = !quelltextModus;
@@ -273,33 +279,66 @@ el.inhalt.addEventListener("keyup", function (ev) {
   if (ev.ctrlKey || ev.metaKey) merken();
 });
 
-// --- Background colours ------------------------------------------------
-// A small, muted selection. Anyone who needs a particular house colour
-// uses the colour field next to it.
+// --- Colours -----------------------------------------------------------
+// A small, muted selection, offered for the background and for the text
+// alike: the same eight tones work in both roles, dark on light and light
+// on dark. They are the picker's swatches; anything else comes out of its
+// colour area.
 var FARBEN = ["#1b1f23", "#0b3d4c", "#2b3a55", "#4a3b52", "#5c3d2e", "#2f4f3a", "#f5f0e6", "#ffffff"];
-FARBEN.forEach(function (farbe) {
-  var b = document.createElement("button");
-  b.type = "button";
-  b.className = "farbe";
-  b.dataset.farbe = farbe;
-  b.style.background = farbe;
-  b.title = farbe;
-  el.farben.appendChild(b);
-});
-el.farben.addEventListener("click", function (ev) {
-  var b = ev.target.closest(".farbe");
-  if (!b) return;
-  ernte();
-  deck.folien[aktiv].hintergrund = b.dataset.farbe || "";
-  zeigeFolie();
-  merken();
-});
-el.eigenfarbe.addEventListener("input", function () {
-  ernte();
-  deck.folien[aktiv].hintergrund = el.eigenfarbe.value;
-  $$(".farbe", el.farben).forEach(function (f) { f.classList.remove("ist-aktiv"); });
-  merken();
-});
+
+// "No colour of its own" is a state the picker cannot express through a
+// colour, so its clear button carries it: an empty field means the slide
+// follows the theme, which is what the placeholder says as well.
+function colorisEinrichten() {
+  Coloris.init();
+  Coloris({
+    el: ".farbfeld",
+    themeMode: document.documentElement.getAttribute("data-theme")
+      || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
+    theme: "polaroid",
+    format: "hex",
+    alpha: true,
+    swatches: FARBEN,
+    clearButton: true,
+    clearLabel: t("farbe.zuruecksetzen"),
+    closeButton: true,
+    closeLabel: t("farbe.fertig"),
+  });
+  // The picker's own light and dark have to follow the editor's.
+  new MutationObserver(function () {
+    Coloris({ themeMode: document.documentElement.getAttribute("data-theme") || "light" });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+}
+
+// Both fields work the same way -- `feldName` is all that differs.
+function farbfeldVerdrahten(feld, feldName) {
+  feld.addEventListener("input", function () {
+    if (feld.dataset.still) return;   // set from the model, not by a person
+    ernte();
+    deck.folien[aktiv][feldName] = feld.value.trim();
+    zeigeFolie();
+    merken();
+  });
+}
+
+// Coloris keeps the swatch beside the field in sync by listening for input
+// events, so the value cannot simply be assigned -- it has to be announced.
+// The flag keeps that announcement from counting as an edit.
+function farbfeldZeigen(feld, wert) {
+  feld.dataset.still = "1";
+  feld.value = wert || "";
+  feld.dispatchEvent(new Event("input", { bubbles: true }));
+  delete feld.dataset.still;
+  // The dot shows the colour, the tooltip names it -- and without a colour
+  // it has to show that too, which no colour can express.
+  var punkt = feld.closest(".clr-field");
+  if (punkt) punkt.classList.toggle("ist-leer", !wert);
+  feld.dataset.tip = wert || t("farbe.ohne");
+}
+
+colorisEinrichten();
+farbfeldVerdrahten(el.eigenfarbe, "hintergrund");
+farbfeldVerdrahten(el.eigenTextfarbe, "textfarbe");
 
 // --- Images ------------------------------------------------------------
 var bildDialog = $("#bild-dialog");
@@ -319,7 +358,7 @@ function zeichneGalerie() {
     b.type = "button";
     b.className = "galerie-bild";
     b.dataset.name = name;
-    b.title = name;
+    b.dataset.tip = name;
     var img = document.createElement("img");
     img.src = BASIS + "/bilder/" + encodeURIComponent(name);
     img.alt = name;
@@ -370,7 +409,7 @@ $("#bild-datei").addEventListener("change", function (ev) {
         merken();
       }
     })
-    .catch(function (e) { console.error(e); window.alert("Das Bild konnte nicht hochgeladen werden."); });
+    .catch(function (e) { console.error(e); window.alert(t("meldung.bildFehler")); });
   ev.target.value = "";
 });
 

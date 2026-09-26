@@ -7,6 +7,9 @@
 // which a stock reveal.js (or a text editor) still renders sensibly --
 // just without the finer points of the arrangement.
 //
+// The words belong to i18n.js, keyed by id -- layout.<id>.label and
+// layout.<id>.hilfe. What stays here is the structure.
+//
 // felder: which input fields the editor shows for this layout.
 //   bild   - image picker (data-image)
 //   quelle - attribution below the quote (data-quelle)
@@ -14,50 +17,34 @@
 const LAYOUTS = [
   {
     id: "titel",
-    label: "Titelfolie",
-    hilfe: "Grosser Titel, darunter Untertitel oder Referent. Fuer den Anfang.",
     felder: [],
   },
   {
     id: "abschnitt",
-    label: "Abschnitt",
-    hilfe: "Trennfolie zwischen zwei Themen. Farbiger Hintergrund, nur Titel.",
     felder: [],
   },
   {
     id: "text",
-    label: "Text",
-    hilfe: "Ueberschrift und Inhalt. Der Normalfall.",
     felder: [],
   },
   {
     id: "spalten",
-    label: "Zwei Spalten",
-    hilfe: "Wie Text, der Inhalt laeuft aber in zwei Spalten nebeneinander.",
     felder: [],
   },
   {
     id: "bild-rechts",
-    label: "Bild rechts",
-    hilfe: "Text links, Bild rechts daneben.",
     felder: ["bild"],
   },
   {
     id: "bild-links",
-    label: "Bild links",
-    hilfe: "Bild links, Text rechts daneben.",
     felder: ["bild"],
   },
   {
     id: "bild-voll",
-    label: "Bild formatfuellend",
-    hilfe: "Bild ueber die ganze Folie, Text lesbar darueber gelegt.",
     felder: ["bild"],
   },
   {
     id: "zitat",
-    label: "Zitat",
-    hilfe: "Grosses Zitat mit Quellenangabe.",
     felder: ["quelle"],
   },
 ];

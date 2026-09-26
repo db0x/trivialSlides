@@ -8,6 +8,7 @@
     "start": "node app.js"
   },
   "dependencies": {
+    "@melloware/coloris": "^0.25.0",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "marked": "^4.3.0",

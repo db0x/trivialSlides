@@ -102,6 +102,110 @@
 .reveal .layout-bild-voll .folie-text h2,
 .reveal .layout-bild-voll .folie-text a { color: #fff; }
 
+/* --- A text colour of the slide's own ----------------------------------
+   The colour sits on the <section> as an inline style (see render.js), but
+   reveal's themes colour every heading, every cite and every table cell
+   themselves -- so on its own it would reach the body text and nothing
+   else. These are told to take the slide's colour instead.
+
+   Links keep the theme's colour on purpose: they have to stay
+   recognisable as links, and that is what their colour is for. */
+.reveal .slides section[data-text-color] :is(h1, h2, h3, h4, h5, h6,
+p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
+  color: inherit;
+}
+
+/* --- Tables ------------------------------------------------------------
+   A slide is a fixed box: whatever does not fit is simply cut off at the
+   bottom. reveal's own table styling is sized for prose (40px type, 52px
+   lines), which a table of any length outgrows immediately.
+
+   So the type scales with the number of rows. :has() is the only way CSS
+   can count them, and the steps are deliberately coarse -- the aim is a
+   table that fits, not one typeset to the pixel. Anything past the last
+   step is a table that does not belong on a slide. */
+.reveal .folie-text table {
+  width: 100%;
+  margin: 0.4em 0;
+  font-size: 0.72em;
+  line-height: 1.25;
+  border-collapse: collapse;
+}
+.reveal .folie-text table th,
+.reveal .folie-text table td {
+  padding: 0.3em 0.6em;
+  vertical-align: top;
+}
+/* Counting the header row as well, these are 6, 9, 12 and 15 rows on the
+   slide. */
+.reveal .folie-text table:has(tbody tr:nth-child(5)) { font-size: 0.6em; }
+.reveal .folie-text table:has(tbody tr:nth-child(8)) { font-size: 0.5em; }
+.reveal .folie-text table:has(tbody tr:nth-child(11)) { font-size: 0.42em; }
+.reveal .folie-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
+
+/* Two columns plus a table is a tight fit already -- one notch smaller. */
+.reveal .layout-spalten .folie-text table { font-size: 0.55em; }
+
+/* --- Slides carrying a lot -------------------------------------------
+   A slide is a fixed box. Where tables are measured by their rows and
+   quotes by their number, ordinary text has only one thing CSS can count:
+   how many blocks sit in the body. The heading counts as the first of
+   them, which is why the steps start at eight.
+
+   The whole body scales, heading included -- a slide this full has no room
+   for a heading in its usual size either. */
+/* reveal sets the space between paragraphs in PIXELS (20px), so it would
+   stay put while the type around it shrinks. In em it scales along, which
+   is what makes the steps below actually do what they promise. At the
+   normal size 0.5em is those same 20px, so nothing moves on a slide that
+   was fine to begin with.
+
+   Lists are deliberately NOT included: reveal gives them no vertical
+   margin at all, so a rule here would add space rather than convert it. */
+.reveal .folie-text p { margin: 0.5em 0; }
+
+.reveal .folie-text:has(> :nth-child(8)) { font-size: 0.92em; }
+.reveal .folie-text:has(> :nth-child(10)) { font-size: 0.84em; }
+.reveal .folie-text:has(> :nth-child(13)) { font-size: 0.75em; }
+.reveal .folie-text:has(> :nth-child(16)) { font-size: 0.68em; }
+
+/* --- Staged reveals in the editor preview -----------------------------
+   reveal hides a fragment until it is clicked, which is right on the wall
+   and useless in the editor: the author would be typing into a part of the
+   slide that shows nothing. In the preview they are visible but dimmed,
+   with a bar in the margin -- you see what is there AND that it only
+   appears later. Presentation and export are untouched. */
+body.ist-vorschau .reveal .fragment {
+  visibility: visible !important;
+  opacity: 0.5;
+  border-left: 3px solid currentColor;
+  padding-left: 0.4em;
+  margin-left: -0.4em;
+}
+
+/* --- Quotes inside body text -------------------------------------------
+   reveal styles a blockquote for the one big pull quote: 70% of the width,
+   20px of margin outside and another 20px inside. On a slide carrying
+   several of them that runs off the bottom, and the narrow measure alone
+   doubles the number of lines -- 319px out of 960 on a 960px slide.
+
+   In body text they take the full width and tighter spacing, and the type
+   steps down with their number, the same way tables do. The quote LAYOUT
+   keeps its own styling further down; this is only about quotes that
+   appear inside ordinary text. */
+.reveal .slides section:not(.layout-zitat) .folie-text blockquote {
+  width: 100%;
+  margin: 0.45em 0;
+  padding: 0.35em 0.7em;
+  font-size: 0.8em;
+  line-height: 1.3;
+}
+.reveal .slides section:not(.layout-zitat) .folie-text blockquote p {
+  margin: 0.25em 0;
+}
+.reveal .slides section:not(.layout-zitat) .folie-text:has(blockquote:nth-of-type(3)) blockquote { font-size: 0.72em; }
+.reveal .slides section:not(.layout-zitat) .folie-text:has(blockquote:nth-of-type(5)) blockquote { font-size: 0.62em; }
+
 /* --- Quote ------------------------------------------------------------ */
 .reveal .slides section.layout-zitat { text-align: center; }
 .reveal .layout-zitat blockquote {
