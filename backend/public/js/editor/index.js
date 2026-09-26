@@ -32,17 +32,46 @@ var el = {
   quelltextHinweis: $("#quelltext-hinweis"),
   quelltextKnopf: $("#quelltext-umschalten"),
   quelle: $("#folie-quelle"),
+  video: $("#folie-video"),
+  videoHinweis: $("#video-hinweis"),
   feldBild: $(".feld-bild"),
   feldQuelle: $(".feld-quelle"),
+  feldVideo: $(".feld-video"),
   bildVorschau: $("#bild-vorschau"),
   bildEntfernen: $("#bild-entfernen"),
   layoutHilfe: $("#layout-hilfe"),
   stand: $("#speicherstand"),
   eigenfarbe: $("#hintergrund-eigen"),
   eigenTextfarbe: $("#textfarbe-eigen"),
+  verlauf: $("#folie-verlauf"),
+  verlaufHilfe: $("#verlauf-hilfe"),
+  verlaufVorlagen: $("#verlauf-vorlagen"),
+  effektKacheln: $("#effekt-kacheln"),
+  farbenGruppe: $("#farben-gruppe"),
+  codeKnopf: $("#code-einfuegen"),
+  codeDialog: $("#code-dialog"),
+  codeSprache: $("#code-sprache"),
+  codeStil: $("#code-stil"),
+  codeText: $("#code-text"),
+  codeTitel: $("#code-titel"),
+  codeOk: $("#code-ok"),
+  codeHinweis: $("#code-hinweis"),
+  codeFragment: $("#code-fragment"),
 };
 
 var vorschau = createVorschau($("#vorschau"), BASIS);
+
+// --- Notices -------------------------------------------------------------
+// One dialog, one line of text. The browser's alert would do the same job,
+// but it cannot be styled, it announces the host it comes from, and it
+// stops the page dead -- see views/editor.ejs.
+var hinweisDialog = $("#hinweis-dialog");
+var hinweisText = $("#hinweis-text");
+
+function hinweis(text) {
+  hinweisText.textContent = text;
+  hinweisDialog.showModal();
+}
 
 // --- Saving ------------------------------------------------------------
 function standAnzeigen(text, klasse) {
@@ -128,6 +157,16 @@ function ernte() {
   folie.titel = el.titel.value;
   folie.inhalt = quelltextModus ? el.quelltext.value : rt.htmlZuMd(el.inhalt);
   folie.quelle = el.quelle.value;
+  // Passed on as typed: the server picks the id out of it (video.js), and
+  // it does so for the live preview too. So a pasted link is a video
+  // before it has been saved anywhere.
+  folie.video = el.video.value;
+  // The gradient field takes CSS, so at any moment it may hold something
+  // half-typed. Only a complete gradient goes into the model -- the rest
+  // stays in the field and is named as unfinished, instead of quietly
+  // stripping the slide of the background it still has.
+  var verlauf = el.verlauf.value.trim();
+  if (!verlauf || el.verlauf.checkValidity()) folie.verlauf = verlauf;
 }
 
 function zeigeFolie() {
@@ -142,6 +181,8 @@ function zeigeFolie() {
   setzeInhaltsModus(folie);
 
   el.quelle.value = folie.quelle || "";
+  el.video.value = folie.video || "";
+  videoZeigen();
 
   $$(".layout-kachel").forEach(function (k) {
     k.classList.toggle("ist-aktiv", k.dataset.layout === folie.layout);
@@ -151,10 +192,20 @@ function zeigeFolie() {
   var def = layoutsById[folie.layout] || { felder: [] };
   el.feldBild.hidden = def.felder.indexOf("bild") === -1;
   el.feldQuelle.hidden = def.felder.indexOf("quelle") === -1;
+  el.feldVideo.hidden = def.felder.indexOf("video") === -1;
   zeigeBild(folie.bild);
 
   farbfeldZeigen(el.eigenfarbe, folie.hintergrund);
   farbfeldZeigen(el.eigenTextfarbe, folie.textfarbe);
+  el.verlauf.value = folie.verlauf || "";
+  verlaufZeigen();
+  $$(".effekt-kachel").forEach(function (k) {
+    k.classList.toggle("ist-aktiv", k.dataset.effect === (folie.effekt || ""));
+  });
+  // Folded, the group shows nothing of what the slide carries. The mark on
+  // its label says that there is something to unfold.
+  el.farbenGruppe.classList.toggle("hat-eigenes",
+    !!(folie.hintergrund || folie.textfarbe || folie.verlauf || folie.effekt));
 }
 
 function setzeInhaltsModus(folie) {
@@ -186,7 +237,7 @@ function waehle(i) {
 
 // --- Slide list --------------------------------------------------------
 function leereFolie(layout) {
-  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", hintergrund: "", textfarbe: "" };
+  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
 }
 
 el.liste.addEventListener("click", function (ev) {
@@ -199,7 +250,7 @@ el.liste.addEventListener("click", function (ev) {
   var aktion = knopf.dataset.aktion;
   ernte();
   if (aktion === "loeschen") {
-    if (deck.folien.length === 1) { window.alert(t("meldung.mindestensEine")); return; }
+    if (deck.folien.length === 1) { hinweis(t("meldung.mindestensEine")); return; }
     if (!window.confirm(t("meldung.folieLoeschen"))) return;
     deck.folien.splice(i, 1);
     aufbauGeaendert(Math.min(i, deck.folien.length - 1));
@@ -270,7 +321,7 @@ el.quelltextKnopf.addEventListener("click", function () {
   ernte();
   var folie = deck.folien[aktiv];
   if (quelltextModus && !rt.istEinfach(folie.inhalt)) {
-    window.alert(t("meldung.bleibtQuelltext"));
+    hinweis(t("meldung.bleibtQuelltext"));
     return;
   }
   quelltextModus = !quelltextModus;
@@ -282,6 +333,144 @@ el.quelltextKnopf.addEventListener("click", function () {
 el.inhalt.addEventListener("keyup", function (ev) {
   if (ev.ctrlKey || ev.metaKey) merken();
 });
+
+// --- Video ---------------------------------------------------------------
+// The field takes whatever is in the clipboard. Whether there is a video id
+// in it is decided by the server's own pattern, handed to the page -- so
+// the field says "no video in this" with the same rule that would later
+// drop the value on saving.
+var videoMuster = new RegExp(el.video.dataset.muster || "");
+
+function videoZeigen() {
+  var wert = el.video.value.trim();
+  var gefunden = !wert || videoMuster.test(wert);
+  el.video.setAttribute("aria-invalid", gefunden ? "false" : "true");
+  el.videoHinweis.textContent = gefunden ? "" : t("editor.videoUnbekannt");
+  el.videoHinweis.classList.toggle("hilfe-fehler", !gefunden);
+}
+
+el.video.addEventListener("input", function () {
+  videoZeigen();
+  merken();
+});
+
+// --- Code blocks --------------------------------------------------------
+// The one thing in the toolbar the rich-text field cannot hold as text. So
+// it is not a formatting command but a dialog, and what it leaves behind in
+// the field is a sealed block (richtext.js) rather than a fence anyone
+// could damage with a stray keystroke. Clicking the block opens the same
+// dialog again.
+//
+// Language and scheme are remembered for the next block: someone writing a
+// talk about Rust writes Rust on the next slide too.
+var CODE_LETZTE = "trivialslides:code-zuletzt";
+var codeBearbeitet = null;   // the block being edited, or null for a new one
+
+function codeZuletzt() {
+  try { return JSON.parse(localStorage.getItem(CODE_LETZTE)) || {}; } catch (e) { return {}; }
+}
+
+function codeDialogOeffnen(block) {
+  codeBearbeitet = block || null;
+  var letzte = codeZuletzt();
+  el.codeSprache.value = block ? (block.dataset.sprache || "") : (letzte.sprache || "");
+  el.codeStil.value = block ? (block.dataset.stil || "") : (letzte.stil || "");
+  var pre = block && block.querySelector("pre");
+  el.codeText.value = pre ? pre.textContent : "";
+  el.codeFragment.checked = !!(block && block.classList.contains("fragment"));
+  // The same dialog does both jobs, so it says which one it is doing.
+  el.codeTitel.textContent = t(block ? "dialog.codeBearbeiten" : "dialog.codeTitel");
+  el.codeOk.textContent = t(block ? "dialog.codeUebernehmen" : "dialog.codeEinfuegen");
+  el.codeHinweis.hidden = !!block;
+  el.codeDialog.returnValue = "";
+  el.codeDialog.showModal();
+}
+
+el.codeKnopf.addEventListener("click", function () { codeDialogOeffnen(null); });
+
+// A click on a block in the field opens it. The block is sealed, so the
+// click cannot land inside it -- it lands on it.
+el.inhalt.addEventListener("click", function (ev) {
+  if (!ev.target.closest) return;
+  var block = ev.target.closest(".code-block");
+  if (!block || !el.inhalt.contains(block)) return;
+  if (ev.target.closest(".code-weg")) {
+    block.remove();
+    merken();
+    return;
+  }
+  codeDialogOeffnen(block);
+});
+
+// In a code field Tab is indentation, not "on to the next control". Shift
+// and Escape still get out, so the field is not a trap.
+el.codeText.addEventListener("keydown", function (ev) {
+  if (ev.key !== "Tab" || ev.shiftKey) return;
+  ev.preventDefault();
+  var von = el.codeText.selectionStart;
+  var bis = el.codeText.selectionEnd;
+  var wert = el.codeText.value;
+  el.codeText.value = wert.slice(0, von) + "    " + wert.slice(bis);
+  el.codeText.setSelectionRange(von + 4, von + 4);
+});
+
+el.codeDialog.addEventListener("click", function (ev) {
+  if (ev.target.closest("[data-schliessen]")) el.codeDialog.close();
+});
+
+// On close, not on submit: a dialog hands the focus back to whatever had it
+// before, and it does so AFTER the submit handler.
+el.codeDialog.addEventListener("close", function () {
+  if (el.codeDialog.returnValue !== "einfuegen") { codeBearbeitet = null; return; }
+  var sprache = el.codeSprache.value;
+  var stil = el.codeStil.value;
+  try {
+    localStorage.setItem(CODE_LETZTE, JSON.stringify({ sprache: sprache, stil: stil }));
+  } catch (e) { /* private window, storage blocked */ }
+  // Emptied out: that is how one gets rid of a block from inside the
+  // dialog, and it beats leaving an empty fence on the slide.
+  var quelltext = el.codeText.value.replace(/\s+$/, "");
+  if (!quelltext.trim() && codeBearbeitet) {
+    codeBearbeitet.remove();
+    merken();
+    codeBearbeitet = null;
+    return;
+  }
+  codeUebernehmen(sprache, stil, quelltext, el.codeFragment.checked);
+  codeBearbeitet = null;
+});
+
+function codeUebernehmen(sprache, stil, quelltext, fragment) {
+  ernte();
+  var folie = deck.folien[aktiv];
+
+  // A slide that is in source mode for some OTHER reason -- a table, say --
+  // has no field to put a block into. There the fence goes in as text.
+  if (quelltextModus) {
+    var zaun = "```" + sprache + (stil ? " hl=" + stil : "");
+    var block = zaun + "\n" + quelltext + "\n```" + (fragment ? "\n" + rt.FRAGMENT : "");
+    var vorher = (folie.inhalt || "").replace(/\s+$/, "");
+    folie.inhalt = vorher ? vorher + "\n\n" + block : block;
+    setzeInhaltsModus(folie);
+    merken();
+    return;
+  }
+
+  var huelle = document.createElement("div");
+  huelle.innerHTML = rt.codeBlockHtml(sprache, stil, quelltext, fragment);
+  var neu = huelle.firstElementChild;
+  if (codeBearbeitet && el.inhalt.contains(codeBearbeitet)) {
+    codeBearbeitet.replaceWith(neu);
+  } else {
+    el.inhalt.appendChild(neu);
+    // Something to carry on typing in: after a sealed block at the very end
+    // of the field there is otherwise nowhere for the caret to go.
+    var danach = document.createElement("p");
+    danach.appendChild(document.createElement("br"));
+    el.inhalt.appendChild(danach);
+  }
+  merken();
+}
 
 // --- Colours -----------------------------------------------------------
 // A small, muted selection, offered for the background and for the text
@@ -343,6 +532,75 @@ function farbfeldZeigen(feld, wert) {
 colorisEinrichten();
 farbfeldVerdrahten(el.eigenfarbe, "hintergrund");
 farbfeldVerdrahten(el.eigenTextfarbe, "textfarbe");
+
+// --- The colour group ---------------------------------------------------
+// Closed to begin with: colours, gradients and effects are what one reaches
+// for after a while, and the editor should not open with them. Whoever has
+// opened it once is past that point, so the choice is kept -- in the
+// browser, like the light/dark setting, because it belongs to the person
+// and not to the deck.
+var FARBEN_OFFEN = "trivialslides:farben-offen";
+
+try {
+  el.farbenGruppe.open = localStorage.getItem(FARBEN_OFFEN) === "1";
+} catch (e) { /* private window, storage blocked */ }
+
+el.farbenGruppe.addEventListener("toggle", function () {
+  try {
+    localStorage.setItem(FARBEN_OFFEN, el.farbenGruppe.open ? "1" : "0");
+  } catch (e) { /* see above */ }
+});
+
+// --- Gradient ----------------------------------------------------------
+// Two ways to the same value: a swatch to click, and the field below it for
+// anyone who writes their own CSS. The field's pattern is the grammar from
+// deck.js (put there by the page), so the browser checks with exactly the
+// rule the server applies -- no second grammar living here.
+
+// The one hint line does double duty -- rule of the field, and complaint
+// when it is broken -- so the original wording is kept before anything
+// overwrites it.
+var verlaufHinweis = el.verlaufHilfe.textContent;
+
+function verlaufZeigen() {
+  var wert = el.verlauf.value.trim();
+  var falsch = !!wert && !el.verlauf.checkValidity();
+  el.verlauf.setAttribute("aria-invalid", falsch ? "true" : "false");
+  el.verlaufHilfe.classList.toggle("hilfe-fehler", falsch);
+  el.verlaufHilfe.textContent = falsch ? t("editor.verlaufUngueltig") : verlaufHinweis;
+  // The active swatch is whichever one holds exactly this value -- a
+  // hand-written gradient simply marks none of them.
+  $$(".verlauf-probe").forEach(function (p) {
+    p.classList.toggle("ist-aktiv", p.dataset.verlauf === wert);
+  });
+}
+
+el.verlauf.addEventListener("input", function () {
+  ernte();
+  verlaufZeigen();
+  merken();
+});
+
+el.verlaufVorlagen.addEventListener("click", function (ev) {
+  var probe = ev.target.closest(".verlauf-probe");
+  if (!probe) return;
+  ernte();
+  el.verlauf.value = probe.dataset.verlauf;
+  deck.folien[aktiv].verlauf = probe.dataset.verlauf;
+  verlaufZeigen();
+  merken();
+});
+
+// An animated background carries a name, so there is nothing to type: the
+// tiles are the whole control.
+el.effektKacheln.addEventListener("click", function (ev) {
+  var kachel = ev.target.closest(".effekt-kachel");
+  if (!kachel) return;
+  ernte();
+  deck.folien[aktiv].effekt = kachel.dataset.effect;
+  zeigeFolie();
+  merken();
+});
 
 // --- Images ------------------------------------------------------------
 var bildDialog = $("#bild-dialog");
@@ -413,7 +671,7 @@ $("#bild-datei").addEventListener("change", function (ev) {
         merken();
       }
     })
-    .catch(function (e) { console.error(e); window.alert(t("meldung.bildFehler")); });
+    .catch(function (e) { console.error(e); hinweis(t("meldung.bildFehler")); });
   ev.target.value = "";
 });
 

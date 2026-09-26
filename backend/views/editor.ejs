@@ -8,7 +8,7 @@
 <body class="seite-editor">
 
 <header class="kopf">
-  <a class="marke" href="<%= BASE %>/" data-tip="<%= t('kopf.alleVortraege') %>"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32">trivialSlides</a>
+  <a class="marke" href="<%= BASE %>/" data-tip="<%= t('kopf.alleVortraege') %>"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32"><span class="marke-wort">trivialSlides<small class="marke-version">v<%= VERSION %></small></span></a>
 
   <input id="deck-titel" class="deck-titel-feld" value="<%= deck.titel %>" maxlength="120" aria-label="<%= t('kopf.titelFeld') %>">
 
@@ -91,6 +91,10 @@
           <button type="button" class="werkzeug-icon" data-befehl="link" data-tip="<%= t('werkzeug.link') %>" aria-label="<%= t('werkzeug.link') %>"></button>
           <span class="leiste-trenner"></span>
           <button type="button" class="werkzeug-icon" data-befehl="fragment" data-tip="<%= t('werkzeug.fragmentTip') %>" aria-label="<%= t('werkzeug.fragment') %>"></button>
+          <!-- Code is the one thing in this bar that the rich-text field
+               cannot hold, so it does not run through execCommand and it
+               stays usable in source mode -- that is where it lands. -->
+          <button type="button" id="code-einfuegen" class="werkzeug-icon" data-tip="<%= t('werkzeug.codeTip') %>" aria-label="<%= t('werkzeug.code') %>"></button>
           <span class="leiste-trenner"></span>
           <button type="button" id="quelltext-umschalten" class="werkzeug-icon" data-tip="<%= t('werkzeug.quelltextTip') %>" aria-label="<%= t('werkzeug.quelltext') %>"></button>
         </div>
@@ -120,14 +124,35 @@
         </div>
       </div>
 
+      <!-- The link as it sits in the clipboard; what lands in the file is
+           the id inside it (video.js). The pattern is the server's, so the
+           page recognises a link the same way the server does. -->
+      <label class="feld feld-video" hidden>
+        <span class="feld-name"><%= t('editor.video') %></span>
+        <input id="folie-video" type="text" maxlength="200" spellcheck="false"
+               placeholder="<%= t('editor.videoPlatzhalter') %>"
+               data-muster="<%= videoMuster %>">
+        <span id="video-hinweis" class="hilfe"></span>
+      </label>
+
       <label class="feld feld-quelle" hidden>
         <span class="feld-name"><%= t('editor.quelle') %></span>
         <input id="folie-quelle" maxlength="200" placeholder="<%= t('editor.quellePlatzhalter') %>">
       </label>
     </fieldset>
 
-    <fieldset class="feldgruppe">
-      <legend><%= t('editor.farben') %></legend>
+    <!-- Colours, gradient and effect are the things one reaches for after a
+         while, not at the start -- so the group folds away, and starts
+         folded. <details> rather than a button of our own: the browser
+         brings the keyboard, the marker and the semantics with it. The
+         choice is remembered (js/editor/index.js), because someone who has
+         opened it once is usually past the start. -->
+    <details id="farben-gruppe" class="feldgruppe feldgruppe-klapp">
+      <summary>
+        <%= t('editor.farben') %>
+        <span class="klapp-marke" data-tip="<%= t('editor.farbenEigen') %>"
+              aria-label="<%= t('editor.farbenEigen') %>"></span>
+      </summary>
       <div class="farbzeile">
         <label class="farbwahl">
           <input id="hintergrund-eigen" class="farbfeld" type="text" value="" aria-label="<%= t('editor.hintergrund') %>">
@@ -138,7 +163,46 @@
           <span><%= t('editor.textfarbe') %></span>
         </label>
       </div>
-    </fieldset>
+
+      <!-- The gradient, twice over: the swatches for picking one, the field
+           below for writing one. The swatches come from verlaeufe.js, which
+           a deck collection extends through decks/verlaeufe.json -- so this
+           row is as long as someone made it, not eight items by design.
+           Each swatch wears its own gradient, which is why the value is in
+           the style attribute: a stylesheet cannot know them. -->
+      <div class="feld feld-verlauf">
+        <span class="feld-name"><%= t('editor.verlauf') %></span>
+        <div id="verlauf-vorlagen" class="verlauf-vorlagen" role="group" aria-label="<%= t('editor.verlaufVorlagen') %>">
+          <button type="button" class="verlauf-probe verlauf-ohne" data-verlauf=""
+                  data-tip="<%= t('editor.verlaufOhne') %>" aria-label="<%= t('editor.verlaufOhne') %>"></button>
+          <% verlaeufe.forEach(function (v) { %>
+            <button type="button" class="verlauf-probe" data-verlauf="<%= v.css %>"
+                    style="background-image: <%= v.css %>"
+                    data-tip="<%= v.name %>" aria-label="<%= v.name %>"></button>
+          <% }); %>
+        </div>
+        <input id="folie-verlauf" class="verlauf-feld" type="text" spellcheck="false"
+               maxlength="<%= verlaufMax %>" pattern="<%= verlaufMuster %>"
+               placeholder="<%= t('editor.verlaufPlatzhalter') %>" aria-label="<%= t('editor.verlaufEigen') %>">
+        <p id="verlauf-hilfe" class="hilfe"><%= t('editor.verlaufHinweis') %></p>
+      </div>
+
+      <!-- Animated backgrounds. A name, not a value -- what it looks like
+           is in slides.css (see effekte.js), so a tile can only show a
+           still of it. -->
+      <div class="feld feld-effekt">
+        <span class="feld-name"><%= t('editor.effekt') %></span>
+        <div id="effekt-kacheln" class="effekt-kacheln" role="group" aria-label="<%= t('editor.effekt') %>">
+          <button type="button" class="effekt-kachel effekt-ohne" data-effect=""
+                  data-tip="<%= t('editor.effektOhne') %>" aria-label="<%= t('editor.effektOhne') %>"></button>
+          <% effekte.forEach(function (e) { %>
+            <button type="button" class="effekt-kachel" data-effect="<%= e.id %>"
+                    data-tip="<%= e.name %>" aria-label="<%= e.name %>"></button>
+          <% }); %>
+        </div>
+        <p class="hilfe"><%= t('editor.effektHinweis') %></p>
+      </div>
+    </details>
   </section>
 
   <!-- Right: real reveal.js, not a replica. What stands here is what
@@ -151,6 +215,67 @@
     <p class="hilfe vorschau-hilfe"><%= t('editor.vorschauHinweis') %></p>
   </aside>
 </main>
+
+<!-- Inserting a code block: language and, for this one block, a style.
+     Both end up in the fence (```java hl=github), so the .md keeps saying
+     what it means in any other renderer too. -->
+<dialog id="code-dialog" class="dialog">
+  <form method="dialog" class="dialog-kopf">
+    <h2 id="code-titel"><%= t('dialog.codeTitel') %></h2>
+    <button class="knopf knopf-still" value="abbruch"><%= t('dialog.schliessen') %></button>
+  </form>
+  <form method="dialog" class="dialog-inhalt" id="code-form">
+    <label class="feld">
+      <span class="feld-name"><%= t('dialog.codeSprache') %></span>
+      <select id="code-sprache">
+        <% codeSprachen.forEach(function (s) { %>
+          <option value="<%= s.id %>"><%= s.label %></option>
+        <% }); %>
+      </select>
+    </label>
+    <label class="feld">
+      <span class="feld-name"><%= t('dialog.codeStil') %></span>
+      <select id="code-stil">
+        <option value=""><%= t('dialog.codeStilStandard') %></option>
+        <% codeStile.forEach(function (s) { %>
+          <option value="<%= s.id %>"><%= s.id %><%= s.light ? " — " + t('dialog.codeHell') : "" %></option>
+        <% }); %>
+      </select>
+    </label>
+    <label class="feld">
+      <span class="feld-name"><%= t('dialog.codeText') %></span>
+      <textarea id="code-text" class="code-eingabe" rows="8" spellcheck="false"
+                placeholder="<%= t('dialog.codePlatzhalter') %>"></textarea>
+    </label>
+    <label class="feld feld-schmal code-fragment-zeile">
+      <input type="checkbox" id="code-fragment">
+      <span><%= t('dialog.codeFragment') %></span>
+    </label>
+    <p id="code-hinweis" class="hilfe"><%= t('dialog.codeHinweis') %></p>
+    <div class="dialog-fuss">
+      <button type="button" class="knopf" data-schliessen><%= t('dialog.abbrechen') %></button>
+      <button type="submit" id="code-ok" class="knopf knopf-haupt" value="einfuegen"><%= t('dialog.codeEinfuegen') %></button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Notices. One dialog for all of them; the text arrives when it is opened
+     (js/editor/index.js). Ours rather than the browser's alert for the same
+     reason the tooltips are ours: that one cannot be styled, it names the
+     host ("localhost:8888 says"), and it looks like a visitor from another
+     program. -->
+<dialog id="hinweis-dialog" class="dialog dialog-schmal">
+  <form method="dialog" class="dialog-kopf">
+    <h2><%= t('dialog.hinweisTitel') %></h2>
+    <button class="knopf knopf-still" value="ok"><%= t('dialog.schliessen') %></button>
+  </form>
+  <form method="dialog" class="dialog-inhalt">
+    <p id="hinweis-text"></p>
+    <div class="dialog-fuss">
+      <button class="knopf knopf-haupt" value="ok" autofocus><%= t('dialog.verstanden') %></button>
+    </div>
+  </form>
+</dialog>
 
 <!-- Image picker -->
 <dialog id="bild-dialog" class="dialog">

@@ -16,14 +16,23 @@ var FRAGMENT = '<!-- .element: class="fragment" -->';
 
 // Markdown the buttons cannot express. Anyone who has such a thing in
 // their file should be allowed to keep it.
+//
+// A fenced code block is NOT such a thing, although it is nothing the
+// buttons could write letter by letter: the field shows it as a sealed
+// object with its own dialog (see below), and it travels back into the .md
+// exactly as it came. Everything between the fences is skipped here --
+// inside a code block a hash or a backtick is code, not Markdown.
 function istEinfach(md) {
   var text = String(md || "");
   if (!text.trim()) return true;
   var zeilen = text.split("\n");
+  var imCode = false;
   for (var i = 0; i < zeilen.length; i++) {
     var z = zeilen[i];
+    if (ZAUN.test(z)) { imCode = !imCode; continue; }
+    if (imCode) continue;
     if (z.trim() === "" || z.trim() === FRAGMENT) continue;
-    if (/^\s{0,3}(#{1,6}\s|>|```|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
+    if (/^\s{0,3}(#{1,6}\s|>|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
     if (/<[a-z!/]/i.test(z)) return false;   // raw HTML (other than the fragment above)
     // Inline code. The field cannot show it, and on the way back the
     // backticks would be escaped into literal characters -- turning
@@ -32,7 +41,54 @@ function istEinfach(md) {
     if (/^\s{4,}\S/.test(z)) return false;   // indented code block
     if (/^\s*([-*_])\s*\1\s*\1/.test(z)) return false; // horizontal rule
   }
-  return true;
+  // A fence that was opened and never closed is not a code block but a
+  // typo, and the field would swallow the rest of the slide into it.
+  return !imCode;
+}
+
+// --- Code blocks -------------------------------------------------------
+// The one thing in the field that is not text with formatting but an
+// OBJECT. It is shown sealed -- contenteditable="false", so the browser
+// treats it as a single indivisible thing that can be selected and deleted
+// but not typed into -- and it is edited through the dialog that made it.
+// That way the code cannot be damaged by the rich-text field, and the fence
+// goes back into the .md exactly as it came.
+var ZAUN = /^\s*```/;
+
+function codeInfoLesen(info) {
+  var teile = String(info || "").trim().split(/\s+/).filter(Boolean);
+  var sprache = teile.length && teile[0].indexOf("=") === -1 ? teile[0] : "";
+  var stil = "";
+  teile.forEach(function (teil) {
+    var treffer = /^hl=([a-z0-9-]+)$/.exec(teil);
+    if (treffer) stil = treffer[1];
+  });
+  return { sprache: sprache, stil: stil };
+}
+
+// The label says what the block is, because the field shows no syntax and
+// the colours only appear in the preview.
+function codeBlockHtml(sprache, stil, quelltext, fragment) {
+  var marke = [sprache || t("code.ohneSprache"), stil].filter(Boolean).join(" \u00b7 ");
+  return '<div class="code-block' + (fragment ? " fragment" : "") + '" contenteditable="false"' +
+    ' data-sprache="' + escHtml(sprache) + '" data-stil="' + escHtml(stil) + '"' +
+    ' data-tip="' + escHtml(t("code.klicken")) + '">' +
+    '<span class="code-marke">' + escHtml(marke) + "</span>" +
+    // A sealed block cannot be deleted with the keyboard the way a
+    // paragraph can -- the caret has no place inside it to delete from. So
+    // it carries its own way out.
+    '<button type="button" class="code-weg" tabindex="-1"' +
+    ' data-tip="' + escHtml(t("code.entfernen")) + '"' +
+    ' aria-label="' + escHtml(t("code.entfernen")) + '">\u00d7</button>' +
+    "<pre>" + escHtml(quelltext) + "</pre></div>";
+}
+
+function codeBlockZuMd(el) {
+  var pre = el.querySelector("pre");
+  var sprache = el.dataset.sprache || "";
+  var stil = el.dataset.stil || "";
+  var info = sprache + (stil ? (sprache ? " " : "") + "hl=" + stil : "");
+  return "```" + info + "\n" + (pre ? pre.textContent : "") + "\n```";
 }
 
 function escHtml(s) {
@@ -69,12 +125,39 @@ function mdZuHtml(md) {
   // attached to that one after the fact.
   function fragmentAnhaengen() {
     for (var i = out.length - 1; i >= 0; i--) {
+      if (/^<div class="code-block/.test(out[i])) {
+        out[i] = out[i].replace('class="code-block', 'class="code-block fragment');
+        return;
+      }
       var t = /^<(p|li)>/.exec(out[i]);
       if (t) { out[i] = "<" + t[1] + ' class="fragment">' + out[i].slice(t[0].length); return; }
     }
   }
 
+  var imCode = false;
+  var codeZeilen = [];
+  var codeInfo = "";
+
+  function codeSchliessen() {
+    out.push(codeBlockHtml(codeInfo.sprache, codeInfo.stil, codeZeilen.join("\n"), false));
+    imCode = false;
+    codeZeilen = [];
+  }
+
   zeilen.forEach(function (zeile) {
+    if (imCode) {
+      if (ZAUN.test(zeile)) codeSchliessen();
+      else codeZeilen.push(zeile);
+      return;
+    }
+    if (ZAUN.test(zeile)) {
+      absatzSchliessen();
+      listeSchliessen();
+      imCode = true;
+      codeInfo = codeInfoLesen(zeile.replace(/^\s*```/, ""));
+      codeZeilen = [];
+      return;
+    }
     if (zeile.trim() === FRAGMENT) {
       // Close the running paragraph first -- otherwise the class lands on
       // the paragraph BEFORE it. The list, by contrast, stays open: a
@@ -96,6 +179,7 @@ function mdZuHtml(md) {
     if (zeile.trim() === "") absatzSchliessen();
     else absatz.push(inlineZuHtml(zeile));
   });
+  if (imCode) codeSchliessen();   // a fence nobody closed
   absatzSchliessen();
   listeSchliessen();
   return out.join("");
@@ -141,6 +225,10 @@ function htmlZuMd(wurzel) {
       return;
     }
     if (k.nodeType !== 1) return;
+    if (k.classList && k.classList.contains("code-block")) {
+      bloecke.push(codeBlockZuMd(k) + fragment(k));
+      return;
+    }
     var tag = k.tagName.toLowerCase();
     if (tag === "ul" || tag === "ol") {
       var zeilen = [];
@@ -212,4 +300,4 @@ function fragmentUmschalten(feld) {
   k.classList.toggle("fragment");
 }
 
-export { istEinfach, mdZuHtml, htmlZuMd, befehl, FRAGMENT };
+export { istEinfach, mdZuHtml, htmlZuMd, befehl, codeBlockHtml, FRAGMENT };

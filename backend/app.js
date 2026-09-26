@@ -9,7 +9,7 @@
 // with authentication, layout and sharing all coming from Relay.
 const path = require("path");
 const express = require("express");
-const { BASE, PORT, PUBLIC_URL } = require("./config");
+const { BASE, PORT, PUBLIC_URL, VERSION } = require("./config");
 const pdf = require("./pdf");
 const storage = require("./storage");
 const i18n = require("./i18n");
@@ -19,6 +19,7 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.locals.BASE = BASE;
+app.locals.VERSION = VERSION;
 
 app.use(i18n.middleware);
 

@@ -21,7 +21,11 @@ const PORT = Number(process.env.PORT || 5000);
 // the preview would then point at an unreachable host.
 const PUBLIC_URL = String(process.env.PUBLIC_URL || "").replace(/\/+$/, "");
 
+// The app's own version, shown next to the mark in the header. Read from
+// package.json so there is one place to bump it.
+const VERSION = require("./package.json").version;
+
 // Upper limit for image uploads
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB || 16);
 
-module.exports = { BASE, DECKS_DIR, PORT, MAX_UPLOAD_MB, PUBLIC_URL };
+module.exports = { BASE, DECKS_DIR, PORT, MAX_UPLOAD_MB, PUBLIC_URL, VERSION };

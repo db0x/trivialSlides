@@ -12,9 +12,15 @@ Every **slide** ~~layout~~, *once*
 
 ---
 
-<!-- .slide: data-layout="abschnitt" data-background-color="#1b3a5c" -->
+<!-- .slide: data-layout="abschnitt" data-background-color="#122233" -->
 
 # Section divider
+
+---
+
+<!-- .slide: data-layout="video" data-video="4ApMS8qYWo0" data-background-effect="starfield" data-text-color="#ffffff" -->
+
+## FIRE
 
 ---
 
@@ -55,6 +61,22 @@ to get here.
 
 ---
 
+<!-- .slide: data-layout="spalten-drei" -->
+
+## Three columns
+
+- C
+- C++
+- Java
+- JavaScript
+- C#
+- Rust
+- Go
+- Pascal
+- COBOL
+
+---
+
 <!-- .slide: data-layout="bild-rechts" data-image="chart.svg" -->
 
 ## Image on the right
@@ -81,6 +103,30 @@ The picture covers the whole slide, the text stays readable on top of it.
 
 ---
 
+## Code
+
+getAge()
+<!-- .element: class="fragment" -->
+
+```java hl=github
+public int getAge() {
+    return this.age;
+}
+```
+<!-- .element: class="fragment" -->
+
+getFactor()
+<!-- .element: class="fragment" -->
+
+```java hl=github
+static final int getFactor() {
+    return 1;
+}
+```
+<!-- .element: class="fragment" -->
+
+---
+
 <!-- .slide: data-layout="zitat" data-quelle="Antoine de Saint-Exupéry" -->
 
 ## Quote
@@ -88,19 +134,8 @@ The picture covers the whole slide, the text stays readable on top of it.
 > Perfection is achieved, not when there is nothing more to add, but when
 > there is nothing left to take away.
 
----
+----
 
-<!-- .slide: data-layout="abschnitt" data-background-color="#0e2033" -->
+<!-- .slide: data-layout="abschnitt" data-background-effect="starfield" data-text-color="#ffffff" -->
 
 # That was all of them
-
----
-
-## Where to go from here
-
-Edit this deck in the browser, or open `vortrag.md` in any text editor —
-both work on the same file.
-
-- Present it with `S` for speaker notes and `Esc` for the overview
-- Export it as one self-contained HTML file, or as a PDF handout
-- Copy the folder to send the talk and its images together

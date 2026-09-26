@@ -10,6 +10,10 @@ const dokument = require("../dokument");
 const pdf = require("../pdf");
 const layouts = require("../layouts");
 const render = require("../render");
+const verlaeufe = require("../verlaeufe");
+const effekte = require("../effekte");
+const code = require("../code");
+const video = require("../video");
 const storage = require("../storage");
 const i18n = require("../i18n");
 const { BASE, MAX_UPLOAD_MB } = require("../config");
@@ -82,6 +86,14 @@ router.post("/sprache/:code", (req, res) => {
   res.json({ ok: true, sprache: code });
 });
 
+// The code styles, fenced into one class each (see code.js). Generated
+// rather than a file on disk, so it is served from here instead of from
+// public/. It changes only when the highlight.js package does, hence the
+// long cache.
+router.get("/code-styles.css", (req, res) => {
+  res.type("text/css").set("Cache-Control", "public, max-age=3600").send(code.css());
+});
+
 // --- Overview ----------------------------------------------------------
 router.get("/", (req, res) => {
   res.render("index", { decks: storage.liste() });
@@ -98,6 +110,16 @@ router.get("/d/:slug", deckLaden, (req, res) => {
     slug: req.slug,
     deck: req.deck,
     layouts: i18n.layoutsUebersetzt(layouts.LAYOUTS, req.sprache),
+    verlaeufe: i18n.verlaeufeUebersetzt(verlaeufe.liste(), req.sprache),
+    effekte: i18n.effekteUebersetzt(effekte.EFFEKTE, req.sprache),
+    videoMuster: video.MUSTER,
+    codeSprachen: code.LANGUAGES,
+    codeStile: code.STYLES,
+    // The grammar travels with the page and becomes the input's pattern --
+    // so the browser refuses a broken gradient with the same rule the
+    // server would have applied (deck.js).
+    verlaufMuster: deck.VERLAUF_MUSTER,
+    verlaufMax: deck.VERLAUF_MAX,
     themes: deck.THEMES,
     transitions: deck.TRANSITIONS,
     bilder: storage.bilder(req.slug),

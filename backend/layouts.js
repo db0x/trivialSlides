@@ -13,6 +13,7 @@
 // felder: which input fields the editor shows for this layout.
 //   bild   - image picker (data-image)
 //   quelle - attribution below the quote (data-quelle)
+//   video  - a YouTube link (data-video, see video.js)
 // Every layout has a title and a body, so those are not in the list.
 const LAYOUTS = [
   {
@@ -32,6 +33,10 @@ const LAYOUTS = [
     felder: [],
   },
   {
+    id: "spalten-drei",
+    felder: [],
+  },
+  {
     id: "bild-rechts",
     felder: ["bild"],
   },
@@ -42,6 +47,10 @@ const LAYOUTS = [
   {
     id: "bild-voll",
     felder: ["bild"],
+  },
+  {
+    id: "video",
+    felder: ["video"],
   },
   {
     id: "zitat",

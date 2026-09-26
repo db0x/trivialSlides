@@ -49,6 +49,10 @@ const FUER_BROWSER = [
   "thema.zuHell", "thema.zuDunkel",
   "stand.offline",
   "farbe.ohne", "farbe.zuruecksetzen", "farbe.fertig",
+  "editor.verlaufUngueltig",
+  "dialog.codeTitel", "dialog.codeBearbeiten", "dialog.codeEinfuegen", "dialog.codeUebernehmen",
+  "code.klicken", "code.ohneSprache", "code.entfernen",
+  "editor.videoUnbekannt",
   "karte.hoch", "karte.runter", "karte.einruecken", "karte.ausruecken",
   "karte.doppeln", "karte.loeschen", "karte.ohneTitel",
   "meldung.mindestensEine", "meldung.folieLoeschen", "meldung.bleibtQuelltext",
@@ -70,6 +74,21 @@ function layoutsUebersetzt(layouts, sprache) {
   }));
 }
 
+// Gradients the same way, except that one brought in from verlaeufe.json
+// carries its own name -- see verlaeufe.js.
+function verlaeufeUebersetzt(verlaeufe, sprache) {
+  return verlaeufe.map((v) => Object.assign({}, v, {
+    name: v.name || uebersetze(sprache, "verlauf." + v.id),
+  }));
+}
+
+// And the effects, which carry nothing but an id either (effekte.js).
+function effekteUebersetzt(effekte, sprache) {
+  return effekte.map((e) => Object.assign({}, e, {
+    name: uebersetze(sprache, "effekt." + e.id),
+  }));
+}
+
 // Puts t() and the language into every render and onto req, so routes can
 // reach them too.
 function middleware(req, res, next) {
@@ -83,4 +102,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, uebersetze, sprachen, fuerBrowser, layoutsUebersetzt, KEKS, STANDARD };
+module.exports = { middleware, uebersetze, sprachen, fuerBrowser, layoutsUebersetzt, verlaeufeUebersetzt, effekteUebersetzt, KEKS, STANDARD };

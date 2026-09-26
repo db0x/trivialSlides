@@ -24,6 +24,10 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* Same as the player below: the box is ours and already sized, so the
+     theme's 95% would only leave a strip of it empty. The limit that
+     matters is the next line, which is ours. */
+  max-width: none;
   max-height: 70vh;
   object-fit: contain;
   margin: 0;
@@ -43,15 +47,32 @@
 .reveal .layout-abschnitt h1 { font-size: 2.4em; line-height: 1.1; }
 .reveal .layout-abschnitt .folie-text > p { font-size: 0.7em; opacity: 0.8; }
 
-/* --- Two columns ------------------------------------------------------ */
-/* The body flows in two columns, the heading runs across both. No need to
-   split the text -- in the .md the slide body stays a perfectly ordinary
-   list or paragraph. */
-.reveal .layout-spalten .folie-text {
+/* --- Columns ---------------------------------------------------------- */
+/* The body flows in columns, the heading runs across all of them. No need
+   to split the text -- in the .md the slide body stays a perfectly ordinary
+   list or paragraph, and the same text can be moved between two columns and
+   three by changing the layout alone. */
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text {
   column-count: 2;
   column-gap: 1.2em;
 }
-.reveal .layout-spalten .folie-text h2 {
+/* Three columns on a 960-unit slide leave about a third each. At the
+   theme's own size that is a handful of characters per line, so the type
+   steps down with the column count -- three columns are for short points,
+   which is what the layout's own help text says. */
+.reveal .layout-spalten-drei .folie-text {
+  column-count: 3;
+  /* Wider than the two-column gap, not narrower: the bullets of the next
+     column would otherwise sit right against the longest line of the one
+     before, and three narrow columns need the daylight more than two wide
+     ones do. */
+  column-gap: 1.6em;
+  font-size: 0.85em;
+}
+/* reveal indents lists by a fixed amount, which in a third of a slide is a
+   sizeable part of the column. */
+.reveal .layout-spalten-drei .folie-text :is(ul, ol) { padding-left: 0.8em; }
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text h2 {
   column-span: all;
 }
 /* Two pitfalls at once:
@@ -60,12 +81,12 @@
       would have no effect. Hence back to block here.
    2. The break rule applies to the individual list item, NOT to the list --
       otherwise you would have the same effect all over again. */
-.reveal .layout-spalten .folie-text ul,
-.reveal .layout-spalten .folie-text ol {
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text ul,
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text ol {
   display: block;
   width: 100%;
 }
-.reveal .layout-spalten .folie-text li {
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text li {
   break-inside: avoid;
 }
 
@@ -102,6 +123,58 @@
 .reveal .layout-bild-voll .folie-text h2,
 .reveal .layout-bild-voll .folie-text a { color: #fff; }
 
+/* --- Video ------------------------------------------------------------
+   Heading above, player below. The box keeps the 16:9 of the source and
+   takes what height is left beside the heading, so a long title does not
+   push the player off the slide. */
+.reveal .slides section.layout-video {
+  display: flex !important;
+  flex-direction: column;
+}
+.reveal .layout-video .folie-text { flex: 0 0 auto; }
+.reveal .layout-video .folie-video {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  background: #000;
+  border-radius: 0.2em;
+  overflow: hidden;
+}
+.reveal .layout-video .folie-video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  /* The themes cap every image, video and iframe in a slide at 95% -- a
+     sensible margin for a picture dropped straight into a slide, and wrong
+     for something in a box that is already the right size: the player would
+     sit in the top left corner of its own black box with a tenth of it
+     showing around the right and bottom. */
+  max-width: none;
+  max-height: none;
+}
+/* On screen the address is behind the player; it is there for the case
+   where the player cannot be. */
+.reveal .layout-video .video-adresse {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 40%;
+  text-align: center;
+  font-size: 0.5em;
+  word-break: break-all;
+  color: #fff;
+}
+/* On paper an iframe shows nothing at all -- so the handout gets the black
+   box with the address in it, which is the one thing a reader can act on. */
+@media print {
+  .reveal .layout-video .folie-video iframe { display: none; }
+}
+
 /* --- A text colour of the slide's own ----------------------------------
    The colour sits on the <section> as an inline style (see render.js), but
    reveal's themes colour every heading, every cite and every table cell
@@ -113,6 +186,217 @@
 .reveal .slides section[data-text-color] :is(h1, h2, h3, h4, h5, h6,
 p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
   color: inherit;
+}
+
+/* --- Background effects ------------------------------------------------
+   An animated background. It does not sit on the <section> -- that box is
+   only as tall as its text -- but on the background element reveal.js
+   builds for every slide, where js/folien-effekte.js hangs the layers and
+   carries the name across. So the effect spans the whole slide, lies behind
+   everything, rides along with the transitions and survives into the print
+   view.
+
+   Waves, taken from a CodePen and reproduced rather than adapted: its own
+   blue ground, three near-black discs far larger than the slide, hanging in
+   from above so that only the bottom of their rim is on show, each turning
+   at its own speed. A turning rim rises and falls, which is the movement of
+   water, and three at different speeds are what keep it from reading as one
+   turning disc. The radii are deliberately just off round (45%, 40%,
+   42.5%): a circle turning on its own centre would not move at all.
+
+   It brings its background with it, so unlike a gradient it covers the
+   slide's own colour. That is part of the picture, not an oversight.
+
+   Only print draws it differently, for the reason given further down. */
+.reveal .slide-background[data-background-effect] > .folie-effekt {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.reveal .slide-background[data-background-effect="waves"] > .folie-effekt {
+  background: #4973ff;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  /* A proportion of the slide, never a pixel count: the background element
+     is as large as the WINDOW, so a fixed size would put the rim halfway up
+     a wide screen and below the edge in the editor's small preview. The pen
+     measures its discs in 325vh, against a section that fills the window --
+     here the background element plays that part, so the number is the
+     pen's, read against the slide. */
+  height: 325%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -75%) rotate(0deg);
+  animation: folie-waves 5s linear infinite;
+}
+.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(1) {
+  border-radius: 45%;
+  background: rgba(20, 20, 20, 1);
+}
+.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(2) {
+  border-radius: 40%;
+  background: rgba(20, 20, 20, 0.5);
+  animation-duration: 10s;
+}
+.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(3) {
+  border-radius: 42.5%;
+  background: rgba(20, 20, 20, 0.5);
+  animation-duration: 15s;
+}
+
+@keyframes folie-waves {
+  to { transform: translate(-50%, -75%) rotate(360deg); }
+}
+
+/* --- Stars -------------------------------------------------------------
+   Three star fields drifting upwards at three speeds -- near stars quickly,
+   far ones slowly, which is what makes the sky look deep. A field is a
+   single pixel wearing a few hundred box-shadows; js/folien-effekte.js
+   scatters them, because positions have to be drawn from somewhere and this
+   project has no build step to do it (the pen this comes from has its SCSS
+   compiler roll them).
+
+   Each layer repeats itself one field-height below (::after), so at the
+   moment the first field has travelled its own height off the top, the copy
+   stands exactly where it began: the sky loops without a seam. Which is why
+   the travel and the offset are the SAME number and come from one variable.
+
+   Like the waves this effect brings its own ground -- a night sky is not a
+   tint on someone else's colour. */
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt {
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+}
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent;
+  box-shadow: var(--sterne-feld);
+  animation: folie-starfield 50s linear infinite;
+}
+/* The copy below. inherit rather than a repeat of the sizes: its only job
+   is to be the same field one height further down. */
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span::after {
+  content: "";
+  position: absolute;
+  top: var(--sterne-hoehe);
+  left: 0;
+  width: inherit;
+  height: inherit;
+  background: transparent;
+  box-shadow: var(--sterne-feld);
+}
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(1) {
+  width: 1px;
+  height: 1px;
+}
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(2) {
+  width: 2px;
+  height: 2px;
+  animation-duration: 100s;
+}
+.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(3) {
+  width: 3px;
+  height: 3px;
+  animation-duration: 150s;
+}
+
+@keyframes folie-starfield {
+  to { transform: translateY(calc(-1 * var(--sterne-hoehe))); }
+}
+
+/* --- Blobs -------------------------------------------------------------
+   Four shapes on a yellow ground, turning about two points -- one pair in
+   the upper left, one in the lower right, each of the pair at its own speed
+   so they drift apart and together again instead of moving as one.
+
+   The drawing is an inline SVG (js/folien-effekte.js), not a background
+   image: an SVG used as a background does not animate. The path data,
+   colours and class names are the pen's; what turns how fast is here.
+
+   The viewBox is deliberately smaller than the shapes, with "slice": the
+   blobs are meant to hang over the edges of the slide, not to sit in it. */
+.reveal .slide-background[data-background-effect="blobs"] > .folie-effekt {
+  background: #fee440;
+}
+.reveal .slide-background[data-background-effect="blobs"] > .folie-effekt > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* The origins are in the SVG's own units, which is why they are plain
+   numbers and not percentages: they name a point in the drawing. */
+.reveal .slide-background[data-background-effect="blobs"] .out-top {
+  transform-origin: 13px 25px;
+  animation: folie-blobs 20s linear infinite;
+}
+.reveal .slide-background[data-background-effect="blobs"] .in-top {
+  transform-origin: 13px 25px;
+  animation: folie-blobs 10s linear infinite;
+}
+.reveal .slide-background[data-background-effect="blobs"] .out-bottom {
+  transform-origin: 84px 93px;
+  animation: folie-blobs 25s linear infinite;
+}
+.reveal .slide-background[data-background-effect="blobs"] .in-bottom {
+  transform-origin: 84px 93px;
+  animation: folie-blobs 15s linear infinite;
+}
+
+@keyframes folie-blobs {
+  to { transform: rotate(360deg); }
+}
+
+/* Someone who has asked their system for less movement gets the picture
+   without the motion: waves, stars and blobs stay, they just stand still. A
+   background is not worth a headache. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slide-background[data-background-effect] > .folie-effekt :is(span, path) {
+    animation: none;
+  }
+}
+
+/* On paper the waves are a still anyway -- and they have to be drawn a
+   different way to get there. The print renderer drops both a rounding and
+   a gradient once the element is this much larger than the page and carries
+   a transform; what comes out is a straight band across the handout. So for
+   print each layer stays inside the page, keeps its colour and loses the
+   transform: the same picture, arrived at by the one route that survives
+   the trip to paper. The ellipses hang in from above, exactly as the
+   turning discs do on screen. */
+@media print {
+  /* Whatever the effect, paper gets its first frame rather than whichever
+     one the browser happened to be on. */
+  .reveal .slide-background[data-background-effect] > .folie-effekt :is(span, path) {
+    animation: none;
+  }
+  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: none;
+    animation: none;
+  }
+  /* The rounding sits on the rules below on screen, so it has to be undone
+     on those same rules -- a less specific one would not reach it. */
+  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(1) {
+    border-radius: 0;
+    background: radial-gradient(ellipse 150% 88% at 50% 1%, rgba(20, 20, 20, 1) 0 99.6%, transparent 100%);
+  }
+  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(2) {
+    border-radius: 0;
+    background: radial-gradient(ellipse 150% 80% at 38% -2%, rgba(20, 20, 20, 0.5) 0 99.6%, transparent 100%);
+  }
+  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(3) {
+    border-radius: 0;
+    background: radial-gradient(ellipse 150% 84% at 62% 4%, rgba(20, 20, 20, 0.5) 0 99.6%, transparent 100%);
+  }
 }
 
 /* --- Tables ------------------------------------------------------------
@@ -143,8 +427,29 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
 .reveal .folie-text table:has(tbody tr:nth-child(11)) { font-size: 0.42em; }
 .reveal .folie-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
 
-/* Two columns plus a table is a tight fit already -- one notch smaller. */
-.reveal .layout-spalten .folie-text table { font-size: 0.55em; }
+/* Columns plus a table are a tight fit already -- one notch smaller. */
+.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text table { font-size: 0.55em; }
+
+/* --- Code --------------------------------------------------------------
+   The colours come from the highlighter's own stylesheet (reveal.js'
+   monokai). What is left here is the box around them: reveal gives the
+   block five pixels of padding, which leaves the first character sitting on
+   the edge. */
+.reveal .folie-text pre {
+  width: 100%;
+  margin: 0.4em 0;
+  box-shadow: none;
+}
+.reveal .folie-text pre code {
+  padding: 0.6em 0.8em;
+  border-radius: 0.2em;
+  max-height: none;
+  /* A light scheme on a light theme would otherwise be a block with no
+     edges -- a hairline in the current text colour draws it either way
+     without arguing with the scheme's own colours. */
+  border: 1px solid currentColor;
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
+}
 
 /* --- Slides carrying a lot -------------------------------------------
    A slide is a fixed box. Where tables are measured by their rows and
@@ -238,7 +543,7 @@ body.ist-vorschau .reveal .fragment {
   }
   .reveal .layout-bild-links .folie-bild,
   .reveal .layout-bild-links .folie-text { grid-column: 1; grid-row: auto; }
-  .reveal .layout-spalten .folie-text { column-count: 1; }
+  .reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text { column-count: 1; }
 }
 
 /* --- Print view (PDF export) ------------------------------------------
