@@ -5,7 +5,7 @@
 // Vertical slides (reveal.js stacks) are drawn indented. Whether a slide
 // hangs vertically can be toggled with a button on the card; that is the
 // only place where this concept surfaces at all.
-import { $$ } from "./base.js";
+import { $$, t } from "./base.js";
 
 export function zeichneListe(ol, deck, aktiv, layoutsById) {
   ol.innerHTML = "";
@@ -23,7 +23,7 @@ export function zeichneListe(ol, deck, aktiv, layoutsById) {
     text.className = "karte-text";
     var titel = document.createElement("span");
     titel.className = "karte-titel";
-    titel.textContent = folie.titel || vorschautext(folie) || "(ohne Titel)";
+    titel.textContent = folie.titel || vorschautext(folie) || t("karte.ohneTitel");
     var art = document.createElement("span");
     art.className = "karte-art";
     art.textContent = (layoutsById[folie.layout] || {}).label || folie.layout;
@@ -32,12 +32,16 @@ export function zeichneListe(ol, deck, aktiv, layoutsById) {
 
     var knoepfe = document.createElement("span");
     knoepfe.className = "karte-knoepfe";
-    knoepfe.appendChild(kartenKnopf("hoch", "↑", "Nach oben"));
-    knoepfe.appendChild(kartenKnopf("runter", "↓", "Nach unten"));
-    knoepfe.appendChild(kartenKnopf("einruecken", folie.vertikal ? "↰" : "↳",
-      folie.vertikal ? "Wieder eigenstaendig machen" : "Unter die Folie darueber haengen"));
-    knoepfe.appendChild(kartenKnopf("doppeln", "⧉", "Duplizieren"));
-    knoepfe.appendChild(kartenKnopf("loeschen", "×", "Loeschen"));
+    knoepfe.appendChild(kartenKnopf("hoch", t("karte.hoch")));
+    knoepfe.appendChild(kartenKnopf("runter", t("karte.runter")));
+    // One icon, two directions: a slide that already hangs vertically is
+    // detached again by the same button, which is why it shows as engaged
+    // rather than carrying a second icon nobody would tell apart.
+    knoepfe.appendChild(kartenKnopf("einruecken",
+      folie.vertikal ? t("karte.ausruecken") : t("karte.einruecken"),
+      folie.vertikal));
+    knoepfe.appendChild(kartenKnopf("doppeln", t("karte.doppeln")));
+    knoepfe.appendChild(kartenKnopf("loeschen", t("karte.loeschen")));
 
     li.appendChild(nummer);
     li.appendChild(text);
@@ -46,14 +50,17 @@ export function zeichneListe(ol, deck, aktiv, layoutsById) {
   });
 }
 
-function kartenKnopf(aktion, zeichen, titel) {
+// The icon itself comes from the stylesheet, picked by data-aktion -- so
+// the button carries no text at all and title/aria-label are its only
+// readable name.
+function kartenKnopf(aktion, titel, aktiv) {
   var b = document.createElement("button");
   b.type = "button";
-  b.className = "karte-knopf";
+  b.className = "karte-knopf" + (aktiv ? " ist-aktiv" : "");
   b.dataset.aktion = aktion;
-  b.title = titel;
+  b.dataset.tip = titel;
   b.setAttribute("aria-label", titel);
-  b.textContent = zeichen;
+  if (aktiv) b.setAttribute("aria-pressed", "true");
   return b;
 }
 

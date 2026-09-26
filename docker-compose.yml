@@ -6,12 +6,25 @@ services:
     container_name: trivialSlides
     build: ./backend
     restart: unless-stopped
+    # Runs under your own account, not as root. Without this the container
+    # writes as root, and a bind mount hands that straight through to the
+    # host: the decks then belong to root and cannot be edited, backed up
+    # or checked out again without sudo. The numbers are what `id -u` and
+    # `id -g` report; 1000:1000 is the first account on most systems.
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
     environment:
       # Sub-path behind a reverse proxy, e.g. /folien. Empty = the app sits
       # at the root. Same meaning as BASE_PATH in Relay -- once built in
       # there, Relay supplies this value.
       - BASE_PATH=${BASE_PATH:-}
+      # Public address including BASE_PATH. Only needed so that link preview
+      # cards point at a host that is actually reachable from outside.
+      - PUBLIC_URL=${PUBLIC_URL:-}
       - NODE_ENV=production
+      # The account above has no entry of its own in the image, so its home
+      # would be a directory it cannot write to. Chromium wants a writable
+      # one for the PDF export.
+      - HOME=/tmp
       # A fixed path INSIDE the container. Where the decks live on the host
       # is what DECKS_HOST below says -- the two are named apart on purpose,
       # otherwise the same variable would mean two different places.

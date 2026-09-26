@@ -1,14 +1,14 @@
 ---
 titel: Example
 theme: white
-transition: slide
+transition: concave
 ---
 
 <!-- .slide: data-layout="titel" -->
 
 # Example
 
-Every slide layout, once
+Every **slide** ~~layout~~, *once*
 
 ---
 
@@ -49,7 +49,9 @@ to get here.
 - Jupiter
 - Saturn
 - Uranus
+<!-- .element: class="fragment" -->
 - Neptune
+<!-- .element: class="fragment" -->
 
 ---
 
@@ -71,7 +73,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="landscape.svg" -->
+<!-- .slide: data-layout="bild-voll" data-image="1.svg" -->
 
 ## Full-bleed image
 

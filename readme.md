@@ -123,15 +123,18 @@ Thomas Schwerdt
 same convention as reveal-md and HedgeDoc.
 
 The slide attributes use reveal.js' own comment syntax. Any other reveal.js
-understands `data-background-color` directly; `data-layout` and `data-image`
-are this project's addition and do no harm there. A plain text slide gets no
-attribute line at all, so that a hand-written file is still recognisable
-after its first save.
+understands `data-background-color` directly; `data-layout`, `data-image`
+and `data-text-color` are this project's addition and do no harm there. A
+plain text slide gets no attribute line at all, so that a hand-written file
+is still recognisable after its first save.
 
-The one deviation from stock reveal.js: for *full-bleed image* the picture
-sits in the file as `data-image` and only becomes `data-background-image`
-when rendered. Another reveal.js therefore shows that one slide without its
-background image.
+Two things behave differently under a stock reveal.js. For *full-bleed
+image* the picture sits in the file as `data-image` and only becomes
+`data-background-image` when rendered, so that slide comes out without its
+background image. And `data-text-color` is ours alone -- reveal has no text
+colour of its own, so elsewhere the slide simply keeps the theme's colour.
+Links keep the theme's colour here too, deliberately: their colour is what
+makes them recognisable as links.
 
 ## When the text field is not enough
 
@@ -210,10 +213,11 @@ moving it over is a copy rather than a rewrite. The whole editor hangs off
 4. `nurEigeneSeite` in `routes/decks.js` and `schreibKopf()` in
    `public/js/editor/base.js` fall away — Relay's `csrfSchutz` and its
    `base.js` take over. That is why both sit in exactly one place.
-5. Copy reveal.js out of `node_modules` into `public/vendor/reveal/`, the
-   way the other third-party libraries live there, and adjust the paths in
-   `app.js`. `dokument.js` reads reveal.js and the themes from disk as
-   well -- the path is in one place there, as `REVEAL_DIR`.
+5. Copy reveal.js and overlayscrollbars out of `node_modules` into
+   `public/vendor/`, the way the other third-party libraries live there,
+   and adjust the paths in `app.js` and in `js/scrollbars.js`.
+   `dokument.js` reads reveal.js and the themes from disk as well -- the
+   path is in one place there, as `REVEAL_DIR`.
 6. The Relay server needs a Chromium, otherwise publishing is reduced to
    HTML and Markdown. Everything else keeps working.
 
@@ -235,7 +239,8 @@ moving it over is a copy rather than a rewrite. The whole editor hangs off
 copyright notice has to come along.
 
 Every dependency is permissively licensed as well (MIT, ISC, Apache-2.0,
-BSD-3-Clause), none of them demands copyleft. reveal.js itself is MIT too
-and is only served here as a static file. For the planned move into Relay
+BSD-3-Clause), none of them demands copyleft. reveal.js and
+OverlayScrollbars are both MIT too and are only served here as static
+files. For the planned move into Relay
 that is the right direction: MIT code may travel into an AGPL project, the
 other way round it could not.

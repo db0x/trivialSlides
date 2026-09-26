@@ -1,16 +1,18 @@
 <!doctype html>
-<html lang="de">
+<html lang="<%= t('html.lang') %>">
 <head>
 <%- include("partials/head", { titel: deck.titel || "Vortrag" }) %>
+<!-- Only the editor picks colours, so the overview is spared this. -->
+<link rel="stylesheet" href="<%= BASE %>/coloris/dist/coloris.css">
 </head>
 <body class="seite-editor">
 
 <header class="kopf">
-  <a class="marke" href="<%= BASE %>/" title="Alle Vortraege">trivialSlides</a>
+  <a class="marke" href="<%= BASE %>/" data-tip="<%= t('kopf.alleVortraege') %>"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32">trivialSlides</a>
 
-  <input id="deck-titel" class="deck-titel-feld" value="<%= deck.titel %>" maxlength="120" aria-label="Titel des Vortrags">
+  <input id="deck-titel" class="deck-titel-feld" value="<%= deck.titel %>" maxlength="120" aria-label="<%= t('kopf.titelFeld') %>">
 
-  <label class="kopf-feld">Aussehen
+  <label class="kopf-feld"><%= t('kopf.aussehen') %>
     <select id="deck-theme">
       <% themes.forEach(function (t) { %>
         <option value="<%= t %>" <%= t === deck.theme ? "selected" : "" %>><%= t %></option>
@@ -18,7 +20,7 @@
     </select>
   </label>
 
-  <label class="kopf-feld">Uebergang
+  <label class="kopf-feld"><%= t('kopf.uebergang') %>
     <select id="deck-transition">
       <% transitions.forEach(function (t) { %>
         <option value="<%= t %>" <%= t === deck.transition ? "selected" : "" %>><%= t %></option>
@@ -26,35 +28,42 @@
     </select>
   </label>
 
-  <span id="speicherstand" class="speicherstand" role="status">Gespeichert</span>
+  <span id="speicherstand" class="speicherstand" role="status"></span>
 
-  <a class="knopf knopf-haupt" href="<%= BASE %>/d/<%= slug %>/praesentation" target="_blank" rel="noopener">Vorfuehren</a>
+  <a class="knopf knopf-icon kopf-vorfuehren" data-tip="<%= t('kopf.vorfuehren') %>" aria-label="<%= t('kopf.vorfuehren') %>"
+     href="<%= BASE %>/d/<%= slug %>/praesentation" target="_blank" rel="noopener"></a>
   <details class="menue">
-    <summary class="knopf">Herunterladen</summary>
+    <summary class="knopf knopf-icon kopf-herunterladen" data-tip="<%= t('kopf.herunterladen') %>" aria-label="<%= t('kopf.herunterladen') %>"></summary>
     <div class="menue-inhalt">
-      <a href="<%= BASE %>/d/<%= slug %>/export.html">Eine HTML-Datei (laeuft ohne alles)</a>
-      <a href="<%= BASE %>/d/<%= slug %>/export.pdf">PDF zum Austeilen (dauert einen Moment)</a>
-      <a href="<%= BASE %>/d/<%= slug %>/vortrag.md">Markdown-Datei</a>
+      <a href="<%= BASE %>/d/<%= slug %>/export.html"><%= t('editor.exportHtml') %></a>
+      <a href="<%= BASE %>/d/<%= slug %>/export.pdf"><%= t('editor.exportPdf') %></a>
+      <a href="<%= BASE %>/d/<%= slug %>/vortrag.md"><%= t('editor.exportMd') %></a>
     </div>
   </details>
+  <button id="sprache-umschalter" class="knopf knopf-still sprache" type="button"
+      data-ziel="<%= SPRACHE === 'de' ? 'en' : 'de' %>"
+      data-tip="<%= t('kopf.spracheWechseln') %>"
+      aria-label="<%= t('kopf.spracheWechseln') %>"><%= SPRACHE === 'de' ? 'en' : 'de' %></button>
+  <button id="theme-umschalter" class="knopf knopf-still knopf-icon" type="button"></button>
 </header>
 
 <main class="editor">
 
   <!-- Left: the slides as a list. Reorder by dragging. -->
   <aside class="spalte folienliste">
+    <span class="spalten-kopf"><%= t('spalte.folien') %></span>
     <ol id="folienliste" class="folien"></ol>
-    <button id="folie-neu" class="knopf knopf-breit" type="button">+ Folie hinzufuegen</button>
+    <button id="folie-neu" class="knopf knopf-breit" type="button"><%= t('editor.folieNeu') %></button>
   </aside>
 
   <!-- Middle: the form for the selected slide. Nowhere here is there any
        Markdown syntax -- that is the whole point of the exercise. -->
   <section class="spalte formular">
     <fieldset class="feldgruppe">
-      <legend>Aufbau der Folie</legend>
+      <legend><%= t('editor.aufbau') %></legend>
       <div id="layout-kacheln" class="layout-kacheln">
         <% layouts.forEach(function (l) { %>
-          <button type="button" class="layout-kachel" data-layout="<%= l.id %>" title="<%= l.hilfe %>">
+          <button type="button" class="layout-kachel" data-layout="<%= l.id %>" data-tip="<%= l.hilfe %>">
             <span class="mini mini-<%= l.id %>" aria-hidden="true"></span>
             <span class="layout-name"><%= l.label %></span>
           </button>
@@ -64,87 +73,98 @@
     </fieldset>
 
     <fieldset class="feldgruppe">
-      <legend>Inhalt</legend>
+      <legend><%= t('editor.inhalt') %></legend>
 
       <label class="feld">
-        <span class="feld-name">Ueberschrift</span>
-        <input id="folie-titel" maxlength="200" placeholder="Worum geht es auf dieser Folie?">
+        <span class="feld-name"><%= t('editor.ueberschrift') %></span>
+        <input id="folie-titel" maxlength="200" placeholder="<%= t('editor.ueberschriftPlatzhalter') %>">
       </label>
 
       <div class="feld">
-        <span class="feld-name">Text</span>
-        <div class="werkzeugleiste" role="toolbar" aria-label="Textformatierung">
-          <button type="button" data-befehl="bold" title="Fett (Strg+B)"><b>F</b></button>
-          <button type="button" data-befehl="italic" title="Kursiv (Strg+I)"><i>K</i></button>
-          <button type="button" data-befehl="insertUnorderedList" title="Aufzaehlung">&bull; Liste</button>
-          <button type="button" data-befehl="insertOrderedList" title="Nummerierte Liste">1. Liste</button>
-          <button type="button" data-befehl="link" title="Link einfuegen">Link</button>
+        <span class="feld-name"><%= t('editor.text') %></span>
+        <div class="werkzeugleiste" role="toolbar" aria-label="<%= t('editor.werkzeugleiste') %>">
+          <button type="button" class="werkzeug-icon" data-befehl="bold" data-tip="<%= t('werkzeug.fettTip') %>" aria-label="<%= t('werkzeug.fett') %>"></button>
+          <button type="button" class="werkzeug-icon" data-befehl="italic" data-tip="<%= t('werkzeug.kursivTip') %>" aria-label="<%= t('werkzeug.kursiv') %>"></button>
+          <button type="button" class="werkzeug-icon" data-befehl="strikeThrough" data-tip="<%= t('werkzeug.durchgestrichen') %>" aria-label="<%= t('werkzeug.durchgestrichen') %>"></button>
+          <button type="button" class="werkzeug-icon" data-befehl="insertUnorderedList" data-tip="<%= t('werkzeug.aufzaehlung') %>" aria-label="<%= t('werkzeug.aufzaehlung') %>"></button>
+          <button type="button" class="werkzeug-icon" data-befehl="insertOrderedList" data-tip="<%= t('werkzeug.nummeriert') %>" aria-label="<%= t('werkzeug.nummeriert') %>"></button>
+          <button type="button" class="werkzeug-icon" data-befehl="link" data-tip="<%= t('werkzeug.link') %>" aria-label="<%= t('werkzeug.link') %>"></button>
           <span class="leiste-trenner"></span>
-          <button type="button" data-befehl="fragment" title="Diesen Absatz erst auf Klick einblenden">Nacheinander einblenden</button>
+          <button type="button" class="werkzeug-icon" data-befehl="fragment" data-tip="<%= t('werkzeug.fragmentTip') %>" aria-label="<%= t('werkzeug.fragment') %>"></button>
           <span class="leiste-trenner"></span>
-          <button type="button" id="quelltext-umschalten" title="Zeigt die Folie als Markdown">Quelltext</button>
+          <button type="button" id="quelltext-umschalten" class="werkzeug-icon" data-tip="<%= t('werkzeug.quelltextTip') %>" aria-label="<%= t('werkzeug.quelltext') %>"></button>
         </div>
-        <div id="folie-inhalt" class="inhalt-feld" contenteditable="true" spellcheck="true"
-             data-platzhalter="Schreib hier den Text der Folie."></div>
-        <textarea id="folie-quelltext" class="quelltext-feld" hidden spellcheck="false"></textarea>
+        <!-- The frame, not the field, is what scrolls: OverlayScrollbars
+             builds its own DOM inside whatever it is attached to, and the
+             editor reads the content field's innerHTML back as Markdown. -->
+        <div id="inhalt-rahmen" class="feld-rahmen">
+          <div id="folie-inhalt" class="inhalt-feld" contenteditable="true" spellcheck="true"
+               data-platzhalter="<%= t('editor.textPlatzhalter') %>"></div>
+        </div>
+        <div id="quelltext-rahmen" class="feld-rahmen" hidden>
+          <textarea id="folie-quelltext" class="quelltext-feld" spellcheck="false"></textarea>
+        </div>
         <p id="quelltext-hinweis" class="hilfe" hidden>
-          Diese Folie enthaelt Markdown, das die Formatierknoepfe nicht abbilden koennen
-          (z.B. eine Tabelle oder Code). Sie wird deshalb als Quelltext bearbeitet.
+          <%= t('editor.quelltextHinweis') %>
         </p>
       </div>
 
       <div class="feld feld-bild" hidden>
-        <span class="feld-name">Bild</span>
+        <span class="feld-name"><%= t('editor.bild') %></span>
         <div class="bild-zeile">
           <img id="bild-vorschau" class="bild-vorschau" alt="" hidden>
           <div class="bild-knoepfe">
-            <button type="button" id="bild-waehlen" class="knopf">Bild waehlen</button>
-            <button type="button" id="bild-entfernen" class="knopf knopf-still" hidden>Entfernen</button>
+            <button type="button" id="bild-waehlen" class="knopf"><%= t('editor.bildWaehlen') %></button>
+            <button type="button" id="bild-entfernen" class="knopf knopf-still" hidden><%= t('editor.bildEntfernen') %></button>
           </div>
         </div>
       </div>
 
       <label class="feld feld-quelle" hidden>
-        <span class="feld-name">Quelle</span>
-        <input id="folie-quelle" maxlength="200" placeholder="Wer hat das gesagt?">
+        <span class="feld-name"><%= t('editor.quelle') %></span>
+        <input id="folie-quelle" maxlength="200" placeholder="<%= t('editor.quellePlatzhalter') %>">
       </label>
     </fieldset>
 
     <fieldset class="feldgruppe">
-      <legend>Hintergrund dieser Folie</legend>
-      <div id="hintergrund-farben" class="farbwahl">
-        <button type="button" class="farbe farbe-standard" data-farbe="" title="Wie der Rest des Vortrags"></button>
+      <legend><%= t('editor.farben') %></legend>
+      <div class="farbzeile">
+        <label class="farbwahl">
+          <input id="hintergrund-eigen" class="farbfeld" type="text" value="" aria-label="<%= t('editor.hintergrund') %>">
+          <span><%= t('editor.hintergrund') %></span>
+        </label>
+        <label class="farbwahl">
+          <input id="textfarbe-eigen" class="farbfeld" type="text" value="" aria-label="<%= t('editor.textfarbe') %>">
+          <span><%= t('editor.textfarbe') %></span>
+        </label>
       </div>
-      <label class="feld feld-schmal">
-        <span class="feld-name">Eigene Farbe</span>
-        <input id="hintergrund-eigen" type="color" value="#ffffff">
-      </label>
     </fieldset>
   </section>
 
   <!-- Right: real reveal.js, not a replica. What stands here is what
        stands on the wall later. -->
   <aside class="spalte vorschau">
+    <span class="spalten-kopf"><%= t('spalte.vorschau') %></span>
     <div class="vorschau-rahmen">
-      <iframe id="vorschau" title="Vorschau" src="<%= BASE %>/d/<%= slug %>/vorschau"></iframe>
+      <iframe id="vorschau" title="<%= t('spalte.vorschau') %>" src="<%= BASE %>/d/<%= slug %>/vorschau"></iframe>
     </div>
-    <p class="hilfe vorschau-hilfe">Das ist die Folie, wie sie an der Wand aussieht.</p>
+    <p class="hilfe vorschau-hilfe"><%= t('editor.vorschauHinweis') %></p>
   </aside>
 </main>
 
 <!-- Image picker -->
 <dialog id="bild-dialog" class="dialog">
   <form method="dialog" class="dialog-kopf">
-    <h2>Bild waehlen</h2>
-    <button class="knopf knopf-still" value="abbruch">Schliessen</button>
+    <h2><%= t('editor.bildWaehlen') %></h2>
+    <button class="knopf knopf-still" value="abbruch"><%= t('dialog.schliessen') %></button>
   </form>
   <div class="dialog-inhalt">
     <label class="knopf knopf-haupt hochladen">
-      Bild hochladen
+      <%= t('editor.bildHochladen') %>
       <input type="file" id="bild-datei" accept="image/*" multiple hidden>
     </label>
     <div id="bild-galerie" class="bild-galerie"></div>
-    <p id="bild-leer" class="hilfe" hidden>Noch keine Bilder in diesem Vortrag.</p>
+    <p id="bild-leer" class="hilfe" hidden><%= t('editor.bildKeine') %></p>
   </div>
 </dialog>
 

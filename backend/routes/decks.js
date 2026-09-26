@@ -11,6 +11,7 @@ const pdf = require("../pdf");
 const layouts = require("../layouts");
 const render = require("../render");
 const storage = require("../storage");
+const i18n = require("../i18n");
 const { BASE, MAX_UPLOAD_MB } = require("../config");
 
 const router = express.Router();
@@ -27,14 +28,14 @@ const upload = multer({
 // CORS grant -- that is the protection against forged calls here. Inside
 // Relay its csrf.js takes over this job instead.
 function nurEigeneSeite(req, res, next) {
-  if (req.get("X-Folien") !== "1") return res.status(403).json({ fehler: "Ungueltiger Aufruf" });
+  if (req.get("X-Folien") !== "1") return res.status(403).json({ fehler: req.t("server.ungueltig") });
   next();
 }
 
 // Loads the deck belonging to the URL and puts it on req.deck.
 function deckLaden(req, res, next) {
   const modell = storage.lade(req.params.slug);
-  if (!modell) return res.status(404).send("Diesen Vortrag gibt es nicht.");
+  if (!modell) return res.status(404).send(req.t("server.deckFehlt"));
   req.slug = req.params.slug;
   req.deck = modell;
   next();
@@ -46,13 +47,48 @@ function bildBasis(slug) {
   return `${BASE}/d/${slug}/bilder/`;
 }
 
+// The web app manifest, which lets the editor be placed on a home screen
+// and started in a window of its own. Rendered rather than served as a
+// file, because BASE_PATH has to appear in the paths inside it.
+//
+// One SVG for every size, declared as sizes: "any". The project keeps no
+// raster images, so there is nothing to offer a browser that wants PNG --
+// it falls back to its own placeholder then.
+router.get("/manifest.webmanifest", (req, res) => {
+  res.type("application/manifest+json").json({
+    name: "trivialSlides",
+    short_name: "trivialSlides",
+    description: "A presentation editor on reveal.js that stores nothing but Markdown.",
+    start_url: BASE + "/",
+    scope: BASE + "/",
+    display: "standalone",
+    background_color: "#1c1f23",
+    theme_color: "#1c1f23",
+    icons: [
+      { src: BASE + "/static/trivialSlides.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+    ],
+  });
+});
+
+// Switching the language. A cookie rather than a stored setting in the
+// browser, because the server renders most of the text and only a cookie
+// reaches it. A year is long enough that nobody has to choose twice, and
+// SameSite=Lax keeps it out of requests coming from elsewhere.
+router.post("/sprache/:code", (req, res) => {
+  const code = String(req.params.code || "");
+  if (!i18n.sprachen().includes(code)) return res.status(400).end();
+  res.setHeader("Set-Cookie",
+    `${i18n.KEKS}=${code}; Path=${BASE || "/"}; Max-Age=31536000; SameSite=Lax`);
+  res.json({ ok: true, sprache: code });
+});
+
 // --- Overview ----------------------------------------------------------
 router.get("/", (req, res) => {
   res.render("index", { decks: storage.liste() });
 });
 
 router.post("/neu", (req, res) => {
-  const slug = storage.erstelle(req.body.titel);
+  const slug = storage.erstelle(req.body.titel || req.t("server.neuerVortrag"));
   res.redirect(`${BASE}/d/${slug}`);
 });
 
@@ -61,7 +97,7 @@ router.get("/d/:slug", deckLaden, (req, res) => {
   res.render("editor", {
     slug: req.slug,
     deck: req.deck,
-    layouts: layouts.LAYOUTS,
+    layouts: i18n.layoutsUebersetzt(layouts.LAYOUTS, req.sprache),
     themes: deck.THEMES,
     transitions: deck.TRANSITIONS,
     bilder: storage.bilder(req.slug),
@@ -106,10 +142,35 @@ router.get("/d/:slug/praesentation", deckLaden, (req, res) => {
   });
 });
 
+// A standalone SVG needs its namespace, or no browser will draw it -- it
+// arrives, it is served, and the slide stays empty. Several drawing
+// programs leave it out when exporting a fragment rather than a document.
+// The file is otherwise sound, so it is repaired here rather than refused;
+// adding the namespace to a root element that has none changes nothing
+// about the picture.
+//
+// A .svg whose content is not an SVG at all is a different matter and is
+// dropped: storing it would only produce the same empty slide later.
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function svgGeradeziehen(puffer) {
+  const text = puffer.toString("utf8");
+  const auf = text.match(/<svg\b[^>]*>/i);
+  if (!auf) return null;
+  if (/\sxmlns\s*=/i.test(auf[0])) return puffer;
+  const repariert = auf[0].replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
+  return Buffer.from(text.replace(auf[0], repariert), "utf8");
+}
+
 // --- Images --------------------------------------------------------------
 router.get("/d/:slug/bilder/:name", (req, res) => {
   const p = storage.bildPfad(req.params.slug, req.params.name);
   if (!p || !fs.existsSync(p)) return res.status(404).end();
+  // An SVG is a document, and a document can carry a <script>. As a
+  // picture that script never runs, but opening the address directly
+  // would run it in this app's own origin. The sandbox forbids that while
+  // leaving the drawing untouched.
+  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
   res.sendFile(p, { maxAge: "1h" });
 });
 
@@ -128,8 +189,13 @@ router.post("/d/:slug/bilder", nurEigeneSeite, deckLaden, upload.array("bild", 2
       name = `${basis}-${Date.now().toString(36)}${endung}`;
       ziel = storage.bildPfad(req.slug, name);
     }
+    let daten = f.buffer;
+    if (endung === ".svg") {
+      daten = svgGeradeziehen(f.buffer);
+      if (!daten) continue;   // called .svg, is not one
+    }
     fs.mkdirSync(path.dirname(ziel), { recursive: true });
-    fs.writeFileSync(ziel, f.buffer);
+    fs.writeFileSync(ziel, daten);
     namen.push(name);
   }
   res.json({ ok: true, neu: namen, bilder: storage.bilder(req.slug) });
@@ -175,12 +241,10 @@ router.get("/d/:slug/export.pdf", deckLaden, async (req, res) => {
     const fehlt = err && err.code === "KEIN_BROWSER";
     res.status(fehlt ? 503 : 500).type("html").send(`<!doctype html>
 <meta charset="utf-8">
-<title>PDF nicht moeglich</title>
-<p>${fehlt
-  ? "Auf dem Server steht kein Browser, mit dem sich ein PDF erzeugen laesst. Chromium oder Chrome installieren (im Container macht das das Dockerfile), oder den Pfad in <code>BROWSER_PATH</code> setzen."
-  : "Das PDF liess sich nicht erzeugen. Die Einzelheiten stehen im Server-Log."}</p>
-<p>Bis dahin geht es auch von Hand: <a href="${BASE}/d/${req.slug}/praesentation?print-pdf">die Folien im Druckformat oeffnen</a> und im Druckdialog des Browsers &bdquo;Als PDF speichern&ldquo; waehlen.</p>
-<p><a href="${BASE}/d/${req.slug}">Zurueck zum Vortrag</a></p>
+<title>${req.t("server.pdfTitel")}</title>
+<p>${fehlt ? req.t("server.pdfKeinBrowser") : req.t("server.pdfFehler")}</p>
+<p>${req.t("server.pdfVonHand", { url: `${BASE}/d/${req.slug}/praesentation?print-pdf` })}</p>
+<p><a href="${BASE}/d/${req.slug}">${req.t("server.zurueck")}</a></p>
 `);
   }
 });
