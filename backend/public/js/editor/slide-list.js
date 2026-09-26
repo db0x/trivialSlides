@@ -32,12 +32,16 @@ export function zeichneListe(ol, deck, aktiv, layoutsById) {
 
     var knoepfe = document.createElement("span");
     knoepfe.className = "karte-knoepfe";
-    knoepfe.appendChild(kartenKnopf("hoch", "↑", "Nach oben"));
-    knoepfe.appendChild(kartenKnopf("runter", "↓", "Nach unten"));
-    knoepfe.appendChild(kartenKnopf("einruecken", folie.vertikal ? "↰" : "↳",
-      folie.vertikal ? "Wieder eigenstaendig machen" : "Unter die Folie darueber haengen"));
-    knoepfe.appendChild(kartenKnopf("doppeln", "⧉", "Duplizieren"));
-    knoepfe.appendChild(kartenKnopf("loeschen", "×", "Loeschen"));
+    knoepfe.appendChild(kartenKnopf("hoch", "Nach oben"));
+    knoepfe.appendChild(kartenKnopf("runter", "Nach unten"));
+    // One icon, two directions: a slide that already hangs vertically is
+    // detached again by the same button, which is why it shows as engaged
+    // rather than carrying a second icon nobody would tell apart.
+    knoepfe.appendChild(kartenKnopf("einruecken",
+      folie.vertikal ? "Wieder eigenstaendig machen" : "Unter die Folie darueber haengen",
+      folie.vertikal));
+    knoepfe.appendChild(kartenKnopf("doppeln", "Duplizieren"));
+    knoepfe.appendChild(kartenKnopf("loeschen", "Loeschen"));
 
     li.appendChild(nummer);
     li.appendChild(text);
@@ -46,14 +50,17 @@ export function zeichneListe(ol, deck, aktiv, layoutsById) {
   });
 }
 
-function kartenKnopf(aktion, zeichen, titel) {
+// The icon itself comes from the stylesheet, picked by data-aktion -- so
+// the button carries no text at all and title/aria-label are its only
+// readable name.
+function kartenKnopf(aktion, titel, aktiv) {
   var b = document.createElement("button");
   b.type = "button";
-  b.className = "karte-knopf";
+  b.className = "karte-knopf" + (aktiv ? " ist-aktiv" : "");
   b.dataset.aktion = aktion;
   b.title = titel;
   b.setAttribute("aria-label", titel);
-  b.textContent = zeichen;
+  if (aktiv) b.setAttribute("aria-pressed", "true");
   return b;
 }
 

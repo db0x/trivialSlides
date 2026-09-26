@@ -50,9 +50,9 @@ function bildBasis(slug) {
 // and started in a window of its own. Rendered rather than served as a
 // file, because BASE_PATH has to appear in the paths inside it.
 //
-// The icons say "any maskable": they carry their own opaque background and
-// keep the arrows well inside the edge, so Android may crop them to
-// whatever shape it likes without cutting into the mark.
+// One SVG for every size, declared as sizes: "any". The project keeps no
+// raster images, so there is nothing to offer a browser that wants PNG --
+// it falls back to its own placeholder then.
 router.get("/manifest.webmanifest", (req, res) => {
   res.type("application/manifest+json").json({
     name: "trivialSlides",
@@ -64,8 +64,7 @@ router.get("/manifest.webmanifest", (req, res) => {
     background_color: "#1c1f23",
     theme_color: "#1c1f23",
     icons: [
-      { src: BASE + "/static/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-      { src: BASE + "/static/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+      { src: BASE + "/static/trivialSlides.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],
   });
 });

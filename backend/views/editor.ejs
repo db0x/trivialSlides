@@ -6,7 +6,7 @@
 <body class="seite-editor">
 
 <header class="kopf">
-  <a class="marke" href="<%= BASE %>/" title="Alle Vortraege">trivialSlides</a>
+  <a class="marke" href="<%= BASE %>/" title="Alle Vortraege"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32">trivialSlides</a>
 
   <input id="deck-titel" class="deck-titel-feld" value="<%= deck.titel %>" maxlength="120" aria-label="Titel des Vortrags">
 
@@ -28,21 +28,24 @@
 
   <span id="speicherstand" class="speicherstand" role="status">Gespeichert</span>
 
-  <a class="knopf knopf-haupt" href="<%= BASE %>/d/<%= slug %>/praesentation" target="_blank" rel="noopener">Vorfuehren</a>
+  <a class="knopf knopf-icon kopf-vorfuehren" title="Vorfuehren" aria-label="Vorfuehren"
+     href="<%= BASE %>/d/<%= slug %>/praesentation" target="_blank" rel="noopener"></a>
   <details class="menue">
-    <summary class="knopf">Herunterladen</summary>
+    <summary class="knopf knopf-icon kopf-herunterladen" title="Herunterladen" aria-label="Herunterladen"></summary>
     <div class="menue-inhalt">
       <a href="<%= BASE %>/d/<%= slug %>/export.html">Eine HTML-Datei (laeuft ohne alles)</a>
       <a href="<%= BASE %>/d/<%= slug %>/export.pdf">PDF zum Austeilen (dauert einen Moment)</a>
       <a href="<%= BASE %>/d/<%= slug %>/vortrag.md">Markdown-Datei</a>
     </div>
   </details>
+  <button id="theme-umschalter" class="knopf knopf-still knopf-icon" type="button"></button>
 </header>
 
 <main class="editor">
 
   <!-- Left: the slides as a list. Reorder by dragging. -->
   <aside class="spalte folienliste">
+    <span class="spalten-kopf">Folien</span>
     <ol id="folienliste" class="folien"></ol>
     <button id="folie-neu" class="knopf knopf-breit" type="button">+ Folie hinzufuegen</button>
   </aside>
@@ -84,9 +87,16 @@
           <span class="leiste-trenner"></span>
           <button type="button" id="quelltext-umschalten" title="Zeigt die Folie als Markdown">Quelltext</button>
         </div>
-        <div id="folie-inhalt" class="inhalt-feld" contenteditable="true" spellcheck="true"
-             data-platzhalter="Schreib hier den Text der Folie."></div>
-        <textarea id="folie-quelltext" class="quelltext-feld" hidden spellcheck="false"></textarea>
+        <!-- The frame, not the field, is what scrolls: OverlayScrollbars
+             builds its own DOM inside whatever it is attached to, and the
+             editor reads the content field's innerHTML back as Markdown. -->
+        <div id="inhalt-rahmen" class="feld-rahmen">
+          <div id="folie-inhalt" class="inhalt-feld" contenteditable="true" spellcheck="true"
+               data-platzhalter="Schreib hier den Text der Folie."></div>
+        </div>
+        <div id="quelltext-rahmen" class="feld-rahmen" hidden>
+          <textarea id="folie-quelltext" class="quelltext-feld" spellcheck="false"></textarea>
+        </div>
         <p id="quelltext-hinweis" class="hilfe" hidden>
           Diese Folie enthaelt Markdown, das die Formatierknoepfe nicht abbilden koennen
           (z.B. eine Tabelle oder Code). Sie wird deshalb als Quelltext bearbeitet.
@@ -125,6 +135,7 @@
   <!-- Right: real reveal.js, not a replica. What stands here is what
        stands on the wall later. -->
   <aside class="spalte vorschau">
+    <span class="spalten-kopf">Vorschau</span>
     <div class="vorschau-rahmen">
       <iframe id="vorschau" title="Vorschau" src="<%= BASE %>/d/<%= slug %>/vorschau"></iframe>
     </div>

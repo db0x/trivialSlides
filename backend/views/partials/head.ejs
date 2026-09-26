@@ -1,29 +1,33 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= typeof titel !== "undefined" ? titel : "trivialSlides" %></title>
-<!-- The SVG is the actual icon; the PNG is there for Safari, which does
-     not render SVG favicons. A browser picks the last format it
-     understands, so the PNG comes first. -->
-<link rel="icon" href="<%= BASE %>/static/trivialSlides.png" sizes="48x48">
 <link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
 <meta name="description" content="A presentation editor on reveal.js, usable by people who do not want to write Markdown -- and it still stores nothing but Markdown.">
 <meta name="theme-color" content="#1c1f23">
 
 <!-- The card shown when someone pastes a link into Slack, Teams, Mastodon
-     and the like. og:image has to be an absolute URL, which is what ABS()
-     builds -- behind a reverse proxy that needs PUBLIC_URL, see config.js. -->
+     and the like. Text only: those services do not render SVG previews, and
+     the project keeps no raster images. og:url has to be absolute, which is
+     what HIER builds -- behind a reverse proxy that needs PUBLIC_URL, see
+     config.js. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="trivialSlides">
 <meta property="og:title" content="<%= typeof titel !== "undefined" ? titel : "trivialSlides" %>">
 <meta property="og:description" content="A presentation editor on reveal.js that stores nothing but Markdown.">
 <meta property="og:url" content="<%= HIER %>">
-<meta property="og:image" content="<%= ABS("/static/og-image.png") %>">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The trivialSlides logo beside its name">
-<meta name="twitter:card" content="summary_large_image">
 
-<!-- Home screen: iOS takes the touch icon, Android reads the manifest. -->
-<link rel="apple-touch-icon" href="<%= BASE %>/static/apple-touch-icon.png">
 <link rel="manifest" href="<%= BASE %>/manifest.webmanifest">
+<link rel="stylesheet" href="<%= BASE %>/overlayscrollbars/styles/overlayscrollbars.css">
 <link rel="stylesheet" href="<%= BASE %>/static/css/app.css">
+
+<!-- Has to run before the first paint: an explicit theme choice must already
+     be on <html>, otherwise the page flashes in the other palette for a
+     frame. That is the whole reason this is inline and this small. -->
+<script>
+  try {
+    var m = localStorage.getItem("trivialslides:theme");
+    if (m) document.documentElement.setAttribute("data-theme", m);
+  } catch (e) { /* private window, storage blocked */ }
+</script>
+<script src="<%= BASE %>/static/js/theme.js" defer></script>
+<script type="module" src="<%= BASE %>/static/js/scrollbars.js"></script>

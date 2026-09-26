@@ -25,7 +25,9 @@ var el = {
   liste: $("#folienliste"),
   titel: $("#folie-titel"),
   inhalt: $("#folie-inhalt"),
+  inhaltRahmen: $("#inhalt-rahmen"),
   quelltext: $("#folie-quelltext"),
+  quelltextRahmen: $("#quelltext-rahmen"),
   quelltextHinweis: $("#quelltext-hinweis"),
   quelltextKnopf: $("#quelltext-umschalten"),
   quelle: $("#folie-quelle"),
@@ -146,8 +148,10 @@ function zeigeFolie() {
 }
 
 function setzeInhaltsModus(folie) {
-  el.inhalt.hidden = quelltextModus;
-  el.quelltext.hidden = !quelltextModus;
+  // The frames carry the visible border, so those are what get hidden --
+  // hiding the field alone would leave an empty box behind.
+  el.inhaltRahmen.hidden = quelltextModus;
+  el.quelltextRahmen.hidden = !quelltextModus;
   // The notice only appears when source mode was not chosen freely but
   // forced by the slide.
   el.quelltextHinweis.hidden = !quelltextModus || rt.istEinfach(folie.inhalt);

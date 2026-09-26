@@ -8,7 +8,7 @@ transition: slide
 
 # Example
 
-Every slide layout, once
+Every *slide* **layout**, once
 
 ---
 
@@ -26,7 +26,6 @@ and *italic* text, and a [link](https://revealjs.com).
 - Lists work the way you expect
 - Every point is plain Markdown
 - This one only appears on click
-<!-- .element: class="fragment" -->
 
 ----
 

@@ -28,6 +28,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(BASE + "/static", express.static(path.join(__dirname, "public"), { maxAge: "1h" }));
 app.use(BASE + "/reveal", express.static(path.join(__dirname, "node_modules", "reveal.js", "dist"), { maxAge: "1h" }));
 app.use(BASE + "/reveal-plugin", express.static(path.join(__dirname, "node_modules", "reveal.js", "plugin"), { maxAge: "1h" }));
+// OverlayScrollbars, served the same way: the ES module and its stylesheet
+// straight from node_modules, no build step in between.
+app.use(BASE + "/overlayscrollbars", express.static(path.join(__dirname, "node_modules", "overlayscrollbars"), { maxAge: "1h" }));
 
 // Absolute addresses for the link preview cards (see views/partials/head.ejs).
 // PUBLIC_URL wins; without it the requested host is the best guess there is.

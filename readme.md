@@ -210,10 +210,11 @@ moving it over is a copy rather than a rewrite. The whole editor hangs off
 4. `nurEigeneSeite` in `routes/decks.js` and `schreibKopf()` in
    `public/js/editor/base.js` fall away — Relay's `csrfSchutz` and its
    `base.js` take over. That is why both sit in exactly one place.
-5. Copy reveal.js out of `node_modules` into `public/vendor/reveal/`, the
-   way the other third-party libraries live there, and adjust the paths in
-   `app.js`. `dokument.js` reads reveal.js and the themes from disk as
-   well -- the path is in one place there, as `REVEAL_DIR`.
+5. Copy reveal.js and overlayscrollbars out of `node_modules` into
+   `public/vendor/`, the way the other third-party libraries live there,
+   and adjust the paths in `app.js` and in `js/scrollbars.js`.
+   `dokument.js` reads reveal.js and the themes from disk as well -- the
+   path is in one place there, as `REVEAL_DIR`.
 6. The Relay server needs a Chromium, otherwise publishing is reduced to
    HTML and Markdown. Everything else keeps working.
 
@@ -235,7 +236,8 @@ moving it over is a copy rather than a rewrite. The whole editor hangs off
 copyright notice has to come along.
 
 Every dependency is permissively licensed as well (MIT, ISC, Apache-2.0,
-BSD-3-Clause), none of them demands copyleft. reveal.js itself is MIT too
-and is only served here as a static file. For the planned move into Relay
+BSD-3-Clause), none of them demands copyleft. reveal.js and
+OverlayScrollbars are both MIT too and are only served here as static
+files. For the planned move into Relay
 that is the right direction: MIT code may travel into an AGPL project, the
 other way round it could not.
