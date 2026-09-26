@@ -73,7 +73,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="landscape.svg" -->
+<!-- .slide: data-layout="bild-voll" data-image="1.svg" -->
 
 ## Full-bleed image
 

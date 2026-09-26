@@ -142,10 +142,35 @@ router.get("/d/:slug/praesentation", deckLaden, (req, res) => {
   });
 });
 
+// A standalone SVG needs its namespace, or no browser will draw it -- it
+// arrives, it is served, and the slide stays empty. Several drawing
+// programs leave it out when exporting a fragment rather than a document.
+// The file is otherwise sound, so it is repaired here rather than refused;
+// adding the namespace to a root element that has none changes nothing
+// about the picture.
+//
+// A .svg whose content is not an SVG at all is a different matter and is
+// dropped: storing it would only produce the same empty slide later.
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function svgGeradeziehen(puffer) {
+  const text = puffer.toString("utf8");
+  const auf = text.match(/<svg\b[^>]*>/i);
+  if (!auf) return null;
+  if (/\sxmlns\s*=/i.test(auf[0])) return puffer;
+  const repariert = auf[0].replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
+  return Buffer.from(text.replace(auf[0], repariert), "utf8");
+}
+
 // --- Images --------------------------------------------------------------
 router.get("/d/:slug/bilder/:name", (req, res) => {
   const p = storage.bildPfad(req.params.slug, req.params.name);
   if (!p || !fs.existsSync(p)) return res.status(404).end();
+  // An SVG is a document, and a document can carry a <script>. As a
+  // picture that script never runs, but opening the address directly
+  // would run it in this app's own origin. The sandbox forbids that while
+  // leaving the drawing untouched.
+  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox");
   res.sendFile(p, { maxAge: "1h" });
 });
 
@@ -164,8 +189,13 @@ router.post("/d/:slug/bilder", nurEigeneSeite, deckLaden, upload.array("bild", 2
       name = `${basis}-${Date.now().toString(36)}${endung}`;
       ziel = storage.bildPfad(req.slug, name);
     }
+    let daten = f.buffer;
+    if (endung === ".svg") {
+      daten = svgGeradeziehen(f.buffer);
+      if (!daten) continue;   // called .svg, is not one
+    }
     fs.mkdirSync(path.dirname(ziel), { recursive: true });
-    fs.writeFileSync(ziel, f.buffer);
+    fs.writeFileSync(ziel, daten);
     namen.push(name);
   }
   res.json({ ok: true, neu: namen, bilder: storage.bilder(req.slug) });
