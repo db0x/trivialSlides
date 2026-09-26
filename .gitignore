@@ -1,0 +1,43 @@
+# --- Dependencies ------------------------------------------------------
+node_modules/
+
+# --- Secrets and local settings ----------------------------------------
+# The real .env stays on your machine. What may go in it is described by
+# .env.example -- that one is versioned.
+.env
+.env.*
+!.env.example
+
+# --- Content -----------------------------------------------------------
+# The decks belong to the user, not to the project. Anyone who wants them
+# versioned points DECKS_DIR at a repository of their own.
+decks/
+
+# --- Editors and tooling -----------------------------------------------
+# Everyone works with what they like -- editor settings are a matter of
+# personal taste and none of the project's business.
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Operating system --------------------------------------------------
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# --- Logs and runtime --------------------------------------------------
+*.log
+npm-debug.log*
+yarn-error.log*
+pids/
+*.pid
+*.seed
+
+# --- Transient ---------------------------------------------------------
+tmp/
+temp/
+.cache/
+coverage/

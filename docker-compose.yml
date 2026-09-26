@@ -1,0 +1,28 @@
+services:
+  trivialslides:
+    # A fixed name, so that `docker ps`, `docker logs` and a reverse proxy
+    # all address the same container the same way. Without this line it is
+    # named after whichever folder the compose file happens to sit in.
+    container_name: trivialSlides
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      # Sub-path behind a reverse proxy, e.g. /folien. Empty = the app sits
+      # at the root. Same meaning as BASE_PATH in Relay -- once built in
+      # there, Relay supplies this value.
+      - BASE_PATH=${BASE_PATH:-}
+      - NODE_ENV=production
+      # A fixed path INSIDE the container. Where the decks live on the host
+      # is what DECKS_HOST below says -- the two are named apart on purpose,
+      # otherwise the same variable would mean two different places.
+      - DECKS_DIR=/data/decks
+      # The browser that prints the PDF. The image ships Chromium -- this
+      # line exists only so a different one can be substituted.
+      - BROWSER_PATH=${BROWSER_PATH:-/usr/bin/chromium}
+    volumes:
+      # The decks themselves: one folder per deck holding vortrag.md and the
+      # uploaded images. Deliberately a host path and not a volume -- the
+      # content should be readable and backed up with an editor of your
+      # choice.
+      - ${DECKS_HOST:-./decks}:/data/decks
+    ports: ["${BIND_ADDR:-127.0.0.1}:${PORT:-5002}:5000"]

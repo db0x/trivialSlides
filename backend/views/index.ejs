@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de">
+<head>
+<%- include("partials/head", { titel: "trivialSlides" }) %>
+</head>
+<body class="seite-uebersicht">
+  <header class="kopf">
+    <a class="marke" href="<%= BASE %>/">trivialSlides</a>
+    <form class="neu" method="post" action="<%= BASE %>/neu">
+      <input name="titel" placeholder="Titel des neuen Vortrags" maxlength="120" required>
+      <button class="knopf knopf-haupt" type="submit">Neuer Vortrag</button>
+    </form>
+  </header>
+
+  <main class="inhalt">
+    <% if (!decks.length) { %>
+      <p class="leer">Noch kein Vortrag da. Gib oben einen Titel ein, dann geht es los.</p>
+    <% } %>
+    <ul class="deckliste">
+      <% decks.forEach(function (d) { %>
+        <li>
+          <a href="<%= BASE %>/d/<%= d.slug %>">
+            <span class="deck-titel"><%= d.titel %></span>
+            <span class="deck-meta"><%= d.folien %> Folien &middot; zuletzt geaendert <%= new Date(d.geaendert).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) %></span>
+          </a>
+          <span class="deck-aktionen">
+            <a class="knopf knopf-klein" href="<%= BASE %>/d/<%= d.slug %>/praesentation" target="_blank" rel="noopener">Vorfuehren</a>
+            <a class="knopf knopf-klein" href="<%= BASE %>/d/<%= d.slug %>/export.html">Als Datei</a>
+            <a class="knopf knopf-klein" href="<%= BASE %>/d/<%= d.slug %>/export.pdf">Als PDF</a>
+          </span>
+        </li>
+      <% }); %>
+    </ul>
+  </main>
+</body>
+</html>

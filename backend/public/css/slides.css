@@ -1,0 +1,158 @@
+/* The layouts. This one stylesheet serves the preview, the presentation
+   and the exported HTML file -- which is why the preview in the editor
+   really does look like the finished talk.
+
+   Shape of the markup (see render.js):
+     <section class="layout-...">
+       <div class="folie-text"> heading + body </div>
+       <div class="folie-bild"> <img> </div>       (image layouts only)
+     </section>
+
+   On the !important: reveal.js writes `display: block` straight into the
+   style attribute of the visible slide. Anyone wanting grid or flex on the
+   <section> cannot get around that. Only the display rules are
+   affected. */
+
+.reveal .slides section {
+  text-align: left;
+}
+
+.reveal .folie-text > :first-child { margin-top: 0; }
+.reveal .folie-text > :last-child { margin-bottom: 0; }
+
+.reveal .folie-bild img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+
+/* --- Title slide and section divider ---------------------------------- */
+.reveal .slides section.layout-titel,
+.reveal .slides section.layout-abschnitt {
+  text-align: center;
+}
+.reveal .layout-titel h1 { font-size: 2.1em; line-height: 1.1; margin-bottom: 0.4em; }
+.reveal .layout-titel .folie-text > p { font-size: 0.75em; opacity: 0.85; }
+
+.reveal .layout-abschnitt h1 { font-size: 2.4em; line-height: 1.1; }
+.reveal .layout-abschnitt .folie-text > p { font-size: 0.7em; opacity: 0.8; }
+
+/* --- Two columns ------------------------------------------------------ */
+/* The body flows in two columns, the heading runs across both. No need to
+   split the text -- in the .md the slide body stays a perfectly ordinary
+   list or paragraph. */
+.reveal .layout-spalten .folie-text {
+  column-count: 2;
+  column-gap: 1.2em;
+}
+.reveal .layout-spalten .folie-text h2 {
+  column-span: all;
+}
+/* Two pitfalls at once:
+   1. reveal.js sets lists to display:inline-block. An inline block is an
+      indivisible box -- it lands wholly in the first column and the layout
+      would have no effect. Hence back to block here.
+   2. The break rule applies to the individual list item, NOT to the list --
+      otherwise you would have the same effect all over again. */
+.reveal .layout-spalten .folie-text ul,
+.reveal .layout-spalten .folie-text ol {
+  display: block;
+  width: 100%;
+}
+.reveal .layout-spalten .folie-text li {
+  break-inside: avoid;
+}
+
+/* --- Image beside text ------------------------------------------------ */
+.reveal .slides section.layout-bild-rechts,
+.reveal .slides section.layout-bild-links {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 1em;
+}
+/* The markup is always in reading order (text first, except for
+   bild-links). Column assignment is therefore done entirely in CSS, so
+   that screen readers and sighted readers get the same order. */
+.reveal .layout-bild-links .folie-bild { grid-column: 1; grid-row: 1; }
+.reveal .layout-bild-links .folie-text { grid-column: 2; grid-row: 1; }
+
+/* --- Full-bleed image ------------------------------------------------- */
+/* The image is reveal.js' slide background; all that is left here is the
+   box that keeps the text on top of it readable. */
+.reveal .slides section.layout-bild-voll {
+  display: flex !important;
+  align-items: flex-end;
+  min-height: 100%;
+}
+.reveal .layout-bild-voll .folie-text {
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 0.6em 0.8em;
+  border-radius: 0.2em;
+  max-width: 70%;
+  backdrop-filter: blur(3px);
+}
+.reveal .layout-bild-voll .folie-text h2,
+.reveal .layout-bild-voll .folie-text a { color: #fff; }
+
+/* --- Quote ------------------------------------------------------------ */
+.reveal .slides section.layout-zitat { text-align: center; }
+.reveal .layout-zitat blockquote {
+  width: 100%;
+  box-shadow: none;
+  background: none;
+  font-style: normal;
+  font-size: 1.2em;
+  line-height: 1.35;
+  padding: 0;
+  margin: 0 0 0.6em;
+  quotes: "\201E" "\201C";
+}
+.reveal .layout-zitat blockquote p::before { content: open-quote; }
+.reveal .layout-zitat blockquote p::after { content: close-quote; }
+.reveal .layout-zitat cite {
+  display: block;
+  font-size: 0.6em;
+  font-style: normal;
+  opacity: 0.75;
+}
+.reveal .layout-zitat cite::before { content: "\2014\00A0"; }
+
+/* Narrow windows (the preview in the editor is one): image and text
+   stacked rather than side by side, otherwise both become unreadable. */
+@media (max-width: 640px) {
+  .reveal .slides section.layout-bild-rechts,
+  .reveal .slides section.layout-bild-links {
+    grid-template-columns: 1fr;
+  }
+  .reveal .layout-bild-links .folie-bild,
+  .reveal .layout-bild-links .folie-text { grid-column: 1; grid-row: auto; }
+  .reveal .layout-spalten .folie-text { column-count: 1; }
+}
+
+/* --- Print view (PDF export) ------------------------------------------
+   For printing, reveal.js lays every slide flat on a page of its own and
+   sets `display: block !important` on EVERY <section> to do so -- with a
+   selector (html.reveal-print .reveal .slides section) more specific than
+   the layout rules above. Without the lines that follow, the PDF would
+   lose exactly the arrangement this is all about: image BESIDE text would
+   become image ABOVE text.
+
+   Hence the two display rules appear here a second time, merely more
+   specific. Nothing more is needed: column assignment, centring and
+   column typesetting are untouched by reveal.js when printing, so they
+   apply there anyway. */
+html.reveal-print .reveal .slides section.layout-bild-rechts,
+html.reveal-print .reveal .slides section.layout-bild-links {
+  display: grid !important;
+}
+html.reveal-print .reveal .slides section.layout-bild-voll {
+  display: flex !important;
+}
