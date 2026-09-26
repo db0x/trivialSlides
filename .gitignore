@@ -11,7 +11,11 @@ node_modules/
 # --- Content -----------------------------------------------------------
 # The decks belong to the user, not to the project. Anyone who wants them
 # versioned points DECKS_DIR at a repository of their own.
-decks/
+#
+# Note the "decks/*" rather than "decks/": git does not descend into an
+# excluded directory, so the exception below would never be reached.
+decks/*
+!decks/example/
 
 # --- Editors and tooling -----------------------------------------------
 # Everyone works with what they like -- editor settings are a matter of

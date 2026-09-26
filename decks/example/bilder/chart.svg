@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Bar chart">
+  <rect width="400" height="300" fill="#f4f5f7"/>
+  <g fill="#2b6cb0">
+    <rect x="50"  y="170" width="52" height="90"/>
+    <rect x="122" y="130" width="52" height="130"/>
+    <rect x="194" y="95"  width="52" height="165"/>
+    <rect x="266" y="55"  width="52" height="205"/>
+  </g>
+  <line x1="36" y1="260" x2="364" y2="260" stroke="#1c1f23" stroke-width="2"/>
+  <g fill="#666c75" font-family="system-ui, sans-serif" font-size="15" text-anchor="middle">
+    <text x="76"  y="282">Q1</text>
+    <text x="148" y="282">Q2</text>
+    <text x="220" y="282">Q3</text>
+    <text x="292" y="282">Q4</text>
+  </g>
+</svg>
