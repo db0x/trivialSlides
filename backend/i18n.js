@@ -47,7 +47,7 @@ function uebersetze(sprache, schluessel, werte) {
 // what the server already rendered does not need sending twice.
 const FUER_BROWSER = [
   "thema.zuHell", "thema.zuDunkel",
-  "stand.gespeichert", "stand.speichert", "stand.fehler", "stand.offline",
+  "stand.offline",
   "farbe.ohne", "farbe.zuruecksetzen", "farbe.fertig",
   "karte.hoch", "karte.runter", "karte.einruecken", "karte.ausruecken",
   "karte.doppeln", "karte.loeschen", "karte.ohneTitel",

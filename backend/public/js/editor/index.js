@@ -52,7 +52,6 @@ function standAnzeigen(text, klasse) {
 
 function speichernJetzt() {
   ernte();
-  standAnzeigen(t("stand.speichert"), "ist-aktiv");
   return fetch(BASIS + "/deck.json", {
     method: "PUT",
     headers: schreibKopf({ "Content-Type": "application/json" }),
@@ -68,7 +67,9 @@ function speichernJetzt() {
       // editor would show something other than what the file holds.
       deck = d.deck;
       schmutzig = false;
-      standAnzeigen(t("stand.gespeichert"));
+      // Saved is the normal state, and the normal state says nothing.
+      // What is worth a word is the wait and the failure.
+      standAnzeigen("");
     })
     .catch(function (e) {
       console.error(e);
@@ -88,7 +89,10 @@ window.trivialSlidesSpeichern = function () {
 function merken() {
   ernte();
   schmutzig = true;
-  standAnzeigen(t("stand.fehler"), "ist-offen");
+  // Deliberately silent. Saving follows within the second, and a label
+  // reading "not saved" after every keystroke would be a complaint about
+  // the normal course of things. What guards the real risk -- leaving with
+  // something unsaved -- is the beforeunload below.
   speichernBald();
   vorschauBald();
 }
