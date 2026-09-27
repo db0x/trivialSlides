@@ -25,6 +25,7 @@
 const layouts = require("./layouts");
 const effects = require("./effects");
 const video = require("./video");
+const qr = require("./qr");
 
 // The themes reveal.js ships with. black-contrast and white-contrast meet
 // the WCAG contrast requirements -- they belong in the list even though
@@ -118,7 +119,11 @@ function parseAttrs(line) {
     source: ifField("source", attrs["data-quelle"] || ""),
     // Where the text goes in relation to the player. A name, not a value:
     // the arrangement is in slides.css (see video.js).
-    textSide: ifField("textSide", video.onlySide(attrs["data-textseite"])),
+    textSide: ifField("textSide", layouts.onlySide(attrs["data-textseite"], layout)),
+    url: ifField("url", qr.toUrl(attrs["data-url"])),
+    qrColor: ifField("qrColor", qr.onlyColor(attrs["data-qr-color"])),
+    qrBackground: ifField("qrBackground", qr.onlyBackground(attrs["data-qr-background"])),
+    qrTextColor: ifField("qrTextColor", qr.onlyTextColor(attrs["data-qr-text-color"])),
     textWidth: ifField("textWidth", layouts.onlyWidth(attrs["data-textbreite"], layout)),
     background: onlyColor(attrs["data-background-color"]),
     textColor: onlyColor(attrs["data-text-color"]),
@@ -142,11 +147,25 @@ function serializeAttrs(slide, immer) {
   if (immer || slide.layout !== layouts.DEFAULT_LAYOUT) parts.push(`data-layout="${slide.layout}"`);
   if (slide.image && layouts.hasField(slide.layout, "image")) parts.push(`data-image="${slide.image}"`);
   if (slide.video && layouts.hasField(slide.layout, "video")) parts.push(`data-video="${slide.video}"`);
+  // No escaping here, and none needed: toUrl lets nothing through that is
+  // not http(s) followed by characters that cannot close an attribute
+  // (qr.js) -- the same reasoning as the video id above.
+  if (slide.url && layouts.hasField(slide.layout, "url")) parts.push(`data-url="${slide.url}"`);
+  if (layouts.hasField(slide.layout, "qrColor") && slide.qrColor
+      && slide.qrColor !== qr.COLOR_DEFAULT) parts.push(`data-qr-color="${slide.qrColor}"`);
+  // The see-through one is written out as a word: an absent attribute
+  // already means white, so "nothing here" cannot also mean "nothing
+  // behind it".
+  if (layouts.hasField(slide.layout, "qrBackground") && slide.qrBackground !== qr.BACKGROUND_DEFAULT) {
+    parts.push(`data-qr-background="${slide.qrBackground || qr.TRANSPARENT}"`);
+  }
+  if (layouts.hasField(slide.layout, "qrTextColor") && slide.qrTextColor)
+    parts.push(`data-qr-text-color="${slide.qrTextColor}"`);
   if (slide.source && layouts.hasField(slide.layout, "source")) parts.push(`data-quelle="${slide.source}"`);
   // The default stays out of the file: a video slide that has not been
   // arranged should look unarranged there too.
   if (layouts.hasField(slide.layout, "textSide") && slide.textSide
-      && slide.textSide !== video.SIDE_DEFAULT) parts.push(`data-textseite="${slide.textSide}"`);
+      && slide.textSide !== layouts.defaultSide(slide.layout)) parts.push(`data-textseite="${slide.textSide}"`);
   if (layouts.hasField(slide.layout, "textWidth") && slide.textWidth
       && slide.textWidth !== layouts.defaultWidth(slide.layout)) parts.push(`data-textbreite="${slide.textWidth}"`);
   if (slide.background) parts.push(`data-background-color="${slide.background}"`);
@@ -160,22 +179,32 @@ function serializeAttrs(slide, immer) {
 // The editor shows title and body as two separate fields -- that is exactly
 // where the Markdown syntax disappears for the user. The title is the FIRST
 // heading line of the slide; everything before and after it is body.
+// null and "" are two different things here, and that difference is the
+// point: null means the slide has NO heading line, "" means it has one that
+// is empty. An empty heading is not nothing -- it holds the space a heading
+// takes, which is how a slide keeps its proportions when the words belong
+// somewhere else on it. Folding the two together is what made the editor
+// swallow a hand-written "##".
 function splitTitle(text) {
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
-    const t = /^(#{1,6})\s+(.*)$/.exec(lines[i]);
+    // The text after the hashes is optional, so "##" on its own is a
+    // heading too -- CommonMark says so, and it saves writing a line that
+    // ends in a space.
+    const t = /^(#{1,6})(?:\s+(.*))?$/.exec(lines[i]);
     if (t) {
       const rest = lines.slice(0, i).concat(lines.slice(i + 1));
-      return { title: t[2].trim(), content: rest.join("\n").trim() };
+      return { title: (t[2] || "").trim(), content: rest.join("\n").trim() };
     }
     if (lines[i].trim() !== "") break; // first non-empty line is not a heading
   }
-  return { title: "", content: text.trim() };
+  // null, not "": see above -- a slide with no heading line at all.
+  return { title: null, content: text.trim() };
 }
 
 function parseSlide(text, vertical) {
   const lines = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: video.SIDE_DEFAULT, textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), background: "", textColor: "", gradient: "", effect: "" };
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), background: "", textColor: "", gradient: "", effect: "" };
   let i = 0;
   while (i < lines.length && lines[i].trim() === "") i++;
   if (i < lines.length && ATTR_LINE.test(lines[i])) {
@@ -236,7 +265,12 @@ function serialize(deck) {
     const level = slide.layout === "titel" || slide.layout === "abschnitt" ? "#" : "##";
     const attrs = serializeAttrs(slide);
     const block = attrs ? [attrs] : [];
-    if (oneLine(slide.title)) block.push(`${level} ${oneLine(slide.title)}`);
+    // Written whenever the slide has a heading at all -- an empty one comes
+    // out as a bare "##", which is what carries it back in.
+    if (slide.title !== null && slide.title !== undefined) {
+      const heading = oneLine(slide.title);
+      block.push(heading ? `${level} ${heading}` : level);
+    }
     if (String(slide.content || "").trim()) block.push(String(slide.content).trim());
     if (!block.length) block.push(serializeAttrs(slide, true));
     if (i > 0) parts.push(slide.vertical ? "----" : "---");
@@ -250,12 +284,16 @@ function newSlide(layout) {
     id: "f" + Date.now().toString(36),
     layout: layouts.get(layout).id,
     vertical: false,
-    title: "",
+    title: null,
     content: "",
     image: "",
     source: "",
     video: "",
-    textSide: video.SIDE_DEFAULT,
+    textSide: layouts.defaultSide(layout),
+    url: "",
+    qrColor: qr.COLOR_DEFAULT,
+    qrBackground: qr.BACKGROUND_DEFAULT,
+    qrTextColor: "",
     textWidth: layouts.defaultWidth(layout),
     background: "",
     textColor: "",
@@ -281,14 +319,24 @@ function normalize(raw) {
         // The first slide cannot hang vertically -- there would be
         // nothing for it to hang from.
         vertical: i > 0 && !!(f && f.vertical),
-        title: oneLine(f && f.title).slice(0, 200),
+        // Passed through rather than folded to "": the editor sends null for
+        // a slide without a heading and "" for one with an empty heading,
+        // and both have to survive the round trip.
+        title: f && f.title !== null && f.title !== undefined ? oneLine(f.title).slice(0, 200) : null,
         content: String((f && f.content) || "").replace(/\r\n/g, "\n").slice(0, 20000),
         image: layouts.hasField(layout, "image") ? oneLine(f && f.image).slice(0, 200) : "",
         source: layouts.hasField(layout, "source") ? oneLine(f && f.source).slice(0, 200) : "",
         // Whatever arrives -- a watch link, a short link, an id -- becomes
         // an id here, so the editor may simply pass on what was pasted.
         video: layouts.hasField(layout, "video") ? video.toId(f && f.video) : "",
-        textSide: layouts.hasField(layout, "textSide") ? video.onlySide(f && f.textSide) : "",
+        textSide: layouts.hasField(layout, "textSide") ? layouts.onlySide(f && f.textSide, layout) : "",
+        url: layouts.hasField(layout, "url") ? qr.toUrl(f && f.url) : "",
+        qrColor: layouts.hasField(layout, "qrColor") ? qr.onlyColor(f && f.qrColor) : "",
+        // f.qrBackground is undefined on a slide just switched to this
+        // layout, and that has to come out white rather than see-through --
+        // onlyBackground is what tells the two apart.
+        qrBackground: layouts.hasField(layout, "qrBackground") ? qr.onlyBackground(f ? f.qrBackground : undefined) : "",
+        qrTextColor: layouts.hasField(layout, "qrTextColor") ? qr.onlyTextColor(f && f.qrTextColor) : "",
         textWidth: layouts.hasField(layout, "textWidth") ? layouts.onlyWidth(f && f.textWidth, layout) : "",
         background: onlyColor(f && f.background),
         textColor: onlyColor(f && f.textColor),

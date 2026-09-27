@@ -93,8 +93,8 @@ unnoticed.
 One folder per deck:
 
 ```
-decks/quartalsbericht/vortrag.md
-decks/quartalsbericht/bilder/team.jpg
+decks/quartalsbericht/deck.md
+decks/quartalsbericht/assets/team.jpg
 ```
 
 The folder is the unit you send or back up — Markdown and images together,

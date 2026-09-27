@@ -48,7 +48,7 @@ function loadDeck(req, res, next) {
 // URL prefix a deck's images live under. Kept in one place because the
 // renderer, the editor and the export all need it.
 function imageBase(slug) {
-  return `${BASE}/d/${slug}/images/`;
+  return `${BASE}/d/${slug}/assets/`;
 }
 
 // The web app manifest, which lets the editor be placed on a home screen
@@ -113,7 +113,7 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     gradients: i18n.gradientsTranslated(gradients.list(), req.language),
     effects: i18n.effectsTranslated(effects.EFFECTS, req.language),
     videoPattern: video.PATTERN,
-    videoSides: i18n.videoSidesTranslated(video.SIDES, req.language),
+    textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
     codeLanguages: code.LANGUAGES,
     codeStyles: code.STYLES,
@@ -187,7 +187,7 @@ function repairSvg(puffer) {
 }
 
 // --- Images --------------------------------------------------------------
-router.get("/d/:slug/images/:name", (req, res) => {
+router.get("/d/:slug/assets/:name", (req, res) => {
   const p = storage.imagePath(req.params.slug, req.params.name);
   if (!p || !fs.existsSync(p)) return res.status(404).end();
   // An SVG is a document, and a document can carry a <script>. As a
@@ -198,7 +198,7 @@ router.get("/d/:slug/images/:name", (req, res) => {
   res.sendFile(p, { maxAge: "1h" });
 });
 
-router.post("/d/:slug/images", sameOriginOnly, loadDeck, upload.array("image", 20), (req, res) => {
+router.post("/d/:slug/assets", sameOriginOnly, loadDeck, upload.array("image", 20), (req, res) => {
   const names = [];
   for (const f of req.files || []) {
     const ext = (path.extname(f.originalname || "").toLowerCase().match(/^\.(jpe?g|png|gif|webp|svg)$/) || [])[0];
@@ -228,7 +228,7 @@ router.post("/d/:slug/images", sameOriginOnly, loadDeck, upload.array("image", 2
 // --- Publishing --------------------------------------------------------
 // The Markdown file itself. The way back into a reveal.js project of your
 // own, or into version control.
-router.get("/d/:slug/vortrag.md", loadDeck, (req, res) => {
+router.get("/d/:slug/deck.md", loadDeck, (req, res) => {
   res.type("text/markdown; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${req.slug}.md"`);
   res.send(deck.serialize(req.deck));

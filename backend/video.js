@@ -72,22 +72,4 @@ function thumbUrl(id) {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
 
-// --- Where the text sits ------------------------------------------------
-// A video slide has a heading and a body like any other, and they have to
-// go somewhere in relation to the player. The arrangement itself is in
-// slides.css, as with the layouts -- what is decided here is only which
-// names a file may carry.
-//
-// "oben" is what a video slide looked like before there was a choice, so it
-// is the default and the one a file does not have to spell out. An unknown
-// name falls back to it rather than leaving the slide without an
-// arrangement at all.
-const SIDES = ["oben", "unten", "links", "rechts"];
-const SIDE_DEFAULT = "oben";
-
-function onlySide(value) {
-  const s = String(value == null ? "" : value).trim();
-  return SIDES.includes(s) ? s : SIDE_DEFAULT;
-}
-
-module.exports = { PATTERN, isId, toId, embedUrl, watchUrl, thumbUrl, SIDES, SIDE_DEFAULT, onlySide };
+module.exports = { PATTERN, isId, toId, embedUrl, watchUrl, thumbUrl };

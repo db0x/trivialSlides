@@ -33,6 +33,11 @@ var el = {
   sourceButton: $("#source-toggle"),
   source: $("#slide-source"),
   video: $("#slide-video"),
+  url: $("#slide-url"),
+  urlNote: $("#url-note"),
+  qrColor: $("#qr-color"),
+  qrBackground: $("#qr-background"),
+  qrTextColor: $("#qr-text-color"),
   videoNote: $("#video-note"),
   textSideMenu: $("#text-side-menu"),
   textSideButton: $("#text-side-button"),
@@ -41,6 +46,8 @@ var el = {
   fieldImage: $(".field-image"),
   fieldSource: $(".field-source"),
   fieldVideo: $(".field-video"),
+  fieldUrl: $(".field-url"),
+  fieldQrColors: $(".field-qr-colors"),
   imagePreview: $("#image-preview"),
   imageRemove: $("#image-remove"),
   layoutHint: $("#layout-hint"),
@@ -158,13 +165,19 @@ function harvest() {
   deck.title = $("#deck-title").value;
   deck.theme = $("#deck-theme").value;
   deck.transition = $("#deck-transition").value;
-  slide.title = el.title.value;
+  // An empty field on a slide that never had a heading leaves it without
+  // one; on a slide that has an empty heading it keeps that heading. The
+  // one field cannot say which is meant, so what the slide already is
+  // decides -- which is what makes a hand-written "##" survive being opened
+  // here (deck.js).
+  slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
   slide.content = sourceMode ? el.sourceText.value : rt.htmlToMd(el.content);
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
   // it does so for the live preview too. So a pasted link is a video
   // before it has been saved anywhere.
   slide.video = el.video.value;
+  slide.url = el.url.value;
   // The bar shows the side as an icon, so the chosen one lives on the
   // button rather than in a field value.
   slide.textSide = el.textSideButton.dataset.side || "oben";
@@ -180,7 +193,7 @@ function harvest() {
 function showSlide() {
   var slide = deck.slides[active];
   if (!slide) return;
-  el.title.value = slide.title || "";
+  el.title.value = slide.title || "";   // null and "" both show as empty
 
   // Rich text or source? Slides with Markdown outside our subset are
   // shown as source rather than damaged on the way back.
@@ -190,6 +203,8 @@ function showSlide() {
 
   el.source.value = slide.source || "";
   el.video.value = slide.video || "";
+  el.url.value = slide.url || "";
+  showUrl();
   // A slide that has never been arranged is arranged the way it has always
   // looked, so the button shows the same thing the slide does.
   showTextSide(slide.textSide || "oben");
@@ -205,6 +220,8 @@ function showSlide() {
   el.fieldImage.hidden = def.fields.indexOf("image") === -1;
   el.fieldSource.hidden = def.fields.indexOf("source") === -1;
   el.fieldVideo.hidden = def.fields.indexOf("video") === -1;
+  el.fieldUrl.hidden = def.fields.indexOf("url") === -1;
+  el.fieldQrColors.hidden = def.fields.indexOf("qrColor") === -1;
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
   el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
   // A menu left standing open over a layout that no longer has the button
@@ -213,6 +230,13 @@ function showSlide() {
   if (el.textWidthMenu.hidden) el.textWidthMenu.open = false;
   showImage(slide.image);
 
+  // The code's colours show what the slide will actually look like, so an
+  // unset one shows the value it falls back to rather than nothing. The
+  // file stays clean all the same: a value equal to the default is not
+  // written (deck.js).
+  showColorField(el.qrColor, slide.qrColor || "#000000");
+  showColorField(el.qrBackground, slide.qrBackground === undefined ? "#ffffff" : slide.qrBackground);
+  showColorField(el.qrTextColor, slide.qrTextColor || "");
   showColorField(el.customColor, slide.background);
   showColorField(el.customTextColor, slide.textColor);
   el.gradient.value = slide.gradient || "";
@@ -255,7 +279,7 @@ function select(i) {
 
 // --- Slide list --------------------------------------------------------
 function emptySlide(layout) {
-  return { layout: layout || "text", vertical: false, title: "", content: "", image: "", source: "", textSide: "oben", background: "", textColor: "", gradient: "", effect: "" };
+  return { layout: layout || "text", vertical: false, title: null, content: "", image: "", source: "", url: "", qrColor: "#000000", qrBackground: "#ffffff", qrTextColor: "", textSide: "oben", background: "", textColor: "", gradient: "", effect: "" };
 }
 
 el.list.addEventListener("click", function (ev) {
@@ -310,7 +334,9 @@ el.title.addEventListener("input", function () {
   // The card in the list carries the heading -- it has to follow along as
   // you type, otherwise the list looks frozen.
   var card = el.list.children[active];
-  if (card) $(".card-title", card).textContent = el.title.value || "(without Title)";
+  // The same wording the card uses when it is drawn (slide-list.js), and
+  // out of the table rather than written here in one language.
+  if (card) $(".card-title", card).textContent = el.title.value || t("card.untitled");
 });
 el.content.addEventListener("input", remember);
 el.sourceText.addEventListener("input", remember);
@@ -369,7 +395,9 @@ function widthName() {
   var slide = deck.slides[active];
   var def = layoutsById[slide && slide.layout] || { fields: [] };
   var d = el.textWidthMenu.dataset;
-  return def.fields.indexOf("video") !== -1 ? d.nameVideo : d.nameImage;
+  if (def.fields.indexOf("video") !== -1) return d.nameVideo;
+  if (def.fields.indexOf("url") !== -1) return d.nameQr;
+  return d.nameImage;
 }
 
 function showTextWidth(width) {
@@ -471,6 +499,23 @@ function showVideo() {
   el.videoNote.textContent = gefunden ? "" : t("editor.videoUnknown");
   el.videoNote.classList.toggle("hint-error", !gefunden);
 }
+
+// The field takes whatever is in the clipboard. Whether an address can be
+// made of it is the server's rule (qr.js), and the page only says so --
+// http and https are the only schemes a code on a slide may carry, because
+// a stranger's phone is what opens it.
+function showUrl() {
+  var value = el.url.value.trim();
+  var ok = !value || /^(https?:\/\/)?[^\s<>"']+\.[^\s<>"']+$/i.test(value);
+  el.url.setAttribute("aria-invalid", ok ? "false" : "true");
+  el.urlNote.textContent = ok ? "" : t("editor.urlInvalid");
+  el.urlNote.classList.toggle("hint-error", !ok);
+}
+
+el.url.addEventListener("input", function () {
+  showUrl();
+  remember();
+});
 
 el.video.addEventListener("input", function () {
   showVideo();
@@ -605,7 +650,7 @@ var COLORS = ["#1b1f23", "#0b3d4c", "#2b3a55", "#4a3b52", "#5c3d2e", "#2f4f3a", 
 // "No colour of its own" is a state the picker cannot express through a
 // colour, so its clear button carries it: an empty field means the slide
 // follows the theme, which is what the placeholder says as well.
-function colorisEinrichten() {
+function colorisSetUp() {
   Coloris.init();
   Coloris({
     el: ".color-field",
@@ -652,9 +697,12 @@ function showColorField(field, value) {
   field.dataset.tip = value || t("color.none");
 }
 
-colorisEinrichten();
+colorisSetUp();
 colorFieldWire(el.customColor, "background");
 colorFieldWire(el.customTextColor, "textColor");
+colorFieldWire(el.qrColor, "qrColor");
+colorFieldWire(el.qrBackground, "qrBackground");
+colorFieldWire(el.qrTextColor, "qrTextColor");
 
 // --- The colour group ---------------------------------------------------
 // Closed to begin with: colours, gradients and effects are what one reaches
@@ -731,7 +779,7 @@ var imageDialog = $("#image-dialog");
 function showImage(name) {
   el.imagePreview.hidden = !name;
   el.imageRemove.hidden = !name;
-  if (name) el.imagePreview.src = BASE + "/images/" + encodeURIComponent(name);
+  if (name) el.imagePreview.src = BASE + "/assets/" + encodeURIComponent(name);
 }
 
 function drawGallery() {
@@ -745,7 +793,7 @@ function drawGallery() {
     b.dataset.name = name;
     b.dataset.tip = name;
     var img = document.createElement("img");
-    img.src = BASE + "/images/" + encodeURIComponent(name);
+    img.src = BASE + "/assets/" + encodeURIComponent(name);
     img.alt = name;
     img.loading = "lazy";
     b.appendChild(img);
@@ -780,7 +828,7 @@ $("#image-file").addEventListener("change", function (ev) {
   if (!files || !files.length) return;
   var data = new FormData();
   Array.prototype.forEach.call(files, function (f) { data.append("image", f); });
-  fetch(BASE + "/images", { method: "POST", headers: schreibHead(), body: data })
+  fetch(BASE + "/assets", { method: "POST", headers: schreibHead(), body: data })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       images = d.images || images;

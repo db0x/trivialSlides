@@ -1,18 +1,22 @@
 // Storage on disk. One folder per deck:
 //
-//   decks/quartalsbericht/vortrag.md
-//   decks/quartalsbericht/images/team.jpg
+//   decks/quartalsbericht/deck.md
+//   decks/quartalsbericht/assets/team.jpg
 //
 // The folder is the unit you send, back up or copy into an existing
-// reveal.js project -- Markdown and images together, and the image paths
-// inside the .md are relative to the folder.
+// reveal.js project -- Markdown and pictures together, and the paths inside
+// the .md are relative to the folder.
+//
+// "assets" rather than "images": pictures are what goes in there today, but
+// the folder is the deck's luggage and there is no reason the name should
+// have to change the first time something else travels with it.
 const fs = require("fs");
 const path = require("path");
 const deck = require("./deck");
 const { DECKS_DIR } = require("./config");
 
-const FILE = "vortrag.md";
-const IMAGES = "bilder";
+const FILE = "deck.md";
+const ASSETS = "assets";
 
 // Turns a title into a folder name: ASCII, lower case, no path tricks.
 // Deliberately strict -- the value ends up in a file path, and the title's
@@ -113,15 +117,15 @@ function imagePath(slug, name) {
   if (!o) return null;
   if (!/^[a-z0-9][a-z0-9.-]{0,79}$/.test(String(name || ""))) return null;
   if (String(name).includes("..")) return null;
-  return path.join(o, IMAGES, name);
+  return path.join(o, ASSETS, name);
 }
 
 function images(slug) {
   const o = folderFor(slug);
-  if (!o || !fs.existsSync(path.join(o, IMAGES))) return [];
-  return fs.readdirSync(path.join(o, IMAGES))
+  if (!o || !fs.existsSync(path.join(o, ASSETS))) return [];
+  return fs.readdirSync(path.join(o, ASSETS))
     .filter((n) => /\.(jpe?g|png|gif|webp|svg)$/i.test(n))
     .sort();
 }
 
-module.exports = { FILE, IMAGES, slugify, folderFor, exists, list, load, save, create, imagePath, images, ensure };
+module.exports = { FILE, ASSETS, slugify, folderFor, exists, list, load, save, create, imagePath, images, ensure };

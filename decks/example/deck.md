@@ -139,6 +139,8 @@ static final int getFactor() {
 
 ----
 
-<!-- .slide: data-layout="abschnitt" data-background-effect="starfield" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="qr" data-url="https://github.com/db0x/trivialSlides" data-qr-color="#ffffff" data-qr-background="#ffffff00" data-background-effect="starfield" data-text-color="#ffffff" -->
 
-# That was all of them
+##
+
+## That was all of them

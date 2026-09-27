@@ -5,6 +5,7 @@ const { marked } = require("marked");
 const layouts = require("./layouts");
 const code = require("./code");
 const video = require("./video");
+const qr = require("./qr");
 
 // reveal.js' syntax for "reveal on click": a comment on a line of its own,
 // directly after the element it belongs to. This is the ONE piece of raw
@@ -171,8 +172,8 @@ function slideHtml(slide, imageBase) {
   // attribute because the arrangement itself is the stylesheet's business
   // (slides.css) -- the renderer keeps putting out the same markup in the
   // same reading order, heading first, whichever side is chosen.
-  if (layout === "video") {
-    attrs.push(`data-textseite="${esc(video.onlySide(slide.textSide))}"`);
+  if (layouts.hasField(layout, "textSide")) {
+    attrs.push(`data-textseite="${esc(layouts.onlySide(slide.textSide, layout))}"`);
   }
   // How wide the text may get where it stands beside something -- a picture
   // or a player. On a video slide it says nothing while the text is above
@@ -188,9 +189,13 @@ function slideHtml(slide, imageBase) {
     attrs.push('data-background-size="cover"');
   }
 
-  const heading = slide.title
-    ? `<h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>${esc(slide.title)}</h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>`
-    : "";
+  // An empty heading is still a heading: it holds the space one takes, and
+  // a slide that asked for it (deck.js) gets the element even with nothing
+  // in it. Only a slide with no heading at all gets none.
+  const level = layout === "titel" || layout === "abschnitt" ? 1 : 2;
+  const heading = slide.title === null || slide.title === undefined
+    ? ""
+    : `<h${level}>${esc(slide.title)}</h${level}>`;
 
   let inner;
   if (layout === "zitat") {
@@ -198,15 +203,16 @@ function slideHtml(slide, imageBase) {
       `<blockquote>${md(slide.content, imageBase) || "<p></p>"}</blockquote>` +
       (slide.source ? `<cite>${esc(slide.source)}</cite>` : "");
     inner = `<div class="slide-text">${heading}${inner}</div>`;
-  } else if (layout === "video") {
-    // The one layout whose heading sits OUTSIDE .slide-text. It names the
-    // slide, not the text next to the player, so it stays at the top
-    // whichever side the text is put on (data-textseite) -- and it can only
-    // stay there if it is not inside the box that moves.
+  } else if (layouts.hasField(layout, "textSide")) {
+    // The layouts whose heading sits OUTSIDE .slide-text -- video and qr.
+    // It names the slide, not the text next to the player or the code, so
+    // it stays at the top whichever side the text is put on
+    // (data-textseite), and it can only stay there if it is not inside the
+    // box that moves.
     //
-    // And no empty .slide-text when there is no body: beside the player that
-    // box is half the width, and an empty half would take the room from the
-    // picture for nothing.
+    // And no empty .slide-text when there is no body: beside the picture
+    // that box is a share of the width, and an empty share would take the
+    // room from the picture for nothing.
     const body = md(slide.content, imageBase);
     inner = heading + (body ? `<div class="slide-text">${body}</div>` : "");
   } else {
@@ -227,11 +233,30 @@ function slideHtml(slide, imageBase) {
   // a YouTube URL of its own.
   if (layout === "video" && slide.video) {
     const address = esc(video.watchUrl(slide.video));
-    inner += `<div class="slide-video" data-image="${esc(video.thumbUrl(slide.video))}">` +
+    inner += `<div class="slide-video slide-beside" data-image="${esc(video.thumbUrl(slide.video))}">` +
       `<iframe data-src="${esc(video.embedUrl(slide.video))}" title="${esc(slide.title || "Video")}"` +
       ` allow="autoplay; accelerometer; clipboard-write; encrypted-media; picture-in-picture"` +
       ` allowfullscreen loading="lazy"></iframe>` +
       `<a class="video-address" href="${address}">${address}</a>` +
+      `</div>`;
+  }
+
+  // The code itself, drawn on the server and carried as markup (qr.js) --
+  // no file beside the slide, nothing fetched when it is shown, so it works
+  // in the exported file on a train.
+  //
+  // The address below it is not decoration either: not everyone in the room
+  // has a phone in their hand, and a code says nothing to anybody reading
+  // the handout on paper.
+  if (layout === "qr" && slide.url) {
+    // The writing under the code takes the slide's own colour unless it was
+    // given one (slides.css does the inheriting), so only a chosen one is
+    // written onto the element.
+    const schrift = qr.onlyTextColor(slide.qrTextColor);
+    inner += `<div class="slide-qr slide-beside">` +
+      qr.svg(slide.url, slide.qrColor, slide.qrBackground) +
+      `<a class="qr-address"${schrift ? ` style="color: ${esc(schrift)}"` : ""}` +
+      ` href="${esc(slide.url)}">${esc(slide.url)}</a>` +
       `</div>`;
   }
 

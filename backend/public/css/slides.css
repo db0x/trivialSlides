@@ -138,63 +138,68 @@
 .reveal .layout-bild-voll .slide-text h2,
 .reveal .layout-bild-voll .slide-text a { color: #fff; }
 
-/* --- Video ------------------------------------------------------------
-   Text and player, in whichever of the four arrangements the slide asks
-   for (data-textseite, see video.js). The box keeps the 16:9 of the source
-   and takes what room is left beside the text, so a long heading does not
-   push the player off the slide.
+/* --- Text beside something: video and QR -------------------------------
+   Two layouts are built the same way: a heading, a body, and one box the
+   slide is actually about -- a player or a code. Where the body goes in
+   relation to that box is the slide's own affair (data-textseite, see
+   layouts.js), and the rules for it are written once here rather than
+   twice.
+
+   .slide-beside is the box, whatever is in it (render.js). What differs
+   between the two -- 16:9 and black for the player, square and white for
+   the code -- is further down, where it belongs.
 
    The markup is the same in all four cases and always in reading order --
    heading first, player after it (render.js). Which side that ends up on
    is decided here, the same division of labour as the image layouts. */
-.reveal .slides section.layout-video {
+.reveal .slides section:is(.layout-video, .layout-qr) {
   display: flex !important;
   flex-direction: column;
 }
-.reveal .layout-video .slide-text { flex: 0 0 auto; }
+.reveal :is(.layout-video, .layout-qr) .slide-text { flex: 0 0 auto; }
 
 /* The heading names the SLIDE, not the text beside the player, so it stays
    at the top in all four arrangements. It can do that because it sits
    outside .slide-text here (render.js) and because what moves below it
    moves by `order` rather than by turning the whole box around -- turning
    the box would take the heading with it. */
-.reveal .layout-video > :is(h1, h2) { order: 1; flex: 0 0 auto; }
-.reveal .layout-video .slide-text { order: 2; }
-.reveal .layout-video .slide-video { order: 3; }
+.reveal :is(.layout-video, .layout-qr) > :is(h1, h2) { order: 1; flex: 0 0 auto; }
+.reveal :is(.layout-video, .layout-qr) .slide-text { order: 2; }
+.reveal :is(.layout-video, .layout-qr) .slide-beside { order: 3; }
 
 /* Text below: the two under the heading trade places, the heading stays. */
-.reveal .slides section.layout-video[data-textseite="unten"] .slide-text { order: 3; }
-.reveal .slides section.layout-video[data-textseite="unten"] .slide-video { order: 2; }
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="unten"] .slide-text { order: 3; }
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="unten"] .slide-beside { order: 2; }
 
 /* Text beside: a row under the heading. The wrap plus a heading that takes
    the whole width is what gives it a line of its own -- and keeps it a
    heading of the slide rather than a column beside the picture. */
-.reveal .slides section.layout-video[data-textseite="links"],
-.reveal .slides section.layout-video[data-textseite="rechts"] {
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="links"],
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] {
   flex-flow: row wrap;
   align-items: center;
   align-content: flex-start;
   column-gap: 1em;
 }
-.reveal .slides section.layout-video[data-textseite="links"] > :is(h1, h2),
-.reveal .slides section.layout-video[data-textseite="rechts"] > :is(h1, h2) {
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="links"] > :is(h1, h2),
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] > :is(h1, h2) {
   flex: 0 0 100%;
 }
-.reveal .slides section.layout-video[data-textseite="rechts"] .slide-text { order: 3; }
-.reveal .slides section.layout-video[data-textseite="rechts"] .slide-video { order: 2; }
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] .slide-text { order: 3; }
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] .slide-beside { order: 2; }
 /* Both share the width rather than keeping the 0 0 auto above -- side by
    side the two are a division of the slide, not "as much as the text
    happens to need". How far the text may go is the slide's own affair
    (data-textbreite): a cap, so a couple of lines do not have to fill their
-   share, and the player takes whatever the cap leaves over. The player is
+   share, and the box takes whatever the cap leaves over. That box is
    what the slide is for.
 
    min-width: 0 because a flex item refuses to go below its longest word
    otherwise, and one long word would push the player out. */
-.reveal .slides section.layout-video[data-textseite="links"] .slide-text,
-.reveal .slides section.layout-video[data-textseite="rechts"] .slide-text,
-.reveal .slides section.layout-video[data-textseite="links"] .slide-video,
-.reveal .slides section.layout-video[data-textseite="rechts"] .slide-video {
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="links"] .slide-text,
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] .slide-text,
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="links"] .slide-beside,
+.reveal .slides section:is(.layout-video, .layout-qr)[data-textseite="rechts"] .slide-beside {
   flex: 1 1 0;
   min-width: 0;
 }
@@ -205,9 +210,9 @@
    player the text has the full width, and a cap carried along from a time
    when the slide was arranged side by side would narrow it there for no
    reason anybody could see. */
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="25"] .slide-text { max-width: 25%; }
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="33"] .slide-text { max-width: 33%; }
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="50"] .slide-text { max-width: 50%; }
+.reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="25"] .slide-text { max-width: 25%; }
+.reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="33"] .slide-text { max-width: 33%; }
+.reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="50"] .slide-text { max-width: 50%; }
 .reveal .layout-video .slide-video {
   position: relative;
   flex: 1 1 auto;
@@ -319,6 +324,53 @@
 .reveal .is-measuring * {
   transition: none !important;
   animation: none !important;
+}
+
+/* --- QR code -----------------------------------------------------------
+   The code is an <svg> the server drew into the slide (qr.js), so there is
+   no file to load and nothing to fetch when it is shown.
+
+   Capped in em like the player above, and for the same reason: across the
+   full width a square code would be 700 units tall and push everything
+   else off the slide, and the cap has to shrink along with the type when a
+   slide is stepped down (js/slide-fit.js). 12em is about half the slide at
+   the theme's own size -- large enough to scan from the back of a room,
+   small enough to leave the text its share. */
+.reveal .layout-qr .slide-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  min-height: 0;
+}
+.reveal .layout-qr .qr-code {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  /* The themes cap every picture in a slide at 95%, which would leave a
+     strip of the box empty -- this box is ours and already the right
+     size. */
+  max-width: min(100%, 12em);
+  max-height: 100%;
+  border-radius: 0.15em;
+}
+/* The address in writing as well: not everyone in the room is holding a
+   phone, and on paper a code says nothing at all.
+
+   It follows the slide's own text colour rather than the theme's link
+   colour -- it is a caption under a picture, not a link in a sentence, and
+   a blue line under a code somebody coloured themselves looks like an
+   accident. A colour chosen for it lands on the element (render.js) and
+   wins over this. */
+.reveal .layout-qr .qr-address {
+  color: inherit;
+  font-size: 0.38em;
+  line-height: 1.2;
+  text-align: center;
+  word-break: break-all;
+  opacity: 0.85;
 }
 
 /* --- A text colour of the slide's own ----------------------------------
@@ -728,6 +780,6 @@ html.reveal-print .reveal .slides section.layout-bild-voll {
    text above the player whichever side the slide asks for. The direction
    itself survives -- reveal only writes `display`, so the rules that turn
    the box into a row quiet apply. */
-html.reveal-print .reveal .slides section.layout-video {
+html.reveal-print .reveal .slides section:is(.layout-video, .layout-qr) {
   display: flex !important;
 }
