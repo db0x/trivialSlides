@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21" width="21" height="21">
+  <!-- A stylised QR: the three finder squares a person recognises the thing
+       by, plus enough data modules to read as a code rather than as four
+       blocks. Used as a mask (app.css), so only the shapes matter. -->
+  <path fill="#000" d="M0 0h7v7H0V0zm1 1v5h5V1H1zm1 1h3v3H2V2z"/>
+  <path fill="#000" d="M14 0h7v7h-7V0zm1 1v5h5V1h-5zm1 1h3v3h-3V2z"/>
+  <path fill="#000" d="M0 14h7v7H0v-7zm1 1v5h5v-5H1zm1 1h3v3H2v-3z"/>
+  <path fill="#000" d="M9 0h1v2H9zM11 1h1v2h-1zM9 3h2v1H9zM12 4h1v1h-1zM9 5h1v2H9zM11 6h2v1h-2z
+                       M0 9h2v1H0zM3 9h1v2H3zM5 9h2v1H5zM1 11h2v1H1zM4 12h1v1H4zM0 12h2v1H0z
+                       M9 9h2v2H9zM12 9h1v1h-1zM14 9h2v1h-2zM17 9h1v2h-1zM19 9h2v1h-2z
+                       M9 12h1v1H9zM11 11h2v2h-2zM14 12h1v1h-1zM16 11h2v1h-2zM19 12h2v1h-2z
+                       M9 14h2v1H9zM12 14h1v2h-1zM14 15h2v1h-2zM17 14h1v1h-1zM19 15h2v1h-2z
+                       M9 16h1v2H9zM11 17h2v1h-2zM14 17h1v2h-1zM16 17h2v1h-2zM19 17h1v2h-1z
+                       M9 19h2v2H9zM12 19h1v1h-1zM14 20h2v1h-2zM17 19h2v1h-2zM20 19h1v2h-1z"/>
+</svg>

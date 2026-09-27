@@ -33,9 +33,9 @@ services:
       # line exists only so a different one can be substituted.
       - BROWSER_PATH=${BROWSER_PATH:-/usr/bin/chromium}
     volumes:
-      # The decks themselves: one folder per deck holding vortrag.md and the
-      # uploaded images. Deliberately a host path and not a volume -- the
-      # content should be readable and backed up with an editor of your
-      # choice.
+      # The decks themselves: one folder per deck holding deck.md and an
+      # assets folder with the uploaded pictures. Deliberately a host path
+      # and not a volume -- the content should be readable and backed up
+      # with an editor of your choice.
       - ${DECKS_HOST:-./decks}:/data/decks
     ports: ["${BIND_ADDR:-127.0.0.1}:${PORT:-5002}:5000"]

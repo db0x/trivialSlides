@@ -52,7 +52,7 @@ const FOR_BROWSER = [
   "editor.gradientInvalid",
   "dialog.codeTitle", "dialog.codeEdit", "dialog.codeInsert", "dialog.codeApply",
   "code.click", "code.noLanguage", "code.remove",
-  "editor.videoUnknown",
+  "editor.videoUnknown", "editor.urlInvalid",
   "card.up", "card.down", "card.indent", "card.outdent",
   "card.duplicate", "card.delete", "card.untitled",
   "message.atLeastOne", "message.deleteSlide", "message.staysSource",
@@ -82,9 +82,9 @@ function gradientsTranslated(gradients, language) {
   }));
 }
 
-// The four places the text may sit on a video slide (video.js) -- ids
-// there, words here.
-function videoSidesTranslated(sides, language) {
+// The four places the text may sit beside a player or a code
+// (layouts.js) -- ids there, words here.
+function textSidesTranslated(sides, language) {
   return sides.map((id) => ({ id, name: translate(language, "textSide." + id) }));
 }
 
@@ -108,4 +108,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, videoSidesTranslated, COOKIE, DEFAULT };
+module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, COOKIE, DEFAULT };

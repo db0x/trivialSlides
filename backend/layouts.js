@@ -62,6 +62,19 @@ const LAYOUTS = [
     width: "33",
   },
   {
+    // A code somebody in the room can point a phone at -- the address to
+    // the talk, the repository, the author. Built like the video layout,
+    // only with a picture the server draws instead of a player it embeds
+    // (qr.js).
+    id: "qr",
+    fields: ["url", "textSide", "textWidth", "qrColor", "qrBackground", "qrTextColor"],
+    // Beside the text, not under it: a code is something to scan while the
+    // slide is being talked about, and it is square -- across the full
+    // width it would take half the slide and say nothing more.
+    side: "rechts",
+    width: "50",
+  },
+  {
     id: "zitat",
     fields: ["source"],
   },
@@ -85,6 +98,26 @@ const LAYOUTS = [
 // chooses, so those are their defaults -- a deck written before this
 // existed reads exactly as it did. `width` on a layout below says so; a
 // layout that names none falls back to the middle value.
+// Where the text sits in relation to what the slide is built around -- a
+// player, a code. The arrangement itself is in slides.css; what is decided
+// here is which names a file may carry.
+//
+// Like the width below, the default belongs to the LAYOUT: a video slide
+// has always had its text above the player, and a QR code is meant to
+// stand beside the text rather than under it. `side` on a layout says so;
+// a layout that names none gets the first value.
+const SIDES = ["oben", "unten", "links", "rechts"];
+const SIDE_DEFAULT = "oben";
+
+function defaultSide(id) {
+  return get(id).side || SIDE_DEFAULT;
+}
+
+function onlySide(value, layoutId) {
+  const s = String(value == null ? "" : value).trim();
+  return SIDES.includes(s) ? s : defaultSide(layoutId);
+}
+
 const WIDTHS = ["25", "33", "50"];
 const WIDTH_DEFAULT = "33";
 
@@ -111,4 +144,6 @@ function hasField(id, field) {
   return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField, WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth };
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField,
+  SIDES, SIDE_DEFAULT, defaultSide, onlySide,
+  WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth };

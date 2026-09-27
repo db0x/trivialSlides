@@ -15,7 +15,11 @@ ENV BROWSER_PATH=/usr/bin/chromium
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
-COPY app.js code.js config.js deck.js document.js effects.js gradients.js i18n.js layouts.js pdf.js render.js storage.js video.js ./
+# A pattern and not a list of names. The list had to be edited every time a
+# module was added or renamed, it was forgotten twice, and the image then
+# built fine and died on the first request -- which is the worst way for
+# this to go wrong. What must not travel is kept out by .dockerignore.
+COPY *.js ./
 COPY i18n ./i18n
 COPY routes ./routes
 COPY views ./views

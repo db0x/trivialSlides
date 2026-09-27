@@ -473,8 +473,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* Folded, the group hides what the slide carries -- so it says THAT it
    carries something. Without this the dot would be decoration; with it, it
    is the only way to tell a plain slide from one with a gradient. */
-.klapp-mark { display: none; }
-.has-own > summary > .klapp-mark {
+.fold-mark { display: none; }
+.has-own > summary > .fold-mark {
   display: inline-block;
   width: 7px;
   height: 7px;
@@ -549,6 +549,22 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .mini-bild-links::before { right: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
 .mini-bild-links::after { left: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
 /* Full-bleed image */
+/* Text on the left, a code on the right. The code is a real picture and
+   not four blocks: the three finder squares are what a person recognises a
+   QR by, and without them the tile says nothing. A mask rather than an
+   image, like every other icon here, so it takes the colour of the tile. */
+.mini-qr::before { left: 6%; width: 38%; top: 10px; height: 13px; opacity: 0.25; }
+.mini-qr::after {
+  right: 7%;
+  top: 6px;
+  width: 20px;
+  height: 20px;
+  opacity: 0.75;
+  background: var(--muted);
+  -webkit-mask: url(../assets/mini-qr.svg) center / contain no-repeat;
+  mask: url(../assets/mini-qr.svg) center / contain no-repeat;
+}
+
 .mini-bild-voll { background: var(--muted); }
 .mini-bild-voll::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--paper); opacity: 0.9; }
 .mini-bild-voll::after { display: none; }
@@ -822,8 +838,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    the picker, which is where someone who wants the number looks. */
 /* Both dots on one line, each with its word beside it -- a fieldset per
    dot left two large boxes almost empty. */
-.colorRow { display: flex; flex-wrap: wrap; gap: 20px; }
-.farbwahl {
+.color-row { display: flex; flex-wrap: wrap; gap: 20px; }
+.color-choice {
   display: inline-flex;
   align-items: center;
   gap: 8px;

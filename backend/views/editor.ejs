@@ -37,7 +37,7 @@
     <div class="menu-content">
       <a href="<%= BASE %>/d/<%= slug %>/export.html"><%= t('editor.exportHtml') %></a>
       <a href="<%= BASE %>/d/<%= slug %>/export.pdf"><%= t('editor.exportPdf') %></a>
-      <a href="<%= BASE %>/d/<%= slug %>/vortrag.md"><%= t('editor.exportMd') %></a>
+      <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
     </div>
   </details>
   <button id="language-toggle" class="button button-quiet language" type="button"
@@ -106,7 +106,7 @@
             <summary id="text-side-button" class="tool-icon tool-side" data-side="oben"
                      aria-label="<%= t('editor.textSide') %>"></summary>
             <div class="menu-content" role="menu">
-              <% videoSides.forEach(function (s) { %>
+              <% textSides.forEach(function (s) { %>
                 <button type="button" class="menu-item tool-side" role="menuitemradio"
                         aria-checked="false" data-side="<%= s.id %>"><span
                         class="menu-item-icon" aria-hidden="true"></span><%= s.name %></button>
@@ -126,7 +126,8 @@
                change. -->
           <details id="text-width-menu" class="menu menu-tool" hidden
                    data-name-image="<%= t('editor.textWidthImage') %>"
-                   data-name-video="<%= t('editor.textWidthVideo') %>">
+                   data-name-video="<%= t('editor.textWidthVideo') %>"
+                   data-name-qr="<%= t('editor.textWidthQr') %>">
             <summary id="text-width-button" class="tool-word"></summary>
             <div class="menu-content" role="menu">
               <% textWidths.forEach(function (b) { %>
@@ -175,6 +176,40 @@
         <span id="video-note" class="hint"></span>
       </label>
 
+      <!-- The address the code points at. Same shape as the video field:
+           whatever is pasted goes to the server as it stands, and the
+           server decides what a usable address is (qr.js). -->
+      <label class="field field-url" hidden>
+        <span class="field-label"><%= t('editor.url') %></span>
+        <input id="slide-url" type="text" maxlength="300" spellcheck="false"
+               placeholder="<%= t('editor.urlPlaceholder') %>">
+        <span id="url-note" class="hint"></span>
+      </label>
+
+      <!-- The code's own colours. Its own block and not in the colour group
+           below, because those belong to the slide and these to the one
+           picture on it -- and because the group is folded away by default,
+           where somebody looking for the code's colours would not think to
+           look. Clearing the background is what makes it see-through. -->
+      <div class="field field-qr-colors" hidden>
+        <span class="field-label"><%= t('editor.qrColors') %></span>
+        <div class="color-row">
+          <label class="color-choice">
+            <input id="qr-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrColor') %>">
+            <span><%= t('editor.qrColor') %></span>
+          </label>
+          <label class="color-choice">
+            <input id="qr-background" class="color-field" type="text" value="" aria-label="<%= t('editor.qrBackground') %>">
+            <span><%= t('editor.qrBackground') %></span>
+          </label>
+          <label class="color-choice">
+            <input id="qr-text-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrTextColor') %>">
+            <span><%= t('editor.qrTextColor') %></span>
+          </label>
+        </div>
+        <p class="hint"><%= t('editor.qrColorsHint') %></p>
+      </div>
+
       <label class="field field-source" hidden>
         <span class="field-label"><%= t('editor.source') %></span>
         <input id="slide-source" maxlength="200" placeholder="<%= t('editor.sourcePlaceholder') %>">
@@ -190,15 +225,15 @@
     <details id="colors-group" class="fieldset fieldset-fold">
       <summary>
         <%= t('editor.colors') %>
-        <span class="klapp-mark" data-tip="<%= t('editor.colorsCustom') %>"
+        <span class="fold-mark" data-tip="<%= t('editor.colorsCustom') %>"
               aria-label="<%= t('editor.colorsCustom') %>"></span>
       </summary>
-      <div class="colorRow">
-        <label class="farbwahl">
+      <div class="color-row">
+        <label class="color-choice">
           <input id="background-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.background') %>">
           <span><%= t('editor.background') %></span>
         </label>
-        <label class="farbwahl">
+        <label class="color-choice">
           <input id="text-color-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.textColor') %>">
           <span><%= t('editor.textColor') %></span>
         </label>
