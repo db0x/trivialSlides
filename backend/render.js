@@ -138,7 +138,9 @@ function md(text, bildBasis) {
 // --- a single slide ----------------------------------------------------
 // Always the same shape: <section> carries the layout class and the reveal
 // attributes, inside it a .folie-text with title and body and -- depending
-// on the layout -- a .folie-bild next to it. The arrangement is done
+// on the layout -- a .folie-bild next to it. The video layout is the one
+// exception: there the heading sits beside .folie-text rather than in it,
+// so that it can stay at the top while the text moves around the player. The arrangement is done
 // entirely by the CSS (public/css/slides.css), not by this module. A layout
 // can therefore be redesigned without touching the renderer.
 function folieHtml(folie, bildBasis) {
@@ -164,6 +166,21 @@ function folieHtml(folie, bildBasis) {
     attrs.push(`data-text-color="${esc(folie.textfarbe)}"`);
     attrs.push(`style="color: ${esc(folie.textfarbe)}"`);
   }
+  // Where the text goes in relation to the player. On the <section>
+  // because that is the box the arrangement happens in, and as an
+  // attribute because the arrangement itself is the stylesheet's business
+  // (slides.css) -- the renderer keeps putting out the same markup in the
+  // same reading order, heading first, whichever side is chosen.
+  if (layout === "video") {
+    attrs.push(`data-textseite="${esc(video.nurSeite(folie.textseite))}"`);
+  }
+  // How wide the text may get where it stands beside something -- a picture
+  // or a player. On a video slide it says nothing while the text is above
+  // or below, but it goes on the slide all the same, so switching sides
+  // needs nothing but the one other attribute.
+  if (layouts.hatFeld(layout, "textbreite")) {
+    attrs.push(`data-textbreite="${esc(layouts.nurBreite(folie.textbreite, layout))}"`);
+  }
   // A full-bleed image is a slide background in reveal.js -- that way
   // reveal handles the scaling and the transition.
   if (layout === "bild-voll" && folie.bild) {
@@ -181,6 +198,17 @@ function folieHtml(folie, bildBasis) {
       `<blockquote>${md(folie.inhalt, bildBasis) || "<p></p>"}</blockquote>` +
       (folie.quelle ? `<cite>${esc(folie.quelle)}</cite>` : "");
     innen = `<div class="folie-text">${ueberschrift}${innen}</div>`;
+  } else if (layout === "video") {
+    // The one layout whose heading sits OUTSIDE .folie-text. It names the
+    // slide, not the text next to the player, so it stays at the top
+    // whichever side the text is put on (data-textseite) -- and it can only
+    // stay there if it is not inside the box that moves.
+    //
+    // And no empty .folie-text when there is no body: beside the player that
+    // box is half the width, and an empty half would take the room from the
+    // picture for nothing.
+    const koerper = md(folie.inhalt, bildBasis);
+    innen = ueberschrift + (koerper ? `<div class="folie-text">${koerper}</div>` : "");
   } else {
     innen = `<div class="folie-text">${ueberschrift}${md(folie.inhalt, bildBasis)}</div>`;
   }
@@ -192,9 +220,14 @@ function folieHtml(folie, bildBasis) {
   //
   // The link below it is not decoration: on paper an iframe shows nothing,
   // so that is where the address has to be readable (see slides.css).
+  // data-bild is the still image, for the case where there can be no player
+  // at all: YouTube refuses to configure one for a document opened from the
+  // file system, which is exactly what the export is (js/folien-video.js).
+  // The address is built here like the other two -- the page never composes
+  // a YouTube URL of its own.
   if (layout === "video" && folie.video) {
     const adresse = esc(video.watchUrl(folie.video));
-    innen += `<div class="folie-video">` +
+    innen += `<div class="folie-video" data-bild="${esc(video.thumbUrl(folie.video))}">` +
       `<iframe data-src="${esc(video.embedUrl(folie.video))}" title="${esc(folie.titel || "Video")}"` +
       ` allow="autoplay; accelerometer; clipboard-write; encrypted-media; picture-in-picture"` +
       ` allowfullscreen loading="lazy"></iframe>` +

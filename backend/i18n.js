@@ -82,6 +82,12 @@ function verlaeufeUebersetzt(verlaeufe, sprache) {
   }));
 }
 
+// The four places the text may sit on a video slide (video.js) -- ids
+// there, words here.
+function videoSeitenUebersetzt(seiten, sprache) {
+  return seiten.map((id) => ({ id, name: uebersetze(sprache, "textseite." + id) }));
+}
+
 // And the effects, which carry nothing but an id either (effekte.js).
 function effekteUebersetzt(effekte, sprache) {
   return effekte.map((e) => Object.assign({}, e, {
@@ -102,4 +108,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, uebersetze, sprachen, fuerBrowser, layoutsUebersetzt, verlaeufeUebersetzt, effekteUebersetzt, KEKS, STANDARD };
+module.exports = { middleware, uebersetze, sprachen, fuerBrowser, layoutsUebersetzt, verlaeufeUebersetzt, effekteUebersetzt, videoSeitenUebersetzt, KEKS, STANDARD };

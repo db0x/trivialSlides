@@ -104,12 +104,22 @@ function parseAttrs(zeile) {
   const re = /([a-z-]+)\s*=\s*"([^"]*)"/g;
   let t;
   while ((t = re.exec(zeile)) !== null) attrs[t[1]] = t[2];
+  const layout = layouts.get(attrs["data-layout"]).id;
+  // What a layout has no field for comes back empty, exactly as it does
+  // from normalize() -- otherwise a text slide read from a file would carry
+  // a text arrangement it cannot have, and the same slide would look
+  // different before and after its first save.
+  const wennFeld = (feld, wert) => (layouts.hatFeld(layout, feld) ? wert : "");
   return {
-    layout: layouts.get(attrs["data-layout"]).id,
-    bild: attrs["data-image"] || "",
+    layout,
+    bild: wennFeld("bild", attrs["data-image"] || ""),
     // Only the id is kept, never a URL -- see video.js.
-    video: video.isId(attrs["data-video"] || "") ? attrs["data-video"] : "",
-    quelle: attrs["data-quelle"] || "",
+    video: wennFeld("video", video.isId(attrs["data-video"] || "") ? attrs["data-video"] : ""),
+    quelle: wennFeld("quelle", attrs["data-quelle"] || ""),
+    // Where the text goes in relation to the player. A name, not a value:
+    // the arrangement is in slides.css (see video.js).
+    textseite: wennFeld("textseite", video.nurSeite(attrs["data-textseite"])),
+    textbreite: wennFeld("textbreite", layouts.nurBreite(attrs["data-textbreite"], layout)),
     hintergrund: nurFarbe(attrs["data-background-color"]),
     textfarbe: nurFarbe(attrs["data-text-color"]),
     // A gradient someone wrote by hand passes through as it stands, as
@@ -133,6 +143,12 @@ function serialisiereAttrs(folie, immer) {
   if (folie.bild && layouts.hatFeld(folie.layout, "bild")) teile.push(`data-image="${folie.bild}"`);
   if (folie.video && layouts.hatFeld(folie.layout, "video")) teile.push(`data-video="${folie.video}"`);
   if (folie.quelle && layouts.hatFeld(folie.layout, "quelle")) teile.push(`data-quelle="${folie.quelle}"`);
+  // The default stays out of the file: a video slide that has not been
+  // arranged should look unarranged there too.
+  if (layouts.hatFeld(folie.layout, "textseite") && folie.textseite
+      && folie.textseite !== video.SEITE_STANDARD) teile.push(`data-textseite="${folie.textseite}"`);
+  if (layouts.hatFeld(folie.layout, "textbreite") && folie.textbreite
+      && folie.textbreite !== layouts.standardBreite(folie.layout)) teile.push(`data-textbreite="${folie.textbreite}"`);
   if (folie.hintergrund) teile.push(`data-background-color="${folie.hintergrund}"`);
   if (folie.verlauf) teile.push(`data-background-gradient="${folie.verlauf}"`);
   if (folie.effekt) teile.push(`data-background-effect="${folie.effekt}"`);
@@ -159,7 +175,7 @@ function trenneTitel(text) {
 
 function parseFolie(text, vertikal) {
   const zeilen = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, bild: "", quelle: "", video: "", hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, bild: "", quelle: "", video: "", textseite: video.SEITE_STANDARD, textbreite: layouts.standardBreite(layouts.DEFAULT_LAYOUT), hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
   let i = 0;
   while (i < zeilen.length && zeilen[i].trim() === "") i++;
   if (i < zeilen.length && ATTR_ZEILE.test(zeilen[i])) {
@@ -237,6 +253,8 @@ function neueFolie(layout) {
     bild: "",
     quelle: "",
     video: "",
+    textseite: video.SEITE_STANDARD,
+    textbreite: layouts.standardBreite(layout),
     hintergrund: "",
     textfarbe: "",
     verlauf: "",
@@ -268,6 +286,8 @@ function normalize(roh) {
         // Whatever arrives -- a watch link, a short link, an id -- becomes
         // an id here, so the editor may simply pass on what was pasted.
         video: layouts.hatFeld(layout, "video") ? video.toId(f && f.video) : "",
+        textseite: layouts.hatFeld(layout, "textseite") ? video.nurSeite(f && f.textseite) : "",
+        textbreite: layouts.hatFeld(layout, "textbreite") ? layouts.nurBreite(f && f.textbreite, layout) : "",
         hintergrund: nurFarbe(f && f.hintergrund),
         textfarbe: nurFarbe(f && f.textfarbe),
         // Not truncated but dropped when it does not fit: half a gradient

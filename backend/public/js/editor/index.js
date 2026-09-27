@@ -34,6 +34,10 @@ var el = {
   quelle: $("#folie-quelle"),
   video: $("#folie-video"),
   videoHinweis: $("#video-hinweis"),
+  textseiteMenue: $("#textseite-menue"),
+  textseiteKnopf: $("#textseite-knopf"),
+  textbreiteMenue: $("#textbreite-menue"),
+  textbreiteKnopf: $("#textbreite-knopf"),
   feldBild: $(".feld-bild"),
   feldQuelle: $(".feld-quelle"),
   feldVideo: $(".feld-video"),
@@ -161,6 +165,10 @@ function ernte() {
   // it does so for the live preview too. So a pasted link is a video
   // before it has been saved anywhere.
   folie.video = el.video.value;
+  // The bar shows the side as an icon, so the chosen one lives on the
+  // button rather than in a field value.
+  folie.textseite = el.textseiteKnopf.dataset.seite || "oben";
+  folie.textbreite = el.textbreiteKnopf.dataset.breite || standardBreite();
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
@@ -182,6 +190,10 @@ function zeigeFolie() {
 
   el.quelle.value = folie.quelle || "";
   el.video.value = folie.video || "";
+  // A slide that has never been arranged is arranged the way it has always
+  // looked, so the button shows the same thing the slide does.
+  zeigeTextseite(folie.textseite || "oben");
+  zeigeTextbreite(folie.textbreite || standardBreite());
   videoZeigen();
 
   $$(".layout-kachel").forEach(function (k) {
@@ -193,6 +205,12 @@ function zeigeFolie() {
   el.feldBild.hidden = def.felder.indexOf("bild") === -1;
   el.feldQuelle.hidden = def.felder.indexOf("quelle") === -1;
   el.feldVideo.hidden = def.felder.indexOf("video") === -1;
+  el.textseiteMenue.hidden = def.felder.indexOf("textseite") === -1;
+  el.textbreiteMenue.hidden = def.felder.indexOf("textbreite") === -1;
+  // A menu left standing open over a layout that no longer has the button
+  // would hang in the bar with nothing under it.
+  if (el.textseiteMenue.hidden) el.textseiteMenue.open = false;
+  if (el.textbreiteMenue.hidden) el.textbreiteMenue.open = false;
   zeigeBild(folie.bild);
 
   farbfeldZeigen(el.eigenfarbe, folie.hintergrund);
@@ -237,7 +255,7 @@ function waehle(i) {
 
 // --- Slide list --------------------------------------------------------
 function leereFolie(layout) {
-  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
+  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", textseite: "oben", hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
 }
 
 el.liste.addEventListener("click", function (ev) {
@@ -297,6 +315,111 @@ el.titel.addEventListener("input", function () {
 el.inhalt.addEventListener("input", merken);
 el.quelltext.addEventListener("input", merken);
 el.quelle.addEventListener("input", merken);
+
+// --- Where the text sits on a video slide ------------------------------
+// The bar has room for an icon and no more, so the name of the side has to
+// reach it as its label and its tooltip -- otherwise the button says
+// nothing at all to a screen reader or to a mouse that rests on it. The
+// names come from the menu entries, which the server has already put words
+// into; nothing has to be translated a second time here.
+function zeigeTextseite(seite) {
+  el.textseiteKnopf.dataset.seite = seite;
+  var gewaehlt = null;
+  $$("#textseite-menue .menue-eintrag").forEach(function (b) {
+    var ist = b.dataset.seite === seite;
+    b.classList.toggle("ist-aktiv", ist);
+    b.setAttribute("aria-checked", ist ? "true" : "false");
+    if (ist) gewaehlt = b;
+  });
+  var name = el.textseiteMenue.dataset.name + (gewaehlt ? ": " + gewaehlt.textContent.trim() : "");
+  el.textseiteKnopf.setAttribute("aria-label", name);
+  el.textseiteKnopf.dataset.tip = name;
+  // The button next door follows the side: beside the player the width is a
+  // choice, above and below it is not one (slides.css).
+  schalteTextbreite();
+}
+
+// --- How wide the text may get beside the picture or the player --------
+// A choice only where the text actually stands beside something. On the
+// image layouts it always does; on a video slide only once the text has
+// been put left or right of the player.
+function schalteTextbreite() {
+  var folie = deck.folien[aktiv];
+  var def = layoutsById[folie && folie.layout] || { felder: [] };
+  var seitlich = def.felder.indexOf("textseite") === -1 ||
+    el.textseiteKnopf.dataset.seite === "links" || el.textseiteKnopf.dataset.seite === "rechts";
+  var an = def.felder.indexOf("textbreite") !== -1 && seitlich;
+  el.textbreiteMenue.setAttribute("aria-disabled", an ? "false" : "true");
+  if (!an) el.textbreiteMenue.open = false;
+}
+
+// What the slide has before anybody chooses differs by layout: half and
+// half beside a picture, a third beside a player (layouts.js). The tiles
+// carry it into the page along with the rest of the layout definition.
+function standardBreite() {
+  var folie = deck.folien[aktiv];
+  return ((layoutsById[folie && folie.layout] || {}).breite) || "33";
+}
+
+// What the text stands beside depends on the layout -- a picture here, a
+// player there -- and the button says so. Read off the layout's fields
+// rather than off its name, so a layout added later gets the right wording
+// by declaring the field it already has to declare (layouts.js).
+function breiteName() {
+  var folie = deck.folien[aktiv];
+  var def = layoutsById[folie && folie.layout] || { felder: [] };
+  var d = el.textbreiteMenue.dataset;
+  return def.felder.indexOf("video") !== -1 ? d.nameVideo : d.nameBild;
+}
+
+function zeigeTextbreite(breite) {
+  el.textbreiteKnopf.dataset.breite = breite;
+  var gewaehlt = null;
+  $$("#textbreite-menue .menue-eintrag").forEach(function (b) {
+    var ist = b.dataset.breite === breite;
+    b.classList.toggle("ist-aktiv", ist);
+    b.setAttribute("aria-checked", ist ? "true" : "false");
+    if (ist) gewaehlt = b;
+  });
+  // The button wears the value, so it needs no icon -- but it still needs
+  // to say what the value MEANS, and that goes in the label and the tooltip.
+  var wert = gewaehlt ? gewaehlt.textContent.trim() : breite + "\u00a0%";
+  el.textbreiteKnopf.textContent = wert;
+  var name = breiteName() + ": " + wert;
+  el.textbreiteKnopf.setAttribute("aria-label", name);
+  el.textbreiteKnopf.dataset.tip = name;
+}
+
+$$("#textseite-menue .menue-eintrag").forEach(function (knopf) {
+  knopf.addEventListener("click", function () {
+    zeigeTextseite(knopf.dataset.seite);
+    el.textseiteMenue.open = false;
+    merken();
+  });
+});
+
+$$("#textbreite-menue .menue-eintrag").forEach(function (knopf) {
+  knopf.addEventListener("click", function () {
+    zeigeTextbreite(knopf.dataset.breite);
+    el.textbreiteMenue.open = false;
+    merken();
+  });
+});
+
+// <details> has no disabled state of its own, so the click that would open
+// it is the one that has to be turned away.
+el.textbreiteKnopf.addEventListener("click", function (ev) {
+  if (el.textbreiteMenue.getAttribute("aria-disabled") === "true") ev.preventDefault();
+});
+
+// A menu left open would sit over the very field one types in next. Both
+// of them, and each closes only when the click was somewhere outside it --
+// so opening one closes the other.
+document.addEventListener("click", function (ev) {
+  [el.textseiteMenue, el.textbreiteMenue].forEach(function (m) {
+    if (m.open && !m.contains(ev.target)) m.open = false;
+  });
+});
 
 $$(".layout-kachel").forEach(function (kachel) {
   kachel.addEventListener("click", function () {

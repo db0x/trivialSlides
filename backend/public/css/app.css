@@ -620,6 +620,83 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 #quelltext-umschalten.werkzeug-icon { --knopf-icon: url(../assets/toolbar/code.svg); }
 #code-einfuegen.werkzeug-icon { --knopf-icon: url(../assets/toolbar/md-code.svg); }
 
+/* --- Where the text sits on a video slide ------------------------------
+   One set of icons for two places: the bar shows nothing but the icon of
+   the side in force, the menu behind it shows every icon with its word
+   beside it. Both read --knopf-icon off the same attribute, so the two can
+   never drift apart. */
+.werkzeug-seite[data-seite="oben"]   { --knopf-icon: url(../assets/toolbar/align-top.svg); }
+.werkzeug-seite[data-seite="unten"]  { --knopf-icon: url(../assets/toolbar/align-bottom.svg); }
+.werkzeug-seite[data-seite="links"]  { --knopf-icon: url(../assets/toolbar/align-left.svg); }
+.werkzeug-seite[data-seite="rechts"] { --knopf-icon: url(../assets/toolbar/align-right.svg); }
+
+/* The summary is the button here, and a <summary> is not a <button> -- so
+   what the bar gives its buttons has to be said again for this one. */
+.werkzeugleiste .menue-werkzeug > summary {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+.werkzeugleiste .menue-werkzeug > summary::-webkit-details-marker { display: none; }
+.werkzeugleiste .menue-werkzeug > summary:hover { border-color: var(--rand); background: var(--papier); }
+.werkzeugleiste .menue-werkzeug[open] > summary { border-color: var(--akzent); color: var(--akzent); }
+/* Hangs from the left edge: the bar is read from the left, and the button
+   sits nowhere near the right one. */
+.werkzeugleiste .menue-werkzeug .menue-inhalt { right: auto; left: 0; min-width: 0; white-space: nowrap; }
+/* Prefixed with .werkzeugleiste throughout, because the bar styles every
+   button inside it and would otherwise reach these too. */
+.werkzeugleiste .menue-inhalt .menue-eintrag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.werkzeugleiste .menue-inhalt .menue-eintrag:hover { border-color: transparent; background: var(--flaeche); }
+.werkzeugleiste .menue-inhalt .menue-eintrag.ist-aktiv { color: var(--akzent); }
+/* The width wears its value instead of an icon: "33 %" says what it is,
+   and no picture of a percentage would. Tabular figures so the button does
+   not change width as the number changes. */
+.werkzeugleiste .werkzeug-wort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  height: 1.75rem;
+  padding: 0 6px;
+  color: var(--schrift);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+/* Off while the text is above or below the player, where there is no width
+   to choose. Not hidden: a button that vanishes and comes back as one
+   switches sides is harder to find again than one that greys out. */
+.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary {
+  opacity: 0.35;
+  cursor: default;
+}
+.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary:hover {
+  border-color: transparent;
+  background: transparent;
+}
+.werkzeugleiste .menue-eintrag-icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
+  mask: var(--knopf-icon) center / contain no-repeat;
+}
+
 .werkzeugleiste button:hover:not(:disabled) { border-color: var(--rand); background: var(--papier); }
 .werkzeugleiste button:disabled { opacity: 0.35; cursor: default; }
 .werkzeugleiste button.ist-aktiv { border-color: var(--akzent); background: var(--papier); }

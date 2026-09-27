@@ -24,6 +24,7 @@
 <script src="<%= BASE %>/reveal-plugin/highlight/highlight.js"></script>
 <script src="<%= BASE %>/static/js/folien-effekte.js"></script>
 <script src="<%= BASE %>/static/js/folien-video.js"></script>
+<script src="<%= BASE %>/static/js/folien-passform.js"></script>
 <script>
   // The preview inside the editor must not behave like a presentation: no
   // keyboard control (the keys belong to the form next to it), no address
@@ -99,6 +100,9 @@
         // The highlighter runs once, over the slides that were there when
         // reveal started. A slide redrawn while typing is not one of them.
         hervorheben(neu);
+        // Same for the fit: the slide just grew or shrank by a word, and
+        // whether it still fits is exactly what changed.
+        window.folienPassform(neu);
         if (indizes[n.index]) Reveal.slide(indizes[n.index][0], indizes[n.index][1]);
       }
     });

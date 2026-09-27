@@ -122,10 +122,19 @@ function cssFor(wanted) {
 }
 
 // Which styles a finished piece of slide markup actually uses.
+//
+// The class is read out of the whole class attribute, not off its own: a
+// code block that is also a reveal step carries class="hl-github fragment"
+// (render.js merges the two), and looking for the class alone would find
+// nothing there -- the export would then leave the style behind and the
+// block would show in the shipped default instead.
 function usedIn(html) {
   const found = new Set();
-  for (const treffer of String(html).matchAll(/class="hl-([a-z0-9-]+)"/g)) {
-    if (isStyle(treffer[1])) found.add(treffer[1]);
+  for (const treffer of String(html).matchAll(/\sclass="([^"]*)"/g)) {
+    for (const klasse of treffer[1].split(/\s+/)) {
+      const name = /^hl-([a-z0-9-]+)$/.exec(klasse);
+      if (name && isStyle(name[1])) found.add(name[1]);
+    }
   }
   return [...found];
 }

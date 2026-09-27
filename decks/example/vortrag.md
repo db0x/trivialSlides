@@ -8,19 +8,13 @@ transition: concave
 
 # Example
 
-Every **slide** ~~layout~~, *once*
+Every slide layout, once
 
 ---
 
 <!-- .slide: data-layout="abschnitt" data-background-color="#122233" -->
 
 # Section divider
-
----
-
-<!-- .slide: data-layout="video" data-video="4ApMS8qYWo0" data-background-effect="starfield" data-text-color="#ffffff" -->
-
-## FIRE
 
 ---
 
@@ -34,6 +28,9 @@ and *italic* text, and a [link](https://revealjs.com).
 - This one only appears on click
 <!-- .element: class="fragment" -->
 
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+<!-- .element: class="fragment" -->
+
 ----
 
 ## A vertical slide
@@ -41,6 +38,16 @@ and *italic* text, and a [link](https://revealjs.com).
 Four dashes instead of three attach a slide *below* the previous one
 rather than after it. reveal.js calls that a stack; press the down arrow
 to get here.
+
+---
+
+<!-- .slide: data-layout="video" data-video="4ApMS8qYWo0" data-textseite="rechts" data-textbreite="25" data-background-effect="starfield" data-text-color="#ffffff" -->
+
+Lorem ipsum dolor sit amet,
+
+consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat,
+
+sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 

@@ -86,6 +86,31 @@ unnoticed.
 | Video (`video`) | A heading with a YouTube player below it |
 | Quote (`zitat`) | Large quotation with an attribution |
 
+### How wide the text stands beside a picture
+
+Where the text stands *beside* something — a picture in `bild-rechts` and
+`bild-links`, a player in `video` — `data-textbreite` says how much of the
+slide it may take: `25`, `33` or `50`.
+
+```markdown
+<!-- .slide: data-layout="bild-rechts" data-image="chart.svg" data-textbreite="25" -->
+```
+
+A cap and not a width: whatever the cap leaves over goes to the picture, so
+a narrower column of text is a larger picture, not an empty gap.
+
+The default belongs to the **layout**, not to the list of values: an image
+layout has always split the slide down the middle, a video slide has always
+given the player two thirds. Those are what they look like before anybody
+chooses, so those are their defaults — `50` and `33` — and a deck written
+before this existed reads exactly as it did. A slide left at its layout's
+default says nothing about it in the file.
+
+In the editor it is the second of the two buttons at the end of the text
+toolbar, and it wears its value rather than an icon. On a video slide it is
+greyed out until the text is put left or right of the player; above and
+below, the text has the full width and there is nothing to choose.
+
 A layout **never** changes a slide's text, only its attributes. That is what
 keeps the slide body plain Markdown, which still reads sensibly without this
 project — just without the finer points of the arrangement. The arrangement
@@ -166,6 +191,51 @@ it is built by [`backend/video.js`](backend/video.js), so nothing anyone
 types decides where the iframe points. A URL in the file would put that
 decision back into the file.
 
+### Where the text goes
+
+A video slide has a heading and a body like any other, and `data-textseite`
+says where they sit in relation to the player — `oben`, `unten`, `links` or
+`rechts`. In the editor it is the last button of the text toolbar, and only
+on a video slide: the bar shows the icon of the side in force, the menu
+behind it shows all four with their names.
+
+```markdown
+<!-- .slide: data-layout="video" data-video="aqz-KE-bpKQ" data-textseite="links" -->
+
+## Big Buck Bunny
+
+A line about what is worth watching for.
+```
+
+`oben` is what a video slide looked like before there was a choice, so it is
+the default and stays out of the file — an old deck reads exactly as it
+did. Above and below share the full width and the player gets what height
+is left. Left and right divide it in thirds — one to the text, two to the
+player — and the 16:9 gives the player its height from there. The player is
+what the slide is for, and a third is enough for the handful of lines that
+belong beside it.
+
+Beside the player, `data-textbreite` caps how much of the slide the text
+may take — see [How wide the text stands beside a
+picture](#how-wide-the-text-stands-beside-a-picture), which the image
+layouts share. A video slide gives the player two thirds unless told
+otherwise.
+
+**The heading does not move.** It names the slide, not the text beside the
+player, so it stays across the top in all four arrangements — only the body
+travels. This is the one layout whose heading therefore sits *outside*
+`.folie-text` in the markup: it could not stay put inside a box that moves.
+What moves below it moves by `order`, not by turning the box around, which
+would have taken the heading along.
+
+The markup is the same in all four cases and always in reading order —
+heading, body, player. Which side that ends up on is the stylesheet's
+business, the same division of labour as the image layouts, so a screen
+reader gets the slide in the order it was written whichever arrangement is
+chosen. A slide with no body gets no empty `.folie-text` either — beside
+the player that box is half the width, and an empty half would take the
+room from the picture for nothing.
+
 The player is embedded with `data-src` rather than `src`: reveal.js loads
 it when the slide comes up and takes it away again when the talk moves on,
 which is what stops the sound at the right moment and what keeps ten videos
@@ -198,10 +268,19 @@ among the parameters — one with no effect only suggests it has one. The addres
 `rel=0` keeps the suggestions at the end to the same channel — a talk
 should not end in whatever the algorithm has in stock.
 
-Two places where a video cannot be what it is: the **PDF**, where an iframe
+Two places where a video cannot be what it is. The **PDF**, where an iframe
 shows nothing at all, so the handout gets the black box with the address in
-it; and the **single HTML file**, which stays a single file but needs a
-network for this one slide. Everything else in it still runs without one.
+it. And the **single HTML file**, which is opened from the file system and
+therefore has no origin of its own: YouTube will not configure a player for
+a page without one and puts a "player configuration error" in the box
+instead of the video. No parameter changes that — it is the referrer
+YouTube wants, and a `file://` page sends none. So the exported file shows
+the video's still image with a play mark on it, and a click opens the video
+on youtube.com, where it plays. Served over http(s) — the same file put on
+a web server — the export has an origin and embeds the player as usual.
+
+Both need a network for this one slide. Everything else in the file still
+runs without one.
 
 ## Background gradients
 
@@ -379,6 +458,54 @@ schemes only those the deck actually uses. A deck without code exports
 exactly as small as it did before. Without the highlighter the code still
 shows, in the theme's own type.
 
+## When a slide holds more than fits
+
+reveal.js lays every slide out in a box of a fixed size — 960 by 700 by
+default — and scales that box to the window. What does not fit *inside* the
+box is not scaled with it: it is cut off at the bottom, in the editor, on
+the wall and in the handout alike, and nothing on the slide says so.
+
+So a slide that runs over has its type stepped down until it fits
+([`backend/public/js/folien-passform.js`](backend/public/js/folien-passform.js)).
+Measured rather than guessed — how much is too much depends on the theme,
+the layout, the window and the words themselves, none of which is known
+while the stylesheet is written. A binary search over seven steps finds the
+largest size that still fits; the size goes on the `<section>`, so the
+headings follow it along with the body text.
+
+A slide that fits is not touched at all. This is the rescue for the odd
+slide, not a layout rule — and it stops at **0.55**, because below that a
+slide is unreadable from the back of the room and the honest answer is to
+put less on it. From there the slide is allowed to run over again, which is
+what shows you there is a problem.
+
+A slide that came out smaller carries `data-passform="0.75"` — so a slide
+that was shrunk can be told apart from one that was written small.
+
+On paper it is measured against a different box. reveal.js puts every slide
+in a page of its own there, that page clips what sticks out, and the slide
+does not begin at its top edge — so what is available is the page minus
+that offset. Against the 700 of the screen a slide that just fits on the
+wall would come out of the printer a line short.
+
+It applies to every layout, in the editor's preview, in the presentation,
+in the exported file and in the PDF alike — one file, so all four agree.
+How far it carries differs by layout, because a picture or a player takes
+room the type cannot have and the quote layout starts a size larger.
+Measured with a body of plain prose, at 960 × 700:
+
+| Layout | fits up to | runs over from |
+|---|---|---|
+| `titel`, `abschnitt` | beyond 300 words | — |
+| `text`, `spalten`, `spalten-drei` | beyond 300 words | — |
+| `bild-voll` | 200 words | 250 |
+| `video` | 175 words | 200 |
+| `bild-rechts`, `bild-links` | 150 words | 175 |
+| `zitat` | 125 words | 150 |
+
+Which is a long way past what belongs on a slide — but it is where the
+floor is, and past it a slide is cut off again.
+
 ## When the text field is not enough
 
 The formatting buttons cover paragraphs, bold, italic, lists, links,
@@ -436,45 +563,6 @@ theirs elsewhere sets `BROWSER_PATH`. If no browser is found, the editor
 says so on a click of *PDF* and names the manual route: present, append
 `?print-pdf` to the address, print.
 
-## Fitting it into Relay
-
-The project deliberately follows Relay's conventions — CommonJS on the
-server, native ES modules in the browser, EJS, no build step — so that
-moving it over is a copy rather than a rewrite. The whole editor hangs off
-*one* router.
-
-1. Put `deck.js`, `layouts.js`, `render.js`, `dokument.js` and `pdf.js`
-   next to Relay's other modules, `routes/decks.js` as `routes/folien.js`,
-   the views and `public/` files accordingly.
-2. Mount it in Relay's `app.js` the way it is done there:
-   ```js
-   app.use(mount, loginRequired, require("./routes/folien").router);
-   ```
-3. Replace `storage.js` with Relay's own: the deck folders then belong to
-   the respective user, and sharing runs through `shares.js` as it does for
-   the notes.
-4. `nurEigeneSeite` in `routes/decks.js` and `schreibKopf()` in
-   `public/js/editor/base.js` fall away — Relay's `csrfSchutz` and its
-   `base.js` take over. That is why both sit in exactly one place.
-5. Copy reveal.js and overlayscrollbars out of `node_modules` into
-   `public/vendor/`, the way the other third-party libraries live there,
-   and adjust the paths in `app.js` and in `js/scrollbars.js`.
-   `dokument.js` reads reveal.js and the themes from disk as well -- the
-   path is in one place there, as `REVEAL_DIR`.
-6. The Relay server needs a Chromium, otherwise publishing is reduced to
-   HTML and Markdown. Everything else keeps working.
-
-## What is deliberately missing
-
-* **Simultaneous editing.** Two people on the same slide overwrite each
-  other. Real collaborative writing would need Relay's session handling --
-  worth doing only after the move over there.
-* **Raw HTML in slides** is discarded when rendering. The editor does not
-  offer it, and without raw HTML a smuggled-in `<script>` in a talk passed
-  around is not possible in the first place.
-* **Custom themes.** The reveal.js themes that ship with it are the choice
-  on offer. A house theme would be one more CSS file plus an entry in
-  `deck.js`.
 
 ## Licence
 

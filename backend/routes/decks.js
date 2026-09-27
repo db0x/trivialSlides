@@ -113,6 +113,8 @@ router.get("/d/:slug", deckLaden, (req, res) => {
     verlaeufe: i18n.verlaeufeUebersetzt(verlaeufe.liste(), req.sprache),
     effekte: i18n.effekteUebersetzt(effekte.EFFEKTE, req.sprache),
     videoMuster: video.MUSTER,
+    videoSeiten: i18n.videoSeitenUebersetzt(video.SEITEN, req.sprache),
+    textbreiten: layouts.BREITEN,
     codeSprachen: code.LANGUAGES,
     codeStile: code.STYLES,
     // The grammar travels with the page and becomes the input's pattern --

@@ -17,6 +17,7 @@ const REVEAL_DIR = path.join(__dirname, "node_modules", "reveal.js", "dist");
 const SLIDES_CSS = path.join(__dirname, "public", "css", "slides.css");
 const EFFEKTE_JS = path.join(__dirname, "public", "js", "folien-effekte.js");
 const VIDEO_JS = path.join(__dirname, "public", "js", "folien-video.js");
+const PASSFORM_JS = path.join(__dirname, "public", "js", "folien-passform.js");
 const HIGHLIGHT_JS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "highlight.js");
 const HIGHLIGHT_CSS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "monokai.css");
 
@@ -180,6 +181,9 @@ ${hatCode ? `<script>${lies(HIGHLIGHT_JS)}</script>` : ""}
      document that needs a second file next to it. -->
 <script>${lies(EFFEKTE_JS)}</script>
 <script>${lies(VIDEO_JS)}</script>
+<!-- Steps the type down on a slide holding more than fits, the same file
+     and therefore the same result as in the editor and on the wall. -->
+<script>${lies(PASSFORM_JS)}</script>
 <script>${start}</script>
 </body>
 </html>

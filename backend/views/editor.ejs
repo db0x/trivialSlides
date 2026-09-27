@@ -96,6 +96,46 @@
                stays usable in source mode -- that is where it lands. -->
           <button type="button" id="code-einfuegen" class="werkzeug-icon" data-tip="<%= t('werkzeug.codeTip') %>" aria-label="<%= t('werkzeug.code') %>"></button>
           <span class="leiste-trenner"></span>
+          <!-- Where the text sits in relation to the player, on a video
+               slide. In the bar it is the icon of the side in force and
+               nothing else; the words are in the menu, where there is room
+               for them. Like the code button it is not a rich-text command,
+               so it keeps working in source mode. -->
+          <details id="textseite-menue" class="menue menue-werkzeug"
+                   data-name="<%= t('editor.textseite') %>" hidden>
+            <summary id="textseite-knopf" class="werkzeug-icon werkzeug-seite" data-seite="oben"
+                     aria-label="<%= t('editor.textseite') %>"></summary>
+            <div class="menue-inhalt" role="menu">
+              <% videoSeiten.forEach(function (s) { %>
+                <button type="button" class="menue-eintrag werkzeug-seite" role="menuitemradio"
+                        aria-checked="false" data-seite="<%= s.id %>"><span
+                        class="menue-eintrag-icon" aria-hidden="true"></span><%= s.name %></button>
+              <% }); %>
+            </div>
+          </details>
+          <!-- How wide the text may get beside the player. A percentage
+               says itself, so this one wears its value rather than an icon
+               -- and it is switched off, not hidden, while the text is
+               above or below the player: there it has the full width and
+               the number would be a promise the slide does not keep. -->
+          <!-- Two names, because the thing the text stands beside differs by
+               layout: a picture on bild-links/-rechts, a player on video.
+               Both travel with the button and the page picks the fitting
+               one (js/editor/index.js) -- naming it after the layout on the
+               server would mean re-rendering the bar on every layout
+               change. -->
+          <details id="textbreite-menue" class="menue menue-werkzeug" hidden
+                   data-name-bild="<%= t('editor.textbreiteBild') %>"
+                   data-name-video="<%= t('editor.textbreiteVideo') %>">
+            <summary id="textbreite-knopf" class="werkzeug-wort"></summary>
+            <div class="menue-inhalt" role="menu">
+              <% textbreiten.forEach(function (b) { %>
+                <button type="button" class="menue-eintrag" role="menuitemradio"
+                        aria-checked="false" data-breite="<%= b %>"><%= b %>&nbsp;%</button>
+              <% }); %>
+            </div>
+          </details>
+          <span class="leiste-trenner"></span>
           <button type="button" id="quelltext-umschalten" class="werkzeug-icon" data-tip="<%= t('werkzeug.quelltextTip') %>" aria-label="<%= t('werkzeug.quelltext') %>"></button>
         </div>
         <!-- The frame, not the field, is what scrolls: OverlayScrollbars

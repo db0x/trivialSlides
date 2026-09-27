@@ -61,4 +61,33 @@ function watchUrl(id) {
   return `https://www.youtube.com/watch?v=${id}`;
 }
 
-module.exports = { MUSTER, isId, toId, embedUrl, watchUrl };
+// The video's still image. Stands in for the player where there cannot be
+// one -- in the exported file above all (js/folien-video.js).
+//
+// hqdefault rather than maxresdefault: it exists for every video, while
+// maxres only exists for those uploaded in HD and otherwise answers with a
+// placeholder. 480x360 is little for a whole slide, but it is a still
+// behind a play mark, not the picture the talk is about.
+function thumbUrl(id) {
+  return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+}
+
+// --- Where the text sits ------------------------------------------------
+// A video slide has a heading and a body like any other, and they have to
+// go somewhere in relation to the player. The arrangement itself is in
+// slides.css, as with the layouts -- what is decided here is only which
+// names a file may carry.
+//
+// "oben" is what a video slide looked like before there was a choice, so it
+// is the default and the one a file does not have to spell out. An unknown
+// name falls back to it rather than leaving the slide without an
+// arrangement at all.
+const SEITEN = ["oben", "unten", "links", "rechts"];
+const SEITE_STANDARD = "oben";
+
+function nurSeite(wert) {
+  const s = String(wert == null ? "" : wert).trim();
+  return SEITEN.includes(s) ? s : SEITE_STANDARD;
+}
+
+module.exports = { MUSTER, isId, toId, embedUrl, watchUrl, thumbUrl, SEITEN, SEITE_STANDARD, nurSeite };
