@@ -6,6 +6,8 @@
   "app.short": "A presentation editor on reveal.js that stores nothing but Markdown.",
   "header.allTalks": "All talks",
   "header.present": "Present",
+  "header.presentFromStart": "Start from the beginning",
+  "header.presentFromCurrent": "Start at the current slide",
   "header.download": "Download",
   "header.theme": "Theme",
   "header.transition": "Transition",

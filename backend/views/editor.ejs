@@ -30,8 +30,22 @@
 
   <span id="save-state" class="save-state" role="status"></span>
 
-  <a class="button button-icon header-present" data-tip="<%= t('header.present') %>" aria-label="<%= t('header.present') %>"
-     href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"></a>
+  <!-- Presenting is two things: from the top, or from wherever the editor
+       stands. The second is switched off on the first slide, where it would
+       do exactly what the entry above it does -- index.js keeps it in step
+       with the slide being edited and writes the address into its link. -->
+  <details class="menu present-menu">
+    <summary class="button button-icon header-present" data-tip="<%= t('header.present') %>"
+             aria-label="<%= t('header.present') %>"></summary>
+    <div class="menu-content" role="menu">
+      <a class="menu-item present-from-start" role="menuitem"
+         href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"><span
+         class="menu-item-icon" aria-hidden="true"></span><%= t('header.presentFromStart') %></a>
+      <a id="present-from-current" class="menu-item present-from-current" role="menuitem"
+         href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"><span
+         class="menu-item-icon" aria-hidden="true"></span><%= t('header.presentFromCurrent') %></a>
+    </div>
+  </details>
   <details class="menu">
     <summary class="button button-icon header-download" data-tip="<%= t('header.download') %>" aria-label="<%= t('header.download') %>"></summary>
     <div class="menu-content">

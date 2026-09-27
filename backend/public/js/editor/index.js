@@ -68,6 +68,7 @@ var el = {
   codeOk: $("#code-ok"),
   codeNote: $("#code-note"),
   codeFragment: $("#code-fragment"),
+  presentFromCurrent: $("#present-from-current"),
 };
 
 var preview = createPreview($("#preview"), BASE);
@@ -267,6 +268,31 @@ function setContentMode(slide) {
 function drawAll() {
   drawList(el.list, deck, active, layoutsById);
   showSlide();
+  drawPresentMenu();
+}
+
+// --- Presenting --------------------------------------------------------
+// Reveal addresses a slide as horizontal/vertical, the editor's list is
+// flat -- the same walk the server does for the preview (render.js,
+// indices()), only for the one slide that is wanted.
+function slideHash(index) {
+  var h = -1;
+  var v = 0;
+  for (var i = 0; i <= index; i++) {
+    if (i > 0 && deck.slides[i].vertical) v++;
+    else { h++; v = 0; }
+  }
+  return "#/" + h + "/" + v;
+}
+
+// Starting at the current slide only says something on a slide other than
+// the first. Elsewhere the entry is greyed out and, more to the point,
+// stops being a link -- so the click does nothing at all.
+function drawPresentMenu() {
+  var possible = active > 0;
+  el.presentFromCurrent.setAttribute("aria-disabled", possible ? "false" : "true");
+  if (possible) el.presentFromCurrent.href = BASE + "/present" + slideHash(active);
+  else el.presentFromCurrent.removeAttribute("href");
 }
 
 function select(i) {
