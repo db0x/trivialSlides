@@ -106,6 +106,7 @@
   "gradient.spotlight": "Spotlicht",
   "gradient.morning": "Morgen",
   "gradient.paper": "Papier",
+  "editor.previewFormat": "Seitenverhältnis der Vorschau",
   "editor.previewNote": "Das ist die Folie, wie sie an der Wand aussieht.",
   "editor.exportHtml": "Eine HTML-Datei (läuft ohne alles)",
   "editor.exportPdf": "PDF zum Austeilen (dauert einen Moment)",

@@ -1008,10 +1008,40 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 
 /* --- Preview ---------------------------------------------------------- */
 .preview { display: flex; flex-direction: column; }
+/* The format menu stands under the frame at its left edge, and at the
+   height the buttons elsewhere have (2rem, see .button-icon). max-content
+   keeps the row as narrow as what stands in it: a full-width label would
+   take its click and its tooltip along the whole column. */
+.preview-format-field {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  gap: 6px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+/* The icon file carries a fixed dark grey fill, so it serves as a mask and
+   takes the row's colour -- the same treatment every other icon here gets,
+   and the only one that survives the dark palette. */
+.preview-screen {
+  /* Bigger than the 1rem an icon gets inside a button: there it has the
+     button's border around it, here it stands free beside the menu and
+     would otherwise read as a speck. The drawing keeps a margin of its own
+     inside the file, which eats a good quarter of the box. */
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--muted);
+  background: currentColor;
+  -webkit-mask: url(../assets/screen.svg) center / contain no-repeat;
+  mask: url(../assets/screen.svg) center / contain no-repeat;
+}
+.preview-format { height: 2rem; padding: 0 6px; }
 .preview-frame {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  /* The chosen shape of the screen (preview-format.js). The fallback is the
+     first entry of the menu, for the moment before the script has run. */
+  aspect-ratio: var(--preview-ratio, 16 / 9);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;

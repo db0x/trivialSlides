@@ -105,6 +105,13 @@ router.post("/new", (req, res) => {
 });
 
 // --- Editor ------------------------------------------------------------
+// The shapes a screen comes in. Nothing here touches the deck: reveal.js
+// lays every slide out at 960x700 and fits that into whatever it is given,
+// so this list only says what the editor's preview is fitted into -- which
+// is the one way to see beforehand what a 4:3 projector will make of a
+// slide. The first entry is what a browser shows without a choice stored.
+const PREVIEW_FORMATS = ["16:9", "16:10", "3:2", "4:3", "21:9"];
+
 router.get("/d/:slug", loadDeck, (req, res) => {
   res.render("editor", {
     slug: req.slug,
@@ -124,6 +131,7 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     gradientMax: deck.GRADIENT_MAX,
     themes: deck.THEMES,
     transitions: deck.TRANSITIONS,
+    previewFormats: PREVIEW_FORMATS,
     images: storage.images(req.slug),
   });
 });

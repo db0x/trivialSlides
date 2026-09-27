@@ -4,6 +4,9 @@
 <%- include("partials/head", { title: deck.title || "Vortrag" }) %>
 <!-- Only the editor picks colours, so the overview is spared this. -->
 <link rel="stylesheet" href="<%= BASE %>/coloris/dist/coloris.css">
+<!-- Only the editor has a preview to shape, so this one is not in the
+     shared head either. -->
+<script src="<%= BASE %>/static/js/preview-format.js" defer></script>
 </head>
 <body class="side-editor">
 
@@ -307,6 +310,24 @@
       <iframe id="preview" title="<%= t('column.preview') %>" src="<%= BASE %>/d/<%= slug %>/preview"></iframe>
     </div>
     <p class="hint preview-hint"><%= t('editor.previewNote') %></p>
+    <!-- The shape of the screen the talk will run on. reveal.js fits the
+         slide into whatever it is given, so putting the preview into that
+         shape is the one honest way to see beforehand what a 4:3 projector
+         will make of a slide. The deck is untouched by it -- see
+         preview-format.js.
+
+         Icon and menu in one <label>, so the picture is not a dead
+         decoration: a click on it opens the menu. The tooltip hangs on the
+         label for the same reason. -->
+    <label class="preview-format-field" data-tip="<%= t('editor.previewFormat') %>">
+      <span class="preview-screen" aria-hidden="true"></span>
+      <select id="preview-format" class="preview-format"
+              aria-label="<%= t('editor.previewFormat') %>">
+        <% previewFormats.forEach(function (f) { %>
+          <option value="<%= f %>"><%= f %></option>
+        <% }); %>
+      </select>
+    </label>
   </aside>
 </main>
 

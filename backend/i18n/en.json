@@ -106,6 +106,7 @@
   "gradient.spotlight": "Spotlight",
   "gradient.morning": "Morning",
   "gradient.paper": "Paper",
+  "editor.previewFormat": "Aspect ratio of the preview",
   "editor.previewNote": "This is the slide as it looks on the wall.",
   "editor.exportHtml": "A single HTML file (runs without anything)",
   "editor.exportPdf": "PDF to hand out (takes a moment)",
