@@ -10,10 +10,16 @@
 const fs = require("fs");
 const path = require("path");
 const render = require("./render");
+const code = require("./code");
 const storage = require("./storage");
 
 const REVEAL_DIR = path.join(__dirname, "node_modules", "reveal.js", "dist");
 const SLIDES_CSS = path.join(__dirname, "public", "css", "slides.css");
+const EFFEKTE_JS = path.join(__dirname, "public", "js", "folien-effekte.js");
+const VIDEO_JS = path.join(__dirname, "public", "js", "folien-video.js");
+const PASSFORM_JS = path.join(__dirname, "public", "js", "folien-passform.js");
+const HIGHLIGHT_JS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "highlight.js");
+const HIGHLIGHT_CSS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "monokai.css");
 
 const BILD_TYPEN = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
@@ -120,6 +126,16 @@ function html({ slug, deck, bildBasis, druck = false }) {
 
   const opt = JSON.stringify(optionen(deck, druck));
 
+  // The syntax highlighter is half a megabyte -- as much as reveal.js
+  // itself. A deck without a single code block would carry it for nothing,
+  // so it only travels when there is something to colour. Its absence
+  // changes nothing else: the code then shows in the theme's own type,
+  // which is exactly what it looked like before there was a highlighter.
+  const hatCode = /<pre[^>]*><code/.test(slides);
+
+  // Only the styles this deck actually asks for travel with it.
+  const stileCss = code.cssFor(code.usedIn(slides));
+
   // When printing, reveal.js measures the height of every slide in order
   // to centre it on the page. A font that has not loaded yet yields a
   // different height than the finished one, so the start is delayed: two
@@ -128,12 +144,18 @@ function html({ slug, deck, bildBasis, druck = false }) {
   //
   // pdfFertig is the signal to the PDF generator (pdf.js) that the page
   // breaking is done. Printing earlier would yield a single page.
+  // The plugin cannot go into the options as JSON -- it is a global, not a
+  // value -- so it is added to them in the document instead.
+  const einstellungen = hatCode
+    ? `Object.assign(${opt}, { plugins: [RevealHighlight] })`
+    : opt;
+
   const start = druck
     ? `document.addEventListener("pdf-ready", function () { window.pdfFertig = true; });
 requestAnimationFrame(function () { requestAnimationFrame(function () {
-  document.fonts.ready.then(function () { Reveal.initialize(${opt}); });
+  document.fonts.ready.then(function () { Reveal.initialize(${einstellungen}); });
 }); });`
-    : `Reveal.initialize(${opt});`;
+    : `Reveal.initialize(${einstellungen});`;
 
   return `<!doctype html>
 <html lang="de">
@@ -144,6 +166,8 @@ requestAnimationFrame(function () { requestAnimationFrame(function () {
 <style>${lies(path.join(REVEAL_DIR, "reset.css"))}</style>
 <style>${lies(path.join(REVEAL_DIR, "reveal.css"))}</style>
 <style>${themeCss(deck.theme)}</style>
+${hatCode ? `<style>${lies(HIGHLIGHT_CSS)}</style>` : ""}
+${stileCss ? `<style>${stileCss}</style>` : ""}
 <style>${lies(SLIDES_CSS)}</style>
 </head>
 <body>
@@ -151,6 +175,15 @@ requestAnimationFrame(function () { requestAnimationFrame(function () {
 ${slides}
 </div></div>
 <script>${lies(path.join(REVEAL_DIR, "reveal.js"))}</script>
+${hatCode ? `<script>${lies(HIGHLIGHT_JS)}</script>` : ""}
+<!-- Animated backgrounds: the same file the served pages use, inlined like
+     everything else -- otherwise the effect would be the one thing in the
+     document that needs a second file next to it. -->
+<script>${lies(EFFEKTE_JS)}</script>
+<script>${lies(VIDEO_JS)}</script>
+<!-- Steps the type down on a slide holding more than fits, the same file
+     and therefore the same result as in the editor and on the wall. -->
+<script>${lies(PASSFORM_JS)}</script>
 <script>${start}</script>
 </body>
 </html>

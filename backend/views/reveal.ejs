@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="<%= BASE %>/reveal/reset.css">
 <link rel="stylesheet" href="<%= BASE %>/reveal/reveal.css">
 <link rel="stylesheet" href="<%= BASE %>/reveal/theme/<%= deck.theme %>.css">
+<link rel="stylesheet" href="<%= BASE %>/reveal-plugin/highlight/monokai.css">
+<!-- Styles a single code block can ask for; without one it keeps the
+     monokai above (see code.js). -->
+<link rel="stylesheet" href="<%= BASE %>/code-styles.css">
 <link rel="stylesheet" href="<%= BASE %>/static/css/slides.css">
 </head>
 <body class="<%= vorschau ? "ist-vorschau" : "" %>">
@@ -17,6 +21,10 @@
 
 <script src="<%= BASE %>/reveal/reveal.js"></script>
 <script src="<%= BASE %>/reveal-plugin/notes/notes.js"></script>
+<script src="<%= BASE %>/reveal-plugin/highlight/highlight.js"></script>
+<script src="<%= BASE %>/static/js/folien-effekte.js"></script>
+<script src="<%= BASE %>/static/js/folien-video.js"></script>
+<script src="<%= BASE %>/static/js/folien-passform.js"></script>
 <script>
   // The preview inside the editor must not behave like a presentation: no
   // keyboard control (the keys belong to the form next to it), no address
@@ -34,13 +42,26 @@
     touch: !istVorschau,
     slideNumber: istVorschau ? false : "c/t",
     transition: istVorschau ? "none" : <%- JSON.stringify(deck.transition) %>,
-    plugins: istVorschau ? [] : [RevealNotes],
+    // Highlighting belongs in the preview as well -- it is part of what the
+    // slide looks like. Speaker notes are not: they open a second window.
+    plugins: istVorschau ? [RevealHighlight] : [RevealNotes, RevealHighlight],
   }).then(function () {
     // Only report now: initialize() jumps to the first slide itself at the
     // end and would overwrite a Reveal.slide() accepted earlier.
     fertig = true;
     if (istVorschau) window.parent.postMessage({ typ: "bereit" }, "*");
   });
+
+  // Colours the code in a freshly drawn slide. The plugin does this for the
+  // whole deck at startup; for one slide it has to be asked.
+  function hervorheben(bereich) {
+    var plugin = Reveal.getPlugin && Reveal.getPlugin("highlight");
+    if (!plugin) return;
+    [].forEach.call(bereich.querySelectorAll("pre code"), function (block) {
+      block.parentNode.classList.add("code-wrapper");
+      plugin.highlightBlock(block);
+    });
+  }
 
   if (istVorschau) {
     // The editor drives the preview via postMessage: jump to a slide and
@@ -70,8 +91,18 @@
         if (!ziel) return;
         var huelle = document.createElement("div");
         huelle.innerHTML = n.html;
-        ziel.replaceWith(huelle.firstElementChild);
+        var neu = huelle.firstElementChild;
+        ziel.replaceWith(neu);
         Reveal.sync();
+        // sync() builds the background elements afresh, and with them goes
+        // what folien-effekte.js wrote on them.
+        window.folienEffekte();
+        // The highlighter runs once, over the slides that were there when
+        // reveal started. A slide redrawn while typing is not one of them.
+        hervorheben(neu);
+        // Same for the fit: the slide just grew or shrank by a word, and
+        // whether it still fits is exactly what changed.
+        window.folienPassform(neu);
         if (indizes[n.index]) Reveal.slide(indizes[n.index][0], indizes[n.index][1]);
       }
     });

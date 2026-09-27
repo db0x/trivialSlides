@@ -5,7 +5,7 @@
 </head>
 <body class="seite-uebersicht">
   <header class="kopf">
-    <a class="marke" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32">trivialSlides</a>
+    <a class="marke" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32"><span class="marke-wort">trivialSlides<small class="marke-version">v<%= VERSION %></small></span></a>
     <button id="sprache-umschalter" class="knopf knopf-still sprache" type="button"
             data-ziel="<%= SPRACHE === 'de' ? 'en' : 'de' %>"
             data-tip="<%= t('kopf.spracheWechseln') %>"

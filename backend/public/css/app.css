@@ -106,6 +106,19 @@ body {
   color: var(--schrift);
 }
 .marke img { width: 2rem; height: 2rem; }
+/* Name and version as one column, so the version sits under the name
+   without pushing the logo out of the middle. */
+.marke-wort {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.marke-version {
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--gedaempft);
+}
 .kopf-feld {
   display: flex;
   align-items: center;
@@ -437,6 +450,40 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   margin-bottom: 4px;
   line-height: 17px;
 }
+/* The one group that folds away. Its label cannot sit above the box the way
+   the others do: it has to be clickable and it has to stay when the box is
+   closed, so it lives inside as the summary -- which then IS the whole box
+   while folded. The browser's own marker does the rest. */
+/* Folded, the summary IS the box -- so the box contributes no padding of
+   its own and the row sits evenly between the borders. Open, the bottom
+   padding comes back for the content below. */
+.feldgruppe-klapp { padding-top: 0; padding-bottom: 0; }
+.feldgruppe-klapp[open] { padding-bottom: 12px; }
+.feldgruppe-klapp > summary {
+  padding: 7px 0;
+  line-height: 17px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gedaempft);
+  cursor: pointer;
+}
+.feldgruppe-klapp > summary:hover { color: var(--schrift); }
+.feldgruppe-klapp > summary:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+/* Folded, the group hides what the slide carries -- so it says THAT it
+   carries something. Without this the dot would be decoration; with it, it
+   is the only way to tell a plain slide from one with a gradient. */
+.klapp-marke { display: none; }
+.hat-eigenes > summary > .klapp-marke {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--akzent);
+  vertical-align: 0.05em;
+}
+
 .feld { display: block; margin-bottom: 10px; }
 .feld:last-child { margin-bottom: 0; }
 .feld-name { display: block; margin-bottom: 4px; font-size: 13px; color: var(--gedaempft); }
@@ -486,6 +533,16 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Two columns */
 .mini-spalten::before { left: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
 .mini-spalten::after { right: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
+/* Three columns: the outer two are the pseudo-elements, the middle one is
+   painted into the background -- an element has only two of the former. */
+.mini-spalten-drei {
+  background-image: linear-gradient(color-mix(in srgb, var(--gedaempft) 25%, transparent) 0 100%);
+  background-size: 26% 14px;
+  background-position: 50% 12px;
+  background-repeat: no-repeat;
+}
+.mini-spalten-drei::before { left: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
+.mini-spalten-drei::after { right: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
 /* Image right / left */
 .mini-bild-rechts::before { left: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
 .mini-bild-rechts::after { right: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
@@ -495,6 +552,19 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .mini-bild-voll { background: var(--gedaempft); }
 .mini-bild-voll::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--papier); opacity: 0.9; }
 .mini-bild-voll::after { display: none; }
+/* Video: a screen with a play triangle */
+.mini-video::before { left: 12%; right: 12%; top: 8px; height: 17px; opacity: 0.25; }
+.mini-video::after {
+  left: 45%;
+  top: 12px;
+  width: 0;
+  height: 0;
+  background: none;
+  border-left: 7px solid var(--gedaempft);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  opacity: 0.8;
+}
 /* Quote */
 .mini-zitat::before { left: 15%; right: 15%; top: 10px; height: 8px; opacity: 0.3; }
 .mini-zitat::after { left: 40%; right: 15%; top: 22px; height: 3px; }
@@ -548,6 +618,84 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .werkzeug-icon[data-befehl="link"] { --knopf-icon: url(../assets/toolbar/md-link.svg); }
 .werkzeug-icon[data-befehl="fragment"] { --knopf-icon: url(../assets/toolbar/fragment.svg); }
 #quelltext-umschalten.werkzeug-icon { --knopf-icon: url(../assets/toolbar/code.svg); }
+#code-einfuegen.werkzeug-icon { --knopf-icon: url(../assets/toolbar/md-code.svg); }
+
+/* --- Where the text sits on a video slide ------------------------------
+   One set of icons for two places: the bar shows nothing but the icon of
+   the side in force, the menu behind it shows every icon with its word
+   beside it. Both read --knopf-icon off the same attribute, so the two can
+   never drift apart. */
+.werkzeug-seite[data-seite="oben"]   { --knopf-icon: url(../assets/toolbar/align-top.svg); }
+.werkzeug-seite[data-seite="unten"]  { --knopf-icon: url(../assets/toolbar/align-bottom.svg); }
+.werkzeug-seite[data-seite="links"]  { --knopf-icon: url(../assets/toolbar/align-left.svg); }
+.werkzeug-seite[data-seite="rechts"] { --knopf-icon: url(../assets/toolbar/align-right.svg); }
+
+/* The summary is the button here, and a <summary> is not a <button> -- so
+   what the bar gives its buttons has to be said again for this one. */
+.werkzeugleiste .menue-werkzeug > summary {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  list-style: none;
+}
+.werkzeugleiste .menue-werkzeug > summary::-webkit-details-marker { display: none; }
+.werkzeugleiste .menue-werkzeug > summary:hover { border-color: var(--rand); background: var(--papier); }
+.werkzeugleiste .menue-werkzeug[open] > summary { border-color: var(--akzent); color: var(--akzent); }
+/* Hangs from the left edge: the bar is read from the left, and the button
+   sits nowhere near the right one. */
+.werkzeugleiste .menue-werkzeug .menue-inhalt { right: auto; left: 0; min-width: 0; white-space: nowrap; }
+/* Prefixed with .werkzeugleiste throughout, because the bar styles every
+   button inside it and would otherwise reach these too. */
+.werkzeugleiste .menue-inhalt .menue-eintrag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.werkzeugleiste .menue-inhalt .menue-eintrag:hover { border-color: transparent; background: var(--flaeche); }
+.werkzeugleiste .menue-inhalt .menue-eintrag.ist-aktiv { color: var(--akzent); }
+/* The width wears its value instead of an icon: "33 %" says what it is,
+   and no picture of a percentage would. Tabular figures so the button does
+   not change width as the number changes. */
+.werkzeugleiste .werkzeug-wort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  height: 1.75rem;
+  padding: 0 6px;
+  color: var(--schrift);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+/* Off while the text is above or below the player, where there is no width
+   to choose. Not hidden: a button that vanishes and comes back as one
+   switches sides is harder to find again than one that greys out. */
+.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary {
+  opacity: 0.35;
+  cursor: default;
+}
+.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary:hover {
+  border-color: transparent;
+  background: transparent;
+}
+.werkzeugleiste .menue-eintrag-icon {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
+  mask: var(--knopf-icon) center / contain no-repeat;
+}
 
 .werkzeugleiste button:hover:not(:disabled) { border-color: var(--rand); background: var(--papier); }
 .werkzeugleiste button:disabled { opacity: 0.35; cursor: default; }
@@ -584,6 +732,78 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .inhalt-feld ul, .inhalt-feld ol { margin: 0 0 0.7em; padding-left: 1.4em; }
 /* Mark paragraphs that only appear on click visibly in the editor --
    otherwise there is a surprise waiting during the talk. */
+/* A code block in the rich-text field: an object, not text. It is sealed
+   (contenteditable="false"), so it reads as one thing and behaves as one --
+   a click opens its dialog, backspace next to it removes the whole block.
+   No syntax colours here on purpose: the field is for writing, the preview
+   beside it shows what the wall shows. */
+.inhalt-feld .code-block {
+  position: relative;
+  margin: 8px 0;
+  padding: 22px 10px 8px;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--flaeche);
+  cursor: pointer;
+}
+.inhalt-feld .code-block:hover { border-color: var(--akzent); }
+.inhalt-feld .code-marke {
+  position: absolute;
+  top: 4px;
+  left: 10px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gedaempft);
+}
+.inhalt-feld .code-weg {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--gedaempft);
+  cursor: pointer;
+}
+.inhalt-feld .code-weg:hover { color: var(--gefahr); }
+.inhalt-feld .code-block pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* The dialog's own code field: a plain, roomy textarea -- this is where the
+   code is actually written. */
+/* The dialog's code field. Deliberately NOT the .quelltext-feld of the
+   form: that one has its border taken away because the frame around it
+   supplies one. Here there is no frame, so without this the field would
+   look like a piece of text nobody may touch. */
+.code-eingabe {
+  display: block;
+  width: 100%;
+  min-height: 9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre;
+  overflow-x: auto;
+  resize: vertical;
+  tab-size: 4;
+}
+.code-fragment-zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.code-fragment-zeile input { width: auto; margin: 0; }
+
 .inhalt-feld .fragment { border-left: 3px solid var(--akzent); padding-left: 8px; margin-left: -11px; }
 .quelltext-feld { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; resize: none; }
 
@@ -642,6 +862,122 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
     linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px)),
     var(--papier);
 }
+
+/* The gradient: a row of samples, each wearing what it does, and a field
+   for anyone writing their own CSS. The samples are wide rather than round
+   -- a gradient needs a distance to be a gradient, and a dot the size of the
+   colour picker's would show a single mixed tone. */
+.verlauf-vorlagen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.verlauf-probe {
+  width: 46px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background-color: var(--papier);
+  cursor: pointer;
+}
+.verlauf-probe:hover { border-color: var(--akzent); }
+/* The chosen one is named by a ring outside the swatch: a border of its own
+   would sit on top of the gradient and change what the sample shows. */
+.verlauf-probe.ist-aktiv {
+  border-color: var(--akzent);
+  outline: 2px solid var(--akzent);
+  outline-offset: 1px;
+}
+/* "No gradient" carries the same struck-through circle as a colour dot
+   without a colour -- the same statement, so the same picture. */
+.verlauf-ohne {
+  background-image:
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px));
+}
+.verlauf-feld {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+.verlauf-feld[aria-invalid="true"] { border-color: var(--gefahr); }
+
+/* The effect tiles share the samples' size and ring -- they stand in the
+   same row of decisions. A still, not the animation: a form that moves
+   while someone is writing in it is a form that is hard to write in. The
+   wave is the same shape the slide uses, just held at an angle
+   (css/slides.css). */
+.effekt-kacheln { display: flex; flex-wrap: wrap; gap: 6px; }
+.effekt-kachel {
+  position: relative;
+  width: 46px;
+  height: 28px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background-color: var(--papier);
+  cursor: pointer;
+}
+.effekt-kachel:hover { border-color: var(--akzent); }
+.effekt-kachel.ist-aktiv {
+  border-color: var(--akzent);
+  outline: 2px solid var(--akzent);
+  outline-offset: 1px;
+}
+.effekt-kachel[data-effect="waves"] { background-color: #4973ff; }
+.effekt-kachel[data-effect="waves"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  /* The same proportions as the slide (css/slides.css), held at an angle --
+     a still of the effect rather than a picture of its own. Lifted a little
+     further than on the slide: in a tile 28 pixels tall the true proportion
+     would leave a blue sliver nobody can see. */
+  height: 325%;
+  aspect-ratio: 1;
+  border-radius: 45%;
+  background: rgb(20, 20, 20);
+  transform: translate(-50%, -85%) rotate(18deg);
+}
+
+/* A dozen dots is a night sky at this size; the slide's own few hundred
+   would just be a grey smear in 46 by 28 pixels. */
+.effekt-kachel[data-effect="starfield"] {
+  background-image: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+}
+.effekt-kachel[data-effect="starfield"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 1px;
+  height: 1px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    6px 2px #fff, 14px 9px #fff, 21px 3px #fff, 29px 12px #fff, 36px 5px #fff,
+    3px 14px #fff, 11px 19px #fff, 24px 17px #fff, 33px 20px #fff, 39px 14px #fff,
+    17px 7px #fff, 8px 11px #fff;
+}
+
+/* The blobs as a still: four dots in the pen's colours on its yellow. */
+.effekt-kachel[data-effect="blobs"] {
+  background-color: #fee440;
+  background-image:
+    radial-gradient(circle at 20% 28%, #9b5de5 0 32%, transparent 33%),
+    radial-gradient(circle at 36% 66%, #f15bb5 0 20%, transparent 21%),
+    radial-gradient(circle at 78% 70%, #00bbf9 0 34%, transparent 35%),
+    radial-gradient(circle at 64% 34%, #00f5d4 0 18%, transparent 19%);
+}
+
+.effekt-ohne {
+  background-image:
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px));
+}
+.hilfe-fehler { color: var(--gefahr); }
 
 /* --- Preview ---------------------------------------------------------- */
 .vorschau { display: flex; flex-direction: column; }

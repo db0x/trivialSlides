@@ -15,7 +15,7 @@ ENV BROWSER_PATH=/usr/bin/chromium
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
-COPY app.js config.js deck.js dokument.js i18n.js layouts.js pdf.js render.js storage.js ./
+COPY app.js code.js config.js deck.js dokument.js effekte.js i18n.js layouts.js pdf.js render.js storage.js verlaeufe.js video.js ./
 COPY i18n ./i18n
 COPY routes ./routes
 COPY views ./views
