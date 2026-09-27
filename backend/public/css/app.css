@@ -229,9 +229,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
 .header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
 .header-download { --button-icon: url(../assets/download.svg); }
-/* Presenting opens a menu, so the button sits inside a <details> and the
-   auto margin above no longer reaches it -- it moves to the menu instead,
-   or the header's actions would no longer stand at the right edge. */
+/* Presenting is either the plain button -- which the rule above already
+   pushes to the right edge -- or, where there is a choice, a menu around
+   it. Inside the <details> that rule no longer reaches the button, so the
+   menu has to carry the margin itself. Only ever one of the two is there
+   (index.js), so the two margins never meet. */
 .head > .present-menu { margin-left: auto; }
 
 .menu { position: relative; }
@@ -261,11 +263,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .menu-content a.menu-item { display: flex; align-items: center; gap: 8px; }
 .present-from-start { --button-icon: url(../assets/play.svg); }
 .present-from-current { --button-icon: url(../assets/number.svg); }
-/* Off on the first slide. Greyed out rather than gone: the menu keeps its
-   shape, and what makes the click do nothing is the missing href (index.js),
-   not the look. */
-.menu-content a.menu-item[aria-disabled="true"] { color: var(--muted); opacity: 0.45; cursor: default; }
-.menu-content a.menu-item[aria-disabled="true"]:hover { background: none; }
 
 /* --- Overview page ---------------------------------------------------- */
 .page-overview .content { max-width: 820px; margin: 24px auto; padding: 0 14px; }

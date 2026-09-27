@@ -31,10 +31,15 @@
   <span id="save-state" class="save-state" role="status"></span>
 
   <!-- Presenting is two things: from the top, or from wherever the editor
-       stands. The second is switched off on the first slide, where it would
-       do exactly what the entry above it does -- index.js keeps it in step
-       with the slide being edited and writes the address into its link. -->
-  <details class="menu present-menu">
+       stands. On the first slide those two are the same thing, so there the
+       button stays the plain link it always was and the menu keeps out of
+       the way -- a choice between one thing is a click for nothing.
+       index.js swaps the two as the slide changes and writes the address of
+       the current slide into the second entry. -->
+  <a class="button button-icon header-present present-direct" data-tip="<%= t('header.present') %>"
+     aria-label="<%= t('header.present') %>"
+     href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"></a>
+  <details class="menu present-menu" hidden>
     <summary class="button button-icon header-present" data-tip="<%= t('header.present') %>"
              aria-label="<%= t('header.present') %>"></summary>
     <div class="menu-content" role="menu">

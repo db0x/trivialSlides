@@ -68,6 +68,8 @@ var el = {
   codeOk: $("#code-ok"),
   codeNote: $("#code-note"),
   codeFragment: $("#code-fragment"),
+  presentDirect: $(".present-direct"),
+  presentMenu: $(".present-menu"),
   presentFromCurrent: $("#present-from-current"),
 };
 
@@ -286,13 +288,15 @@ function slideHash(index) {
 }
 
 // Starting at the current slide only says something on a slide other than
-// the first. Elsewhere the entry is greyed out and, more to the point,
-// stops being a link -- so the click does nothing at all.
+// the first. On the first there is nothing to choose, so the menu gives way
+// to the plain button and one click presents.
 function drawPresentMenu() {
-  var possible = active > 0;
-  el.presentFromCurrent.setAttribute("aria-disabled", possible ? "false" : "true");
-  if (possible) el.presentFromCurrent.href = BASE + "/present" + slideHash(active);
-  else el.presentFromCurrent.removeAttribute("href");
+  var choice = active > 0;
+  el.presentDirect.hidden = choice;
+  el.presentMenu.hidden = !choice;
+  // An open menu that is put away would come back open later.
+  if (!choice) el.presentMenu.open = false;
+  else el.presentFromCurrent.href = BASE + "/present" + slideHash(active);
 }
 
 function select(i) {
