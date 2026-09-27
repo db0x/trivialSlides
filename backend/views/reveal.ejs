@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><%= deck.titel %></title>
+<title><%= deck.title %></title>
 <link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
 <link rel="stylesheet" href="<%= BASE %>/reveal/reset.css">
 <link rel="stylesheet" href="<%= BASE %>/reveal/reveal.css">
@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="<%= BASE %>/code-styles.css">
 <link rel="stylesheet" href="<%= BASE %>/static/css/slides.css">
 </head>
-<body class="<%= vorschau ? "ist-vorschau" : "" %>">
+<body class="<%= preview ? "is-preview" : "" %>">
 <div class="reveal"><div class="slides">
 <%- slides %>
 </div></div>
@@ -22,48 +22,48 @@
 <script src="<%= BASE %>/reveal/reveal.js"></script>
 <script src="<%= BASE %>/reveal-plugin/notes/notes.js"></script>
 <script src="<%= BASE %>/reveal-plugin/highlight/highlight.js"></script>
-<script src="<%= BASE %>/static/js/folien-effekte.js"></script>
-<script src="<%= BASE %>/static/js/folien-video.js"></script>
-<script src="<%= BASE %>/static/js/folien-passform.js"></script>
+<script src="<%= BASE %>/static/js/slide-effects.js"></script>
+<script src="<%= BASE %>/static/js/slide-video.js"></script>
+<script src="<%= BASE %>/static/js/slide-fit.js"></script>
 <script>
   // The preview inside the editor must not behave like a presentation: no
   // keyboard control (the keys belong to the form next to it), no address
   // bar anchors, no overview on click.
-  var istVorschau = <%- JSON.stringify(!!vorschau) %>;
-  var indizes = <%- JSON.stringify(indizes) %>;
+  var isPreview = <%- JSON.stringify(!!preview) %>;
+  var indices = <%- JSON.stringify(indices) %>;
 
-  var fertig = false;
+  var ready = false;
 
   Reveal.initialize({
-    hash: !istVorschau,
-    keyboard: !istVorschau,
-    controls: !istVorschau,
-    progress: !istVorschau,
-    touch: !istVorschau,
-    slideNumber: istVorschau ? false : "c/t",
-    transition: istVorschau ? "none" : <%- JSON.stringify(deck.transition) %>,
+    hash: !isPreview,
+    keyboard: !isPreview,
+    controls: !isPreview,
+    progress: !isPreview,
+    touch: !isPreview,
+    slideNumber: isPreview ? false : "c/t",
+    transition: isPreview ? "none" : <%- JSON.stringify(deck.transition) %>,
     // Highlighting belongs in the preview as well -- it is part of what the
     // slide looks like. Speaker notes are not: they open a second window.
-    plugins: istVorschau ? [RevealHighlight] : [RevealNotes, RevealHighlight],
+    plugins: isPreview ? [RevealHighlight] : [RevealNotes, RevealHighlight],
   }).then(function () {
     // Only report now: initialize() jumps to the first slide itself at the
     // end and would overwrite a Reveal.slide() accepted earlier.
-    fertig = true;
-    if (istVorschau) window.parent.postMessage({ typ: "bereit" }, "*");
+    ready = true;
+    if (isPreview) window.parent.postMessage({ kind: "bereit" }, "*");
   });
 
   // Colours the code in a freshly drawn slide. The plugin does this for the
   // whole deck at startup; for one slide it has to be asked.
-  function hervorheben(bereich) {
+  function hervorheben(scope) {
     var plugin = Reveal.getPlugin && Reveal.getPlugin("highlight");
     if (!plugin) return;
-    [].forEach.call(bereich.querySelectorAll("pre code"), function (block) {
+    [].forEach.call(scope.querySelectorAll("pre code"), function (block) {
       block.parentNode.classList.add("code-wrapper");
       plugin.highlightBlock(block);
     });
   }
 
-  if (istVorschau) {
+  if (isPreview) {
     // The editor drives the preview via postMessage: jump to a slide and
     // redraw a slide. Redrawing single slides is why the preview does not
     // flicker while typing -- the frame stays put. Plus "hallo", with which
@@ -71,39 +71,39 @@
     window.addEventListener("message", function (ev) {
       if (ev.source !== window.parent) return;
       var n = ev.data || {};
-      if (n.typ === "hallo") {
+      if (n.kind === "hallo") {
         // The editor is asking because it may have missed our first
         // announcement. Before initialize() finishes we stay silent -- it
         // will ask again shortly.
-        if (fertig) window.parent.postMessage({ typ: "bereit" }, "*");
-      } else if (n.typ === "gehezu" && indizes[n.index]) {
-        Reveal.slide(indizes[n.index][0], indizes[n.index][1]);
-      } else if (n.typ === "folie") {
+        if (ready) window.parent.postMessage({ kind: "bereit" }, "*");
+      } else if (n.kind === "gehezu" && indices[n.index]) {
+        Reveal.slide(indices[n.index][0], indices[n.index][1]);
+      } else if (n.kind === "slide") {
         // The editor's flat slide list corresponds to those <section>
         // elements that contain no <section> themselves -- the outer ones
         // are merely the stacks of vertical slides. Deliberately a filter
         // rather than :has(), which older browsers do not know.
-        var abschnitte = [].filter.call(
+        var sections = [].filter.call(
           document.querySelectorAll(".slides section"),
           function (s) { return !s.querySelector("section"); }
         );
-        var ziel = abschnitte[n.index];
-        if (!ziel) return;
+        var target = sections[n.index];
+        if (!target) return;
         var huelle = document.createElement("div");
         huelle.innerHTML = n.html;
-        var neu = huelle.firstElementChild;
-        ziel.replaceWith(neu);
+        var fresh = huelle.firstElementChild;
+        target.replaceWith(fresh);
         Reveal.sync();
         // sync() builds the background elements afresh, and with them goes
-        // what folien-effekte.js wrote on them.
-        window.folienEffekte();
+        // what slide-effects.js wrote on them.
+        window.slideEffects();
         // The highlighter runs once, over the slides that were there when
         // reveal started. A slide redrawn while typing is not one of them.
-        hervorheben(neu);
+        hervorheben(fresh);
         // Same for the fit: the slide just grew or shrank by a word, and
-        // whether it still fits is exactly what changed.
-        window.folienPassform(neu);
-        if (indizes[n.index]) Reveal.slide(indizes[n.index][0], indizes[n.index][1]);
+        // whether it quiet fits is exactly what changed.
+        window.slideFit(fresh);
+        if (indices[n.index]) Reveal.slide(indices[n.index][0], indices[n.index][1]);
       }
     });
   }

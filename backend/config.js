@@ -2,7 +2,7 @@
 // relearned when this moves over there.
 const path = require("path");
 
-// Sub-path behind a reverse proxy ("" or e.g. "/folien"). Always without a
+// Sub-path behind a reverse proxy ("" or e.g. "/slides"). Always without a
 // trailing slash, so that BASE + "/path" never turns into "//path".
 const BASE = String(process.env.BASE_PATH || "").replace(/\/+$/, "");
 
@@ -14,7 +14,7 @@ const DECKS_DIR = process.env.DECKS_DIR || path.resolve(__dirname, "..", "decks"
 const PORT = Number(process.env.PORT || 5000);
 
 // The app's public address including BASE_PATH, e.g.
-// https://talks.example.com/folien. Only the link preview cards need it:
+// https://talks.example.com/slides. Only the link preview cards need it:
 // Open Graph demands absolute URLs, and behind a reverse proxy the app
 // cannot know its own public name. Left empty, the address is derived from
 // the request -- right when running locally, wrong behind a proxy, where

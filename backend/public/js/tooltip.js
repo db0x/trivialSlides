@@ -7,75 +7,75 @@
 // positioned fixed, because the editor's columns scroll: a bubble placed
 // inside one would be cut off at its edge.
 (function () {
-  var VERZOEGERUNG = 350;   // long enough not to flash while passing over
-  var ABSTAND = 8;
-  var blase = null;
-  var uhr = null;
-  var aktiv = null;
+  var DELAY = 350;   // long enough not to flash while passing over
+  var GAP = 8;
+  var bubble = null;
+  var timer = null;
+  var active = null;
 
-  function blaseHolen() {
-    if (blase) return blase;
-    blase = document.createElement("div");
-    blase.className = "tooltip";
-    blase.setAttribute("role", "tooltip");
+  function bubbleGet() {
+    if (bubble) return bubble;
+    bubble = document.createElement("div");
+    bubble.className = "tooltip";
+    bubble.setAttribute("role", "tooltip");
     // The text repeats the element's own accessible name, so a screen
     // reader must not read it a second time.
-    blase.setAttribute("aria-hidden", "true");
-    document.body.appendChild(blase);
-    return blase;
+    bubble.setAttribute("aria-hidden", "true");
+    document.body.appendChild(bubble);
+    return bubble;
   }
 
-  function verbergen() {
-    clearTimeout(uhr);
-    aktiv = null;
-    if (blase) blase.classList.remove("ist-sichtbar");
+  function hide() {
+    clearTimeout(timer);
+    active = null;
+    if (bubble) bubble.classList.remove("is-visible");
   }
 
-  function setzen(el) {
+  function place(el) {
     var text = el.getAttribute("data-tip");
     if (!text) return;
-    var b = blaseHolen();
+    var b = bubbleGet();
     b.textContent = text;
-    b.classList.add("ist-sichtbar");
+    b.classList.add("is-visible");
 
     // Measured only once it carries its text, otherwise the size is wrong.
-    var ziel = el.getBoundingClientRect();
-    var eigen = b.getBoundingClientRect();
-    var links = ziel.left + ziel.width / 2 - eigen.width / 2;
-    var oben = ziel.top - eigen.height - ABSTAND;
+    var target = el.getBoundingClientRect();
+    var custom = b.getBoundingClientRect();
+    var links = target.left + target.width / 2 - custom.width / 2;
+    var oben = target.top - custom.height - GAP;
     // No room above: below it instead.
-    if (oben < 4) oben = ziel.bottom + ABSTAND;
+    if (oben < 4) oben = target.bottom + GAP;
     // And never past the edge of the window.
-    links = Math.max(4, Math.min(links, window.innerWidth - eigen.width - 4));
+    links = Math.max(4, Math.min(links, window.innerWidth - custom.width - 4));
     b.style.left = Math.round(links) + "px";
     b.style.top = Math.round(oben) + "px";
   }
 
-  function zeigen(el, sofort) {
-    if (el === aktiv) return;
-    clearTimeout(uhr);
-    aktiv = el;
-    if (sofort) setzen(el);
-    else uhr = setTimeout(function () { if (aktiv === el) setzen(el); }, VERZOEGERUNG);
+  function show(el, sofort) {
+    if (el === active) return;
+    clearTimeout(timer);
+    active = el;
+    if (sofort) place(el);
+    else timer = setTimeout(function () { if (active === el) place(el); }, DELAY);
   }
 
   document.addEventListener("mouseover", function (ev) {
     var el = ev.target.closest && ev.target.closest("[data-tip]");
-    if (el) zeigen(el, false);
-    else verbergen();
+    if (el) show(el, false);
+    else hide();
   });
 
   // Keyboard users get it without waiting -- they arrived on purpose.
   document.addEventListener("focusin", function (ev) {
     var el = ev.target.closest && ev.target.closest("[data-tip]");
-    if (el) zeigen(el, true);
+    if (el) show(el, true);
   });
 
-  document.addEventListener("focusout", verbergen);
-  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") verbergen(); });
+  document.addEventListener("focusout", hide);
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") hide(); });
   // After a click the label has served its purpose, and anything that moves
   // the page would leave the bubble behind.
-  document.addEventListener("click", verbergen);
-  document.addEventListener("scroll", verbergen, true);
-  window.addEventListener("resize", verbergen);
+  document.addEventListener("click", hide);
+  document.addEventListener("scroll", hide, true);
+  window.addEventListener("resize", hide);
 })();

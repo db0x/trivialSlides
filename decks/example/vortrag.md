@@ -1,7 +1,7 @@
 ---
 titel: Example
 theme: white
-transition: concave
+transition: convex
 ---
 
 <!-- .slide: data-layout="titel" -->
@@ -113,24 +113,20 @@ The picture covers the whole slide, the text stays readable on top of it.
 ## Code
 
 getAge()
-<!-- .element: class="fragment" -->
 
 ```java hl=github
 public int getAge() {
     return this.age;
 }
 ```
-<!-- .element: class="fragment" -->
 
 getFactor()
-<!-- .element: class="fragment" -->
 
 ```java hl=github
 static final int getFactor() {
     return 1;
 }
 ```
-<!-- .element: class="fragment" -->
 
 ---
 

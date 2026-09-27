@@ -30,7 +30,7 @@ const STYLES = [
 ];
 
 // What the editor offers as a language. highlight.js knows around 170; this
-// is the short list, and anything else can still be typed into the fence by
+// is the short list, and anything else can quiet be typed into the fence by
 // hand -- the highlighter takes the name from there, not from this list.
 // The label is what the dialog shows, the id is what goes into the .md.
 const LANGUAGES = [
@@ -88,37 +88,37 @@ function fence(css, id) {
 
 // Read and rewritten once. The files do not change while the app runs, and
 // every editor and every presentation asks for them.
-let zwischenspeicher = null;
+let cache = null;
 
-function alle() {
-  if (zwischenspeicher) return zwischenspeicher;
-  zwischenspeicher = {};
-  for (const stil of STYLES) {
-    const datei = path.join(STYLE_DIR, `${stil.id}.css`);
+function all() {
+  if (cache) return cache;
+  cache = {};
+  for (const style of STYLES) {
+    const file = path.join(STYLE_DIR, `${style.id}.css`);
     try {
-      zwischenspeicher[stil.id] = fence(fs.readFileSync(datei, "utf8"), stil.id);
+      cache[style.id] = fence(fs.readFileSync(file, "utf8"), style.id);
     } catch (err) {
       // A style that is not there is one the editor should not offer, but
       // it must not take the page down with it.
-      console.error(`code style ${stil.id}: ${err.message}`);
-      zwischenspeicher[stil.id] = "";
+      console.error(`code style ${style.id}: ${err.message}`);
+      cache[style.id] = "";
     }
   }
-  return zwischenspeicher;
+  return cache;
 }
 
 // Every style, for the served pages: a handful of kilobytes, cached by the
 // browser, and then any deck can use any of them.
 function css() {
-  const tafel = alle();
-  return STYLES.map((s) => tafel[s.id]).filter(Boolean).join("\n\n");
+  const table = all();
+  return STYLES.map((s) => table[s.id]).filter(Boolean).join("\n\n");
 }
 
 // Only the ones asked for, for the single-file export: what a deck does not
 // use has no business travelling with it.
 function cssFor(wanted) {
-  const tafel = alle();
-  return wanted.filter((id) => tafel[id]).map((id) => tafel[id]).join("\n\n");
+  const table = all();
+  return wanted.filter((id) => table[id]).map((id) => table[id]).join("\n\n");
 }
 
 // Which styles a finished piece of slide markup actually uses.
@@ -130,9 +130,9 @@ function cssFor(wanted) {
 // block would show in the shipped default instead.
 function usedIn(html) {
   const found = new Set();
-  for (const treffer of String(html).matchAll(/\sclass="([^"]*)"/g)) {
-    for (const klasse of treffer[1].split(/\s+/)) {
-      const name = /^hl-([a-z0-9-]+)$/.exec(klasse);
+  for (const hit of String(html).matchAll(/\sclass="([^"]*)"/g)) {
+    for (const cls of hit[1].split(/\s+/)) {
+      const name = /^hl-([a-z0-9-]+)$/.exec(cls);
       if (name && isStyle(name[1])) found.add(name[1]);
     }
   }

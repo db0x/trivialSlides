@@ -7,102 +7,102 @@
 // only place where this concept surfaces at all.
 import { $$, t } from "./base.js";
 
-export function zeichneListe(ol, deck, aktiv, layoutsById) {
+export function drawList(ol, deck, active, layoutsById) {
   ol.innerHTML = "";
-  deck.folien.forEach(function (folie, i) {
+  deck.slides.forEach(function (slide, i) {
     var li = document.createElement("li");
-    li.className = "folie-karte" + (i === aktiv ? " ist-aktiv" : "") + (folie.vertikal ? " ist-vertikal" : "");
+    li.className = "slide-card" + (i === active ? " is-active" : "") + (slide.vertical ? " is-vertical" : "");
     li.draggable = true;
     li.dataset.index = String(i);
 
-    var nummer = document.createElement("span");
-    nummer.className = "karte-nummer";
-    nummer.textContent = String(i + 1);
+    var number = document.createElement("span");
+    number.className = "card-number";
+    number.textContent = String(i + 1);
 
     var text = document.createElement("span");
-    text.className = "karte-text";
-    var titel = document.createElement("span");
-    titel.className = "karte-titel";
-    titel.textContent = folie.titel || vorschautext(folie) || t("karte.ohneTitel");
+    text.className = "card-text";
+    var title = document.createElement("span");
+    title.className = "card-title";
+    title.textContent = slide.title || previewText(slide) || t("card.untitled");
     var art = document.createElement("span");
-    art.className = "karte-art";
-    art.textContent = (layoutsById[folie.layout] || {}).label || folie.layout;
-    text.appendChild(titel);
+    art.className = "card-art";
+    art.textContent = (layoutsById[slide.layout] || {}).label || slide.layout;
+    text.appendChild(title);
     text.appendChild(art);
 
-    var knoepfe = document.createElement("span");
-    knoepfe.className = "karte-knoepfe";
-    knoepfe.appendChild(kartenKnopf("hoch", t("karte.hoch")));
-    knoepfe.appendChild(kartenKnopf("runter", t("karte.runter")));
+    var buttons = document.createElement("span");
+    buttons.className = "card-buttons";
+    buttons.appendChild(cardButton("up", t("card.up")));
+    buttons.appendChild(cardButton("down", t("card.down")));
     // One icon, two directions: a slide that already hangs vertically is
     // detached again by the same button, which is why it shows as engaged
     // rather than carrying a second icon nobody would tell apart.
-    knoepfe.appendChild(kartenKnopf("einruecken",
-      folie.vertikal ? t("karte.ausruecken") : t("karte.einruecken"),
-      folie.vertikal));
-    knoepfe.appendChild(kartenKnopf("doppeln", t("karte.doppeln")));
-    knoepfe.appendChild(kartenKnopf("loeschen", t("karte.loeschen")));
+    buttons.appendChild(cardButton("indent",
+      slide.vertical ? t("card.outdent") : t("card.indent"),
+      slide.vertical));
+    buttons.appendChild(cardButton("duplicate", t("card.duplicate")));
+    buttons.appendChild(cardButton("delete", t("card.delete")));
 
-    li.appendChild(nummer);
+    li.appendChild(number);
     li.appendChild(text);
-    li.appendChild(knoepfe);
+    li.appendChild(buttons);
     ol.appendChild(li);
   });
 }
 
-// The icon itself comes from the stylesheet, picked by data-aktion -- so
+// The icon itself comes from the stylesheet, picked by data-action -- so
 // the button carries no text at all and title/aria-label are its only
 // readable name.
-function kartenKnopf(aktion, titel, aktiv) {
+function cardButton(action, title, active) {
   var b = document.createElement("button");
   b.type = "button";
-  b.className = "karte-knopf" + (aktiv ? " ist-aktiv" : "");
-  b.dataset.aktion = aktion;
-  b.dataset.tip = titel;
-  b.setAttribute("aria-label", titel);
-  if (aktiv) b.setAttribute("aria-pressed", "true");
+  b.className = "card-button" + (active ? " is-active" : "");
+  b.dataset.action = action;
+  b.dataset.tip = title;
+  b.setAttribute("aria-label", title);
+  if (active) b.setAttribute("aria-pressed", "true");
   return b;
 }
 
 // The first line of body text stands in for a missing heading -- a card
 // with no label at all would be impossible to find again in the list.
-function vorschautext(folie) {
-  var zeile = String(folie.inhalt || "").split("\n").find(function (z) {
+function previewText(slide) {
+  var line = String(slide.content || "").split("\n").find(function (z) {
     return z.trim() && !/^<!--/.test(z.trim());
   });
-  return zeile ? zeile.replace(/^[-*+]\s+/, "").replace(/[*_[\]`]/g, "").trim().slice(0, 60) : "";
+  return line ? line.replace(/^[-*+]\s+/, "").replace(/[*_[\]`]/g, "").trim().slice(0, 60) : "";
 }
 
 // Reordering by dragging. Hands the target position to the caller, who
 // changes the model and triggers a redraw.
-export function ziehenAktivieren(ol, beiVerschieben) {
-  var quelle = null;
+export function dragEnable(ol, beiVerschieben) {
+  var source = null;
 
   ol.addEventListener("dragstart", function (ev) {
-    var karte = ev.target.closest(".folie-karte");
-    if (!karte) return;
-    quelle = Number(karte.dataset.index);
-    karte.classList.add("wird-gezogen");
+    var card = ev.target.closest(".slide-card");
+    if (!card) return;
+    source = Number(card.dataset.index);
+    card.classList.add("wird-gezogen");
     ev.dataTransfer.effectAllowed = "move";
     // Firefox only starts the drag if data has been set.
-    ev.dataTransfer.setData("text/plain", String(quelle));
+    ev.dataTransfer.setData("text/plain", String(source));
   });
 
   ol.addEventListener("dragover", function (ev) {
-    if (quelle === null) return;
+    if (source === null) return;
     ev.preventDefault();
-    var karte = ev.target.closest(".folie-karte");
-    $$(".folie-karte", ol).forEach(function (k) { k.classList.remove("ist-ziel"); });
-    if (karte) karte.classList.add("ist-ziel");
+    var card = ev.target.closest(".slide-card");
+    $$(".slide-card", ol).forEach(function (k) { k.classList.remove("is-target"); });
+    if (card) card.classList.add("is-target");
   });
 
   ol.addEventListener("drop", function (ev) {
-    if (quelle === null) return;
+    if (source === null) return;
     ev.preventDefault();
-    var karte = ev.target.closest(".folie-karte");
-    if (karte) {
-      var ziel = Number(karte.dataset.index);
-      if (ziel !== quelle) beiVerschieben(quelle, ziel);
+    var card = ev.target.closest(".slide-card");
+    if (card) {
+      var target = Number(card.dataset.index);
+      if (target !== source) beiVerschieben(source, target);
     }
     aufraeumen();
   });
@@ -110,10 +110,10 @@ export function ziehenAktivieren(ol, beiVerschieben) {
   ol.addEventListener("dragend", aufraeumen);
 
   function aufraeumen() {
-    quelle = null;
-    $$(".folie-karte", ol).forEach(function (k) {
+    source = null;
+    $$(".slide-card", ol).forEach(function (k) {
       k.classList.remove("wird-gezogen");
-      k.classList.remove("ist-ziel");
+      k.classList.remove("is-target");
     });
   }
 }

@@ -21,9 +21,9 @@
 // editor, put it under git and copy it into an existing reveal.js project.
 // The editor is a VIEW onto this format, not its owner -- which is why a
 // round trip preserves everything we do not understand ourselves (see
-// inhalt: the rest of the slide passes through untouched).
+// content: the rest of the slide passes through untouched).
 const layouts = require("./layouts");
-const effekte = require("./effekte");
+const effects = require("./effects");
 const video = require("./video");
 
 // The themes reveal.js ships with. black-contrast and white-contrast meet
@@ -33,7 +33,7 @@ const THEMES = ["black", "white", "league", "beige", "night", "serif", "simple",
   "solarized", "moon", "sky", "blood", "dracula", "black-contrast", "white-contrast"];
 const TRANSITIONS = ["slide", "fade", "convex", "concave", "zoom", "none"];
 
-function eineZeile(s) {
+function oneLine(s) {
   return String(s == null ? "" : s).replace(/[\r\n]+/g, " ").trim();
 }
 
@@ -50,254 +50,256 @@ function eineZeile(s) {
 // The pattern is unanchored on purpose: the editor puts it straight into
 // the input's pattern attribute, which anchors it itself. One definition,
 // two places, no second grammar in the browser.
-const VERLAUF_MUSTER = "(?:repeating-)?(?:linear|radial|conic)-gradient\\((?:[\\w .,%#\\/\\-]|(?:rgba?|hsla?)\\([\\w .,%\\/\\-]+\\))*\\)";
-const VERLAUF = new RegExp("^" + VERLAUF_MUSTER + "$");
-const VERLAUF_MAX = 400;
+const GRADIENT_PATTERN = "(?:repeating-)?(?:linear|radial|conic)-gradient\\((?:[\\w .,%#\\/\\-]|(?:rgba?|hsla?)\\([\\w .,%\\/\\-]+\\))*\\)";
+const GRADIENT = new RegExp("^" + GRADIENT_PATTERN + "$");
+const GRADIENT_MAX = 400;
 
-function istVerlauf(wert) {
-  const s = String(wert == null ? "" : wert);
-  return s.length <= VERLAUF_MAX && VERLAUF.test(s);
+function isGradient(value) {
+  const s = String(value == null ? "" : value);
+  return s.length <= GRADIENT_MAX && GRADIENT.test(s);
 }
 
 // A line break inside a gradient is CSS anyone may write, but the attribute
 // it travels in is one line -- so it is folded first and only then judged.
-function nurVerlauf(wert) {
-  const s = eineZeile(wert);
-  return istVerlauf(s) ? s : "";
+function onlyGradient(value) {
+  const s = oneLine(value);
+  return isGradient(s) ? s : "";
 }
 
 // Colours stay strictly hexadecimal: they come out of the picker, and a
 // hand-written name would only be a value the picker cannot show again.
-const FARBE = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
+const COLOR = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
 
-function nurFarbe(wert) {
-  return FARBE.test(String(wert || "")) ? String(wert) : "";
+function onlyColor(value) {
+  return COLOR.test(String(value || "")) ? String(value) : "";
 }
 
 // --- Header (frontmatter) ----------------------------------------------
 // Deliberately NOT a YAML parser: the header has exactly three flat fields.
 // A YAML dependency would only need constraining again right away.
-function parseKopf(zeilen) {
-  const kopf = {};
-  if (zeilen[0] !== undefined && zeilen[0].trim() === "---") {
-    for (let i = 1; i < zeilen.length; i++) {
-      if (zeilen[i].trim() === "---") {
-        return { kopf, rest: zeilen.slice(i + 1) };
+function parseHead(lines) {
+  const head = {};
+  if (lines[0] !== undefined && lines[0].trim() === "---") {
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === "---") {
+        return { head, rest: lines.slice(i + 1) };
       }
-      const treffer = /^([A-Za-z_-]+)\s*:\s*(.*)$/.exec(zeilen[i]);
-      if (treffer) kopf[treffer[1].toLowerCase()] = treffer[2].trim();
+      const hit = /^([A-Za-z_-]+)\s*:\s*(.*)$/.exec(lines[i]);
+      if (hit) head[hit[1].toLowerCase()] = hit[2].trim();
     }
     // No closing "---" found: then the first "---" was a slide separator
     // after all and the file simply has no header.
   }
-  return { kopf: {}, rest: zeilen };
+  return { head: {}, rest: lines };
 }
 
 // --- Slide attributes --------------------------------------------------
 // reveal.js' own syntax: an HTML comment on the slide's first line. Any
 // other reveal.js reads data-background-* from it directly; data-layout and
 // data-image are our addition and do no harm there.
-const ATTR_ZEILE = /^\s*<!--\s*\.slide:\s*(.*?)\s*-->\s*$/;
+const ATTR_LINE = /^\s*<!--\s*\.slide:\s*(.*?)\s*-->\s*$/;
 
-function parseAttrs(zeile) {
+function parseAttrs(line) {
   const attrs = {};
   const re = /([a-z-]+)\s*=\s*"([^"]*)"/g;
   let t;
-  while ((t = re.exec(zeile)) !== null) attrs[t[1]] = t[2];
+  while ((t = re.exec(line)) !== null) attrs[t[1]] = t[2];
   const layout = layouts.get(attrs["data-layout"]).id;
   // What a layout has no field for comes back empty, exactly as it does
   // from normalize() -- otherwise a text slide read from a file would carry
   // a text arrangement it cannot have, and the same slide would look
   // different before and after its first save.
-  const wennFeld = (feld, wert) => (layouts.hatFeld(layout, feld) ? wert : "");
+  const ifField = (field, value) => (layouts.hasField(layout, field) ? value : "");
   return {
     layout,
-    bild: wennFeld("bild", attrs["data-image"] || ""),
+    image: ifField("image", attrs["data-image"] || ""),
     // Only the id is kept, never a URL -- see video.js.
-    video: wennFeld("video", video.isId(attrs["data-video"] || "") ? attrs["data-video"] : ""),
-    quelle: wennFeld("quelle", attrs["data-quelle"] || ""),
+    video: ifField("video", video.isId(attrs["data-video"] || "") ? attrs["data-video"] : ""),
+    source: ifField("source", attrs["data-quelle"] || ""),
     // Where the text goes in relation to the player. A name, not a value:
     // the arrangement is in slides.css (see video.js).
-    textseite: wennFeld("textseite", video.nurSeite(attrs["data-textseite"])),
-    textbreite: wennFeld("textbreite", layouts.nurBreite(attrs["data-textbreite"], layout)),
-    hintergrund: nurFarbe(attrs["data-background-color"]),
-    textfarbe: nurFarbe(attrs["data-text-color"]),
+    textSide: ifField("textSide", video.onlySide(attrs["data-textseite"])),
+    textWidth: ifField("textWidth", layouts.onlyWidth(attrs["data-textbreite"], layout)),
+    background: onlyColor(attrs["data-background-color"]),
+    textColor: onlyColor(attrs["data-text-color"]),
     // A gradient someone wrote by hand passes through as it stands, as
     // long as it fits the grammar -- the editor's own presets are not a
     // limit on the file.
-    verlauf: nurVerlauf(attrs["data-background-gradient"]),
-    effekt: effekte.nurEffekt(attrs["data-background-effect"]),
+    gradient: onlyGradient(attrs["data-background-gradient"]),
+    effect: effects.onlyEffect(attrs["data-background-effect"]),
   };
 }
 
 // Returns "" for a slide with nothing special about it: a plain text slide
 // should look plain in the file too. That is the only way a hand-written
 // deck stays recognisable after the first save.
-// immer=true forces the line even for an unremarkable slide. The still
+// immer=true forces the line even for an unremarkable slide. The quiet
 // empty slide needs that: without any content its block in the file would
 // be empty, and parse() discards empty blocks -- the slide just created
 // would be gone on the next load.
-function serialisiereAttrs(folie, immer) {
-  const teile = [];
-  if (immer || folie.layout !== layouts.DEFAULT_LAYOUT) teile.push(`data-layout="${folie.layout}"`);
-  if (folie.bild && layouts.hatFeld(folie.layout, "bild")) teile.push(`data-image="${folie.bild}"`);
-  if (folie.video && layouts.hatFeld(folie.layout, "video")) teile.push(`data-video="${folie.video}"`);
-  if (folie.quelle && layouts.hatFeld(folie.layout, "quelle")) teile.push(`data-quelle="${folie.quelle}"`);
+function serializeAttrs(slide, immer) {
+  const parts = [];
+  if (immer || slide.layout !== layouts.DEFAULT_LAYOUT) parts.push(`data-layout="${slide.layout}"`);
+  if (slide.image && layouts.hasField(slide.layout, "image")) parts.push(`data-image="${slide.image}"`);
+  if (slide.video && layouts.hasField(slide.layout, "video")) parts.push(`data-video="${slide.video}"`);
+  if (slide.source && layouts.hasField(slide.layout, "source")) parts.push(`data-quelle="${slide.source}"`);
   // The default stays out of the file: a video slide that has not been
   // arranged should look unarranged there too.
-  if (layouts.hatFeld(folie.layout, "textseite") && folie.textseite
-      && folie.textseite !== video.SEITE_STANDARD) teile.push(`data-textseite="${folie.textseite}"`);
-  if (layouts.hatFeld(folie.layout, "textbreite") && folie.textbreite
-      && folie.textbreite !== layouts.standardBreite(folie.layout)) teile.push(`data-textbreite="${folie.textbreite}"`);
-  if (folie.hintergrund) teile.push(`data-background-color="${folie.hintergrund}"`);
-  if (folie.verlauf) teile.push(`data-background-gradient="${folie.verlauf}"`);
-  if (folie.effekt) teile.push(`data-background-effect="${folie.effekt}"`);
-  if (folie.textfarbe) teile.push(`data-text-color="${folie.textfarbe}"`);
-  return teile.length ? `<!-- .slide: ${teile.join(" ")} -->` : "";
+  if (layouts.hasField(slide.layout, "textSide") && slide.textSide
+      && slide.textSide !== video.SIDE_DEFAULT) parts.push(`data-textseite="${slide.textSide}"`);
+  if (layouts.hasField(slide.layout, "textWidth") && slide.textWidth
+      && slide.textWidth !== layouts.defaultWidth(slide.layout)) parts.push(`data-textbreite="${slide.textWidth}"`);
+  if (slide.background) parts.push(`data-background-color="${slide.background}"`);
+  if (slide.gradient) parts.push(`data-background-gradient="${slide.gradient}"`);
+  if (slide.effect) parts.push(`data-background-effect="${slide.effect}"`);
+  if (slide.textColor) parts.push(`data-text-color="${slide.textColor}"`);
+  return parts.length ? `<!-- .slide: ${parts.join(" ")} -->` : "";
 }
 
 // --- Slide: separating title from body ---------------------------------
 // The editor shows title and body as two separate fields -- that is exactly
 // where the Markdown syntax disappears for the user. The title is the FIRST
 // heading line of the slide; everything before and after it is body.
-function trenneTitel(text) {
-  const zeilen = text.split("\n");
-  for (let i = 0; i < zeilen.length; i++) {
-    const t = /^(#{1,6})\s+(.*)$/.exec(zeilen[i]);
+function splitTitle(text) {
+  const lines = text.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const t = /^(#{1,6})\s+(.*)$/.exec(lines[i]);
     if (t) {
-      const rest = zeilen.slice(0, i).concat(zeilen.slice(i + 1));
-      return { titel: t[2].trim(), inhalt: rest.join("\n").trim() };
+      const rest = lines.slice(0, i).concat(lines.slice(i + 1));
+      return { title: t[2].trim(), content: rest.join("\n").trim() };
     }
-    if (zeilen[i].trim() !== "") break; // first non-empty line is not a heading
+    if (lines[i].trim() !== "") break; // first non-empty line is not a heading
   }
-  return { titel: "", inhalt: text.trim() };
+  return { title: "", content: text.trim() };
 }
 
-function parseFolie(text, vertikal) {
-  const zeilen = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, bild: "", quelle: "", video: "", textseite: video.SEITE_STANDARD, textbreite: layouts.standardBreite(layouts.DEFAULT_LAYOUT), hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
+function parseSlide(text, vertical) {
+  const lines = text.split("\n");
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: video.SIDE_DEFAULT, textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), background: "", textColor: "", gradient: "", effect: "" };
   let i = 0;
-  while (i < zeilen.length && zeilen[i].trim() === "") i++;
-  if (i < zeilen.length && ATTR_ZEILE.test(zeilen[i])) {
-    attrs = parseAttrs(zeilen[i]);
+  while (i < lines.length && lines[i].trim() === "") i++;
+  if (i < lines.length && ATTR_LINE.test(lines[i])) {
+    attrs = parseAttrs(lines[i]);
     i++;
   }
-  return Object.assign({ vertikal: !!vertikal }, attrs, trenneTitel(zeilen.slice(i).join("\n")));
+  return Object.assign({ vertical: !!vertical }, attrs, splitTitle(lines.slice(i).join("\n")));
 }
 
 // --- File -> model -----------------------------------------------------
 function parse(md) {
-  const zeilen = String(md || "").replace(/\r\n/g, "\n").split("\n");
-  const { kopf, rest } = parseKopf(zeilen);
+  const lines = String(md || "").replace(/\r\n/g, "\n").split("\n");
+  const { head, rest } = parseHead(lines);
 
   // "---" separates horizontally, "----" vertically (the reveal-md and
   // HedgeDoc convention). Vertical slides attach to the preceding
   // horizontal one.
-  const bloecke = [];
-  let aktuell = [];
-  let vertikal = [false];
-  for (const zeile of rest) {
-    const t = zeile.trim();
+  const blocks = [];
+  let current = [];
+  let vertical = [false];
+  for (const line of rest) {
+    const t = line.trim();
     if (t === "---" || t === "----") {
-      bloecke.push(aktuell.join("\n"));
-      vertikal.push(t === "----");
-      aktuell = [];
+      blocks.push(current.join("\n"));
+      vertical.push(t === "----");
+      current = [];
     } else {
-      aktuell.push(zeile);
+      current.push(line);
     }
   }
-  bloecke.push(aktuell.join("\n"));
+  blocks.push(current.join("\n"));
 
-  const folien = bloecke
-    .map((text, i) => ({ text, vertikal: vertikal[i] }))
+  const slides = blocks
+    .map((text, i) => ({ text, vertical: vertical[i] }))
     // An empty first "slide" appears when the file starts with a
     // separator; empty slides in the middle were never intended.
     .filter((b) => b.text.trim() !== "")
-    .map((b, i) => Object.assign({ id: "f" + i }, parseFolie(b.text, i > 0 && b.vertikal)));
+    .map((b, i) => Object.assign({ id: "f" + i }, parseSlide(b.text, i > 0 && b.vertical)));
 
   return {
-    titel: eineZeile(kopf.titel) || "",
-    theme: THEMES.includes(kopf.theme) ? kopf.theme : "white",
-    transition: TRANSITIONS.includes(kopf.transition) ? kopf.transition : "slide",
-    folien: folien.length ? folien : [neueFolie("titel")],
+    // "titel" and not "title": that is the key in the FILE, and the file
+    // format stays as it is -- only the model field beside it is English.
+    title: oneLine(head.titel) || "",
+    theme: THEMES.includes(head.theme) ? head.theme : "white",
+    transition: TRANSITIONS.includes(head.transition) ? head.transition : "slide",
+    slides: slides.length ? slides : [newSlide("titel")],
   };
 }
 
 // --- Model -> file -----------------------------------------------------
 function serialize(deck) {
-  const kopf = ["---", `titel: ${eineZeile(deck.titel)}`, `theme: ${deck.theme}`, `transition: ${deck.transition}`, "---", "", ""];
-  const teile = [];
-  (deck.folien || []).forEach((folie, i) => {
+  const head = ["---", `titel: ${oneLine(deck.title)}`, `theme: ${deck.theme}`, `transition: ${deck.transition}`, "---", "", ""];
+  const parts = [];
+  (deck.slides || []).forEach((slide, i) => {
     // Heading level by weight of the slide: title and section slides get
     // "#", everything else "##". Pure convention, for the case where the
     // file is rendered without our CSS.
-    const ebene = folie.layout === "titel" || folie.layout === "abschnitt" ? "#" : "##";
-    const attrs = serialisiereAttrs(folie);
+    const level = slide.layout === "titel" || slide.layout === "abschnitt" ? "#" : "##";
+    const attrs = serializeAttrs(slide);
     const block = attrs ? [attrs] : [];
-    if (eineZeile(folie.titel)) block.push(`${ebene} ${eineZeile(folie.titel)}`);
-    if (String(folie.inhalt || "").trim()) block.push(String(folie.inhalt).trim());
-    if (!block.length) block.push(serialisiereAttrs(folie, true));
-    if (i > 0) teile.push(folie.vertikal ? "----" : "---");
-    teile.push(block.join("\n\n"));
+    if (oneLine(slide.title)) block.push(`${level} ${oneLine(slide.title)}`);
+    if (String(slide.content || "").trim()) block.push(String(slide.content).trim());
+    if (!block.length) block.push(serializeAttrs(slide, true));
+    if (i > 0) parts.push(slide.vertical ? "----" : "---");
+    parts.push(block.join("\n\n"));
   });
-  return kopf.join("\n") + teile.join("\n\n") + "\n";
+  return head.join("\n") + parts.join("\n\n") + "\n";
 }
 
-function neueFolie(layout) {
+function newSlide(layout) {
   return {
     id: "f" + Date.now().toString(36),
     layout: layouts.get(layout).id,
-    vertikal: false,
-    titel: "",
-    inhalt: "",
-    bild: "",
-    quelle: "",
+    vertical: false,
+    title: "",
+    content: "",
+    image: "",
+    source: "",
     video: "",
-    textseite: video.SEITE_STANDARD,
-    textbreite: layouts.standardBreite(layout),
-    hintergrund: "",
-    textfarbe: "",
-    verlauf: "",
-    effekt: "",
+    textSide: video.SIDE_DEFAULT,
+    textWidth: layouts.defaultWidth(layout),
+    background: "",
+    textColor: "",
+    gradient: "",
+    effect: "",
   };
 }
 
 // Whatever arrives from the browser is unknown at first -- this turns it
 // back into a model holding permitted values only.
-function normalize(roh) {
-  const deck = roh && typeof roh === "object" ? roh : {};
-  const folien = Array.isArray(deck.folien) ? deck.folien : [];
+function normalize(raw) {
+  const deck = raw && typeof raw === "object" ? raw : {};
+  const slides = Array.isArray(deck.slides) ? deck.slides : [];
   return {
-    titel: eineZeile(deck.titel).slice(0, 120),
+    title: oneLine(deck.title).slice(0, 120),
     theme: THEMES.includes(deck.theme) ? deck.theme : "white",
     transition: TRANSITIONS.includes(deck.transition) ? deck.transition : "slide",
-    folien: (folien.length ? folien : [neueFolie("titel")]).map((f, i) => {
+    slides: (slides.length ? slides : [newSlide("titel")]).map((f, i) => {
       const layout = layouts.get(f && f.layout).id;
       return {
         id: "f" + i,
         layout,
         // The first slide cannot hang vertically -- there would be
         // nothing for it to hang from.
-        vertikal: i > 0 && !!(f && f.vertikal),
-        titel: eineZeile(f && f.titel).slice(0, 200),
-        inhalt: String((f && f.inhalt) || "").replace(/\r\n/g, "\n").slice(0, 20000),
-        bild: layouts.hatFeld(layout, "bild") ? eineZeile(f && f.bild).slice(0, 200) : "",
-        quelle: layouts.hatFeld(layout, "quelle") ? eineZeile(f && f.quelle).slice(0, 200) : "",
+        vertical: i > 0 && !!(f && f.vertical),
+        title: oneLine(f && f.title).slice(0, 200),
+        content: String((f && f.content) || "").replace(/\r\n/g, "\n").slice(0, 20000),
+        image: layouts.hasField(layout, "image") ? oneLine(f && f.image).slice(0, 200) : "",
+        source: layouts.hasField(layout, "source") ? oneLine(f && f.source).slice(0, 200) : "",
         // Whatever arrives -- a watch link, a short link, an id -- becomes
         // an id here, so the editor may simply pass on what was pasted.
-        video: layouts.hatFeld(layout, "video") ? video.toId(f && f.video) : "",
-        textseite: layouts.hatFeld(layout, "textseite") ? video.nurSeite(f && f.textseite) : "",
-        textbreite: layouts.hatFeld(layout, "textbreite") ? layouts.nurBreite(f && f.textbreite, layout) : "",
-        hintergrund: nurFarbe(f && f.hintergrund),
-        textfarbe: nurFarbe(f && f.textfarbe),
+        video: layouts.hasField(layout, "video") ? video.toId(f && f.video) : "",
+        textSide: layouts.hasField(layout, "textSide") ? video.onlySide(f && f.textSide) : "",
+        textWidth: layouts.hasField(layout, "textWidth") ? layouts.onlyWidth(f && f.textWidth, layout) : "",
+        background: onlyColor(f && f.background),
+        textColor: onlyColor(f && f.textColor),
         // Not truncated but dropped when it does not fit: half a gradient
         // is invalid CSS, and the slide would come out with no background
         // at all rather than with a shorter one.
-        verlauf: nurVerlauf(f && f.verlauf),
-        effekt: effekte.nurEffekt(f && f.effekt),
+        gradient: onlyGradient(f && f.gradient),
+        effect: effects.onlyEffect(f && f.effect),
       };
     }),
   };
 }
 
-module.exports = { parse, serialize, normalize, neueFolie, istVerlauf, THEMES, TRANSITIONS, VERLAUF_MUSTER, VERLAUF_MAX };
+module.exports = { parse, serialize, normalize, newSlide, isGradient, THEMES, TRANSITIONS, GRADIENT_PATTERN, GRADIENT_MAX };

@@ -9,60 +9,60 @@
    blocks below merely point the live tokens at them -- otherwise the same
    palette would sit in two places and drift apart on the first change. */
 :root {
-  --papier: #ffffff;
-  --flaeche: #f4f5f7;
-  --rand: #d8dbe0;
-  --schrift: #1c1f23;
-  --gedaempft: #666c75;
-  --akzent: #2b6cb0;
-  --akzent-schrift: #ffffff;
-  --gefahr: #b03030;
+  --paper: #ffffff;
+  --surface: #f4f5f7;
+  --border: #d8dbe0;
+  --text: #1c1f23;
+  --muted: #666c75;
+  --accent: #2b6cb0;
+  --accent-text: #ffffff;
+  --danger: #b03030;
   --radius: 6px;
 
   /* The dark palette, not in use until one of the blocks below points at it. */
-  --d-papier: #1b1e22;
-  --d-flaeche: #15171a;
-  --d-rand: #343a41;
-  --d-schrift: #e7e9ec;
-  --d-gedaempft: #9aa1aa;
-  --d-akzent: #5a9bd8;
-  --d-akzent-schrift: #10151a;
-  --d-gefahr: #e06b6b;
+  --d-paper: #1b1e22;
+  --d-surface: #15171a;
+  --d-border: #343a41;
+  --d-text: #e7e9ec;
+  --d-muted: #9aa1aa;
+  --d-accent: #5a9bd8;
+  --d-accent-text: #10151a;
+  --d-danger: #e06b6b;
 
   /* Scrollbars, form controls and the like follow along. */
   color-scheme: light dark;
 
   /* The button shows where the click leads, not where we are. */
-  --icon-umschalten: url(../assets/dark.svg);
+  --icon-toggle: url(../assets/dark.svg);
 }
 
 /* No explicit choice: follow the system. The :not() is what lets a manual
    "light" win over a dark system setting. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --papier: var(--d-papier);
-    --flaeche: var(--d-flaeche);
-    --rand: var(--d-rand);
-    --schrift: var(--d-schrift);
-    --gedaempft: var(--d-gedaempft);
-    --akzent: var(--d-akzent);
-    --akzent-schrift: var(--d-akzent-schrift);
-    --gefahr: var(--d-gefahr);
-    --icon-umschalten: url(../assets/light.svg);
+    --paper: var(--d-paper);
+    --surface: var(--d-surface);
+    --border: var(--d-border);
+    --text: var(--d-text);
+    --muted: var(--d-muted);
+    --accent: var(--d-accent);
+    --accent-text: var(--d-accent-text);
+    --danger: var(--d-danger);
+    --icon-toggle: url(../assets/light.svg);
   }
 }
 
 /* An explicit choice beats the system in both directions. */
 :root[data-theme="dark"] {
-  --papier: var(--d-papier);
-  --flaeche: var(--d-flaeche);
-  --rand: var(--d-rand);
-  --schrift: var(--d-schrift);
-  --gedaempft: var(--d-gedaempft);
-  --akzent: var(--d-akzent);
-  --akzent-schrift: var(--d-akzent-schrift);
-  --gefahr: var(--d-gefahr);
-  --icon-umschalten: url(../assets/light.svg);
+  --paper: var(--d-paper);
+  --surface: var(--d-surface);
+  --border: var(--d-border);
+  --text: var(--d-text);
+  --muted: var(--d-muted);
+  --accent: var(--d-accent);
+  --accent-text: var(--d-accent-text);
+  --danger: var(--d-danger);
+  --icon-toggle: url(../assets/light.svg);
   color-scheme: dark;
 }
 
@@ -80,53 +80,53 @@
 body {
   margin: 0;
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color: var(--schrift);
-  background: var(--flaeche);
+  color: var(--text);
+  background: var(--surface);
 }
 
 /* --- Header ----------------------------------------------------------- */
-.kopf {
+.head {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 8px 14px;
-  background: var(--papier);
-  border-bottom: 1px solid var(--rand);
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
 }
 /* In rem, so the mark scales with the browser's text size rather than
    staying pinned to a pixel count. 1rem is 16px here: the 15px on <body>
    does not enter into it, rem always refers to the root element. */
-.marke {
+.brand {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   text-decoration: none;
-  color: var(--schrift);
+  color: var(--text);
 }
-.marke img { width: 2rem; height: 2rem; }
+.brand img { width: 2rem; height: 2rem; }
 /* Name and version as one column, so the version sits under the name
    without pushing the logo out of the middle. */
-.marke-wort {
+.brand-word {
   display: inline-flex;
   flex-direction: column;
   line-height: 1.15;
 }
-.marke-version {
+.brand-version {
   font-size: 0.65rem;
   font-weight: 400;
   letter-spacing: 0.04em;
-  color: var(--gedaempft);
+  color: var(--muted);
 }
-.kopf-feld {
+.header-field {
   display: flex;
   align-items: center;
   gap: 5px;
   font-size: 13px;
-  color: var(--gedaempft);
+  color: var(--muted);
 }
-.deck-titel-feld {
+.deck-title-field {
   flex: 1;
   min-width: 120px;
   font-size: 16px;
@@ -137,38 +137,38 @@ body {
   background: transparent;
   color: inherit;
 }
-.deck-titel-feld:hover { border-color: var(--rand); }
-.deck-titel-feld:focus { border-color: var(--akzent); background: var(--flaeche); outline: none; }
+.deck-title-field:hover { border-color: var(--border); }
+.deck-title-field:focus { border-color: var(--accent); background: var(--surface); outline: none; }
 
-.speicherstand { font-size: 13px; color: var(--gedaempft); white-space: nowrap; }
-.speicherstand.ist-offen { color: var(--schrift); }
-.speicherstand.ist-fehler { color: var(--gefahr); font-weight: 600; }
+.save-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.save-state.is-open { color: var(--text); }
+.save-state.is-error { color: var(--danger); font-weight: 600; }
 
 input, select, textarea, button { font: inherit; color: inherit; }
 input, select, textarea {
-  background: var(--papier);
-  border: 1px solid var(--rand);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px 8px;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); outline-offset: -1px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
-.knopf {
+.button {
   display: inline-block;
   padding: 6px 12px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--papier);
+  background: var(--paper);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
   white-space: nowrap;
 }
-.knopf:hover { border-color: var(--akzent); }
-.knopf-haupt { background: var(--akzent); color: var(--akzent-schrift); border-color: var(--akzent); }
-.knopf-still { border-color: transparent; color: var(--gedaempft); }
-.knopf-klein { padding: 3px 8px; font-size: 13px; }
-.knopf-breit { display: block; width: 100%; margin-top: 8px; }
+.button:hover { border-color: var(--accent); }
+.button-haupt { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.button-quiet { border-color: transparent; color: var(--muted); }
+.button-small { padding: 3px 8px; font-size: 13px; }
+.button-wide { display: block; width: 100%; margin-top: 8px; }
 
 /* The theme switch, top right. margin-left:auto pushes it to the edge on
    the overview, where the header has room to spare; in the editor the deck
@@ -178,113 +178,113 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
    mask and coloured by the button -- painted directly they would disappear
    against the dark palette. */
 /* A square button carrying nothing but an icon. Which icon is decided by
-   --knopf-icon at the point of use; the file is a mask, so it takes the
+   --button-icon at the point of use; the file is a mask, so it takes the
    button's colour instead of its own baked-in grey. */
-.knopf-icon {
+.button-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2rem;
   height: 2rem;
   padding: 0;
-  color: var(--gedaempft);
+  color: var(--muted);
 }
-.knopf-icon:hover { color: var(--schrift); }
-.knopf-icon::before {
+.button-icon:hover { color: var(--text); }
+.button-icon::before {
   content: "";
   width: 1rem;
   height: 1rem;
   background: currentColor;
-  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
-  mask: var(--knopf-icon) center / contain no-repeat;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
 }
 /* The language switch shows the language it is in, not the one it leads
    to -- two letters that read as a state, with the tooltip saying where a
    click goes. Sized like the icon buttons beside it. */
-.sprache {
+.language {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 2rem;
   height: 2rem;
   padding: 0 0.35rem;
-  color: var(--gedaempft);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.sprache:hover { color: var(--schrift); }
-.kopf > .sprache { margin-left: auto; }
-.kopf > .sprache + .knopf-icon { margin-left: 0; }
+.language:hover { color: var(--text); }
+.head > .language { margin-left: auto; }
+.head > .language + .button-icon { margin-left: 0; }
 
 /* Only in the header does the icon button push itself to the right edge. */
-.kopf > .knopf-icon { margin-left: auto; }
-#theme-umschalter { --knopf-icon: var(--icon-umschalten); }
+.head > .button-icon { margin-left: auto; }
+#theme-toggle { --button-icon: var(--icon-toggle); }
 
 /* The two header actions carry an icon instead of a word. They keep the
-   .knopf border so they still read as buttons; only their label moves into
+   .button border so they quiet read as buttons; only their label moves into
    title/aria-label. Presenting stays the accent-coloured one -- it is what
    the whole editor is for. */
-.kopf-vorfuehren { --knopf-icon: url(../assets/play.svg); color: var(--akzent); }
-.kopf-vorfuehren:hover { border-color: var(--akzent); background: var(--akzent); color: var(--akzent-schrift); }
-.kopf-herunterladen { --knopf-icon: url(../assets/download.svg); }
+.header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
+.header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+.header-download { --button-icon: url(../assets/download.svg); }
 
-.menue { position: relative; }
-.menue summary { list-style: none; }
-.menue summary::-webkit-details-marker { display: none; }
-.menue-inhalt {
+.menu { position: relative; }
+.menu summary { list-style: none; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-content {
   position: absolute;
   right: 0;
   z-index: 20;
   min-width: 250px;
   margin-top: 4px;
   padding: 4px;
-  background: var(--papier);
-  border: 1px solid var(--rand);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
 }
-.menue-inhalt a {
+.menu-content a {
   display: block;
   padding: 7px 10px;
   border-radius: 4px;
   color: inherit;
   text-decoration: none;
 }
-.menue-inhalt a:hover { background: var(--flaeche); }
+.menu-content a:hover { background: var(--surface); }
 
 /* --- Overview page ---------------------------------------------------- */
-.seite-uebersicht .inhalt { max-width: 820px; margin: 24px auto; padding: 0 14px; }
-.leer { color: var(--gedaempft); }
-.deckliste { list-style: none; margin: 0; padding: 0; }
-.deckliste li {
+.page-overview .content { max-width: 820px; margin: 24px auto; padding: 0 14px; }
+.empty { color: var(--muted); }
+.deck-list { list-style: none; margin: 0; padding: 0; }
+.deck-list li {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
   margin-bottom: 8px;
-  background: var(--papier);
-  border: 1px solid var(--rand);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-.deckliste li > a { flex: 1; text-decoration: none; color: inherit; }
-.deck-titel { display: block; font-weight: 600; }
-.deck-meta { display: block; font-size: 13px; color: var(--gedaempft); }
-.deck-aktionen { display: flex; gap: 6px; }
-.deck-vorfuehren { --knopf-icon: url(../assets/play.svg); }
-.deck-vorfuehren:hover { color: var(--akzent); }
+.deck-list li > a { flex: 1; text-decoration: none; color: inherit; }
+.deck-title { display: block; font-weight: 600; }
+.deck-meta { display: block; font-size: 13px; color: var(--muted); }
+.deck-actions { display: flex; gap: 6px; }
+.deck-vorfuehren { --button-icon: url(../assets/play.svg); }
+.deck-vorfuehren:hover { color: var(--accent); }
 
 /* The "new deck" entry is the same card as its neighbours, only dashed and
    quiet -- it should read as an empty slot in the list, not as a button
    parked underneath it. */
-.deckliste li.deck-neu {
+.deck-list li.deck-fresh {
   padding: 0;
   border-style: dashed;
   background: none;
 }
-.deckliste li.deck-neu:hover { border-color: var(--akzent); border-style: solid; }
-.deck-neu-knopf {
+.deck-list li.deck-fresh:hover { border-color: var(--accent); border-style: solid; }
+.deck-fresh-button {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -292,16 +292,16 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   padding: 12px 14px;
   border: 0;
   background: none;
-  color: var(--gedaempft);
+  color: var(--muted);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.deck-neu-knopf:hover { color: var(--schrift); }
+.deck-fresh-button:hover { color: var(--text); }
 /* The plus is a file with its own fixed fill, so it is used as a mask and
    coloured by the button -- otherwise it would stay dark grey and vanish
    against the dark palette. Same treatment as the theme switch. */
-.deck-neu-zeichen {
+.deck-fresh-zeichen {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,7 +311,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   border: 1px solid currentColor;
   border-radius: 50%;
 }
-.deck-neu-zeichen::before {
+.deck-fresh-zeichen::before {
   content: "";
   width: 0.75rem;
   height: 0.75rem;
@@ -323,11 +323,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
 
 /* --- Editor: three columns -------------------------------------------- */
 /* The editor fills the window exactly: the header takes the height it
-   needs, the columns take the rest. A hard-coded pixel height used to stand
+   needs, the columns take the rest. A hard-coded pixel height used to state
    here and was wrong the moment anything in the header changed -- the theme
    switch made it two pixels too tall and left a page scrollbar behind for
    those two pixels. */
-.seite-editor {
+.side-editor {
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -337,101 +337,101 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   display: grid;
   grid-template-columns: 250px minmax(340px, 1fr) minmax(320px, 1.1fr);
   gap: 1px;
-  background: var(--rand);
+  background: var(--border);
   flex: 1;
   min-height: 0;
 }
-.spalte { background: var(--flaeche); overflow-y: auto; padding: 12px; }
+.column { background: var(--surface); overflow-y: auto; padding: 12px; }
 
 /* --- Slide list ------------------------------------------------------- */
-.folien { list-style: none; margin: 0; padding: 0; }
-.folie-karte {
+.slides { list-style: none; margin: 0; padding: 0; }
+.slide-card {
   display: grid;
   grid-template-columns: 22px 1fr;
-  grid-template-areas: "nummer text" "knoepfe knoepfe";
+  grid-template-areas: "number text" "buttons buttons";
   gap: 2px 8px;
   padding: 8px;
   margin-bottom: 6px;
-  background: var(--papier);
-  border: 1px solid var(--rand);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-left: 3px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
 }
-.folie-karte.ist-aktiv { border-left-color: var(--akzent); }
-.folie-karte.ist-vertikal { margin-left: 18px; }
-.folie-karte.wird-gezogen { opacity: 0.4; }
-.folie-karte.ist-ziel { border-color: var(--akzent); }
-.karte-nummer { grid-area: nummer; font-size: 12px; color: var(--gedaempft); }
-.karte-text { grid-area: text; min-width: 0; }
-.karte-titel {
+.slide-card.is-active { border-left-color: var(--accent); }
+.slide-card.is-vertical { margin-left: 18px; }
+.slide-card.wird-gezogen { opacity: 0.4; }
+.slide-card.is-target { border-color: var(--accent); }
+.card-number { grid-area: number; font-size: 12px; color: var(--muted); }
+.card-text { grid-area: text; min-width: 0; }
+.card-title {
   display: block;
   font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.karte-art { display: block; font-size: 11px; color: var(--gedaempft); }
-.karte-knoepfe {
-  grid-area: knoepfe;
+.card-art { display: block; font-size: 11px; color: var(--muted); }
+.card-buttons {
+  grid-area: buttons;
   display: flex;
   gap: 2px;
   margin-top: 4px;
   opacity: 0;
 }
-.folie-karte:hover .karte-knoepfe,
-.folie-karte.ist-aktiv .karte-knoepfe { opacity: 1; }
+.slide-card:hover .card-buttons,
+.slide-card.is-active .card-buttons { opacity: 1; }
 /* The icons are files with a fixed dark fill, so they serve as masks and
    are coloured by the button -- same treatment as the theme switch and the
    plus on the overview. */
-.karte-knopf {
+.card-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 22px;
   padding: 0;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--flaeche);
-  color: var(--gedaempft);
+  background: var(--surface);
+  color: var(--muted);
   cursor: pointer;
 }
-.karte-knopf::before {
+.card-button::before {
   content: "";
   width: 0.875rem;
   height: 0.875rem;
   background: currentColor;
-  -webkit-mask: var(--karten-icon) center / contain no-repeat;
-  mask: var(--karten-icon) center / contain no-repeat;
+  -webkit-mask: var(--cards-icon) center / contain no-repeat;
+  mask: var(--cards-icon) center / contain no-repeat;
 }
-.karte-knopf[data-aktion="hoch"] { --karten-icon: url(../assets/up.svg); }
-.karte-knopf[data-aktion="runter"] { --karten-icon: url(../assets/dow.svg); }
-.karte-knopf[data-aktion="einruecken"] { --karten-icon: url(../assets/sub.svg); }
-.karte-knopf[data-aktion="doppeln"] { --karten-icon: url(../assets/duplicate.svg); }
-.karte-knopf[data-aktion="loeschen"] { --karten-icon: url(../assets/delete.svg); }
-.karte-knopf:hover { border-color: var(--akzent); color: var(--schrift); }
+.card-button[data-action="up"] { --cards-icon: url(../assets/up.svg); }
+.card-button[data-action="down"] { --cards-icon: url(../assets/dow.svg); }
+.card-button[data-action="indent"] { --cards-icon: url(../assets/sub.svg); }
+.card-button[data-action="duplicate"] { --cards-icon: url(../assets/duplicate.svg); }
+.card-button[data-action="delete"] { --cards-icon: url(../assets/delete.svg); }
+.card-button:hover { border-color: var(--accent); color: var(--text); }
 /* Already hanging vertically: the button undoes that, so it reads as
    engaged instead of as a fresh action. */
-.karte-knopf.ist-aktiv { border-color: var(--akzent); color: var(--akzent); }
-.karte-knopf[data-aktion="loeschen"]:hover { border-color: var(--gefahr); color: var(--gefahr); }
+.card-button.is-active { border-color: var(--accent); color: var(--accent); }
+.card-button[data-action="delete"]:hover { border-color: var(--danger); color: var(--danger); }
 
 /* --- Form ------------------------------------------------------------- */
-.feldgruppe {
+.fieldset {
   position: relative;
   margin: 21px 0 14px;
   padding: 10px 12px 12px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--papier);
+  background: var(--paper);
 }
 /* The legend sits ABOVE the box, not in a notch of its border. Riding the
    border, it pushed everything inside the middle column down by its own
    height, so the three columns started at three different heights. Lifted
    out and given the same 21px as the labels in the other two columns, all
    three boxes now begin on one line. */
-.feldgruppe legend,
-.spalten-kopf {
+.fieldset legend,
+.columns-head {
   position: absolute;
   top: -21px;
   left: 0;
@@ -440,11 +440,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gedaempft);
+  color: var(--muted);
 }
 /* The outer columns have no box to hang a label off, so theirs is placed
    normally and simply takes up the same 21px. */
-.spalten-kopf {
+.columns-head {
   position: static;
   display: block;
   margin-bottom: 4px;
@@ -457,75 +457,75 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--akzent); ou
 /* Folded, the summary IS the box -- so the box contributes no padding of
    its own and the row sits evenly between the borders. Open, the bottom
    padding comes back for the content below. */
-.feldgruppe-klapp { padding-top: 0; padding-bottom: 0; }
-.feldgruppe-klapp[open] { padding-bottom: 12px; }
-.feldgruppe-klapp > summary {
+.fieldset-fold { padding-top: 0; padding-bottom: 0; }
+.fieldset-fold[open] { padding-bottom: 12px; }
+.fieldset-fold > summary {
   padding: 7px 0;
   line-height: 17px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gedaempft);
+  color: var(--muted);
   cursor: pointer;
 }
-.feldgruppe-klapp > summary:hover { color: var(--schrift); }
-.feldgruppe-klapp > summary:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+.fieldset-fold > summary:hover { color: var(--text); }
+.fieldset-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Folded, the group hides what the slide carries -- so it says THAT it
    carries something. Without this the dot would be decoration; with it, it
    is the only way to tell a plain slide from one with a gradient. */
-.klapp-marke { display: none; }
-.hat-eigenes > summary > .klapp-marke {
+.klapp-mark { display: none; }
+.has-own > summary > .klapp-mark {
   display: inline-block;
   width: 7px;
   height: 7px;
   margin-left: 2px;
   border-radius: 50%;
-  background: var(--akzent);
+  background: var(--accent);
   vertical-align: 0.05em;
 }
 
-.feld { display: block; margin-bottom: 10px; }
-.feld:last-child { margin-bottom: 0; }
-.feld-name { display: block; margin-bottom: 4px; font-size: 13px; color: var(--gedaempft); }
-.feld > input, .feld > textarea { width: 100%; }
-.feld-schmal > input { width: auto; }
+.field { display: block; margin-bottom: 10px; }
+.field:last-child { margin-bottom: 0; }
+.field-label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.field > input, .field > textarea { width: 100%; }
+.field-schmal > input { width: auto; }
 input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; }
-.hilfe { margin: 6px 0 0; font-size: 12px; color: var(--gedaempft); }
+.hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
 /* Layout tiles: the thumbnails are pure CSS -- one image per layout would
    be another file, forgotten the next time a layout changes. */
-.layout-kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
-.layout-kachel {
+.layout-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.layout-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 6px 4px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--flaeche);
+  background: var(--surface);
   cursor: pointer;
 }
-.layout-kachel:hover { border-color: var(--akzent); }
-.layout-kachel.ist-aktiv { border-color: var(--akzent); box-shadow: inset 0 0 0 1px var(--akzent); }
+.layout-tile:hover { border-color: var(--accent); }
+.layout-tile.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .layout-name { font-size: 11px; text-align: center; line-height: 1.2; }
 
 .mini {
   position: relative;
   width: 52px;
   height: 32px;
-  background: var(--papier);
-  border: 1px solid var(--rand);
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
-.mini::before, .mini::after { content: ""; position: absolute; background: var(--gedaempft); opacity: 0.55; }
+.mini::before, .mini::after { content: ""; position: absolute; background: var(--muted); opacity: 0.55; }
 /* Title slide: bars centred */
 .mini-titel::before { left: 20%; right: 20%; top: 11px; height: 5px; }
 .mini-titel::after { left: 30%; right: 30%; top: 20px; height: 3px; opacity: 0.3; }
 /* Section: filled area with a single bar */
-.mini-abschnitt { background: var(--gedaempft); }
-.mini-abschnitt::before { left: 18%; right: 18%; top: 13px; height: 6px; background: var(--papier); opacity: 0.9; }
+.mini-abschnitt { background: var(--muted); }
+.mini-abschnitt::before { left: 18%; right: 18%; top: 13px; height: 6px; background: var(--paper); opacity: 0.9; }
 .mini-abschnitt::after { display: none; }
 /* Text: heading plus lines */
 .mini-text::before { left: 8%; right: 45%; top: 6px; height: 4px; }
@@ -536,7 +536,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Three columns: the outer two are the pseudo-elements, the middle one is
    painted into the background -- an element has only two of the former. */
 .mini-spalten-drei {
-  background-image: linear-gradient(color-mix(in srgb, var(--gedaempft) 25%, transparent) 0 100%);
+  background-image: linear-gradient(color-mix(in srgb, var(--muted) 25%, transparent) 0 100%);
   background-size: 26% 14px;
   background-position: 50% 12px;
   background-repeat: no-repeat;
@@ -549,8 +549,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .mini-bild-links::before { right: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
 .mini-bild-links::after { left: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
 /* Full-bleed image */
-.mini-bild-voll { background: var(--gedaempft); }
-.mini-bild-voll::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--papier); opacity: 0.9; }
+.mini-bild-voll { background: var(--muted); }
+.mini-bild-voll::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--paper); opacity: 0.9; }
 .mini-bild-voll::after { display: none; }
 /* Video: a screen with a play triangle */
 .mini-video::before { left: 12%; right: 12%; top: 8px; height: 17px; opacity: 0.25; }
@@ -560,7 +560,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   width: 0;
   height: 0;
   background: none;
-  border-left: 7px solid var(--gedaempft);
+  border-left: 7px solid var(--muted);
   border-top: 5px solid transparent;
   border-bottom: 5px solid transparent;
   opacity: 0.8;
@@ -570,18 +570,18 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .mini-zitat::after { left: 40%; right: 15%; top: 22px; height: 3px; }
 
 /* Text tools */
-.werkzeugleiste {
+.toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 3px;
   padding: 4px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--flaeche);
+  background: var(--surface);
 }
-.werkzeugleiste button {
+.toolbar button {
   padding: 3px 8px;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -593,61 +593,61 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    they are masks coloured by the button -- the same treatment as every
    other icon in this app. The two buttons without an icon keep their
    wording and sit next to them as text; a toolbar may well hold both. */
-.werkzeugleiste .werkzeug-icon {
+.toolbar .tool-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;
-  color: var(--schrift);
+  color: var(--text);
 }
-.werkzeugleiste .werkzeug-icon::before {
+.toolbar .tool-icon::before {
   content: "";
   width: 1rem;
   height: 1rem;
   background: currentColor;
-  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
-  mask: var(--knopf-icon) center / contain no-repeat;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
 }
-.werkzeug-icon[data-befehl="bold"] { --knopf-icon: url(../assets/toolbar/md-bold.svg); }
-.werkzeug-icon[data-befehl="italic"] { --knopf-icon: url(../assets/toolbar/md-italic.svg); }
-.werkzeug-icon[data-befehl="insertUnorderedList"] { --knopf-icon: url(../assets/toolbar/md-ul.svg); }
-.werkzeug-icon[data-befehl="insertOrderedList"] { --knopf-icon: url(../assets/toolbar/md-ol.svg); }
-.werkzeug-icon[data-befehl="strikeThrough"] { --knopf-icon: url(../assets/toolbar/md-strike.svg); }
-.werkzeug-icon[data-befehl="link"] { --knopf-icon: url(../assets/toolbar/md-link.svg); }
-.werkzeug-icon[data-befehl="fragment"] { --knopf-icon: url(../assets/toolbar/fragment.svg); }
-#quelltext-umschalten.werkzeug-icon { --knopf-icon: url(../assets/toolbar/code.svg); }
-#code-einfuegen.werkzeug-icon { --knopf-icon: url(../assets/toolbar/md-code.svg); }
+.tool-icon[data-command="bold"] { --button-icon: url(../assets/toolbar/md-bold.svg); }
+.tool-icon[data-command="italic"] { --button-icon: url(../assets/toolbar/md-italic.svg); }
+.tool-icon[data-command="insertUnorderedList"] { --button-icon: url(../assets/toolbar/md-ul.svg); }
+.tool-icon[data-command="insertOrderedList"] { --button-icon: url(../assets/toolbar/md-ol.svg); }
+.tool-icon[data-command="strikeThrough"] { --button-icon: url(../assets/toolbar/md-strike.svg); }
+.tool-icon[data-command="link"] { --button-icon: url(../assets/toolbar/md-link.svg); }
+.tool-icon[data-command="fragment"] { --button-icon: url(../assets/toolbar/fragment.svg); }
+#source-toggle.tool-icon { --button-icon: url(../assets/toolbar/code.svg); }
+#code-insert.tool-icon { --button-icon: url(../assets/toolbar/md-code.svg); }
 
 /* --- Where the text sits on a video slide ------------------------------
    One set of icons for two places: the bar shows nothing but the icon of
    the side in force, the menu behind it shows every icon with its word
-   beside it. Both read --knopf-icon off the same attribute, so the two can
+   beside it. Both read --button-icon off the same attribute, so the two can
    never drift apart. */
-.werkzeug-seite[data-seite="oben"]   { --knopf-icon: url(../assets/toolbar/align-top.svg); }
-.werkzeug-seite[data-seite="unten"]  { --knopf-icon: url(../assets/toolbar/align-bottom.svg); }
-.werkzeug-seite[data-seite="links"]  { --knopf-icon: url(../assets/toolbar/align-left.svg); }
-.werkzeug-seite[data-seite="rechts"] { --knopf-icon: url(../assets/toolbar/align-right.svg); }
+.tool-side[data-side="oben"]   { --button-icon: url(../assets/toolbar/align-top.svg); }
+.tool-side[data-side="unten"]  { --button-icon: url(../assets/toolbar/align-bottom.svg); }
+.tool-side[data-side="links"]  { --button-icon: url(../assets/toolbar/align-left.svg); }
+.tool-side[data-side="rechts"] { --button-icon: url(../assets/toolbar/align-right.svg); }
 
 /* The summary is the button here, and a <summary> is not a <button> -- so
    what the bar gives its buttons has to be said again for this one. */
-.werkzeugleiste .menue-werkzeug > summary {
+.toolbar .menu-tool > summary {
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
   cursor: pointer;
   list-style: none;
 }
-.werkzeugleiste .menue-werkzeug > summary::-webkit-details-marker { display: none; }
-.werkzeugleiste .menue-werkzeug > summary:hover { border-color: var(--rand); background: var(--papier); }
-.werkzeugleiste .menue-werkzeug[open] > summary { border-color: var(--akzent); color: var(--akzent); }
+.toolbar .menu-tool > summary::-webkit-details-marker { display: none; }
+.toolbar .menu-tool > summary:hover { border-color: var(--border); background: var(--paper); }
+.toolbar .menu-tool[open] > summary { border-color: var(--accent); color: var(--accent); }
 /* Hangs from the left edge: the bar is read from the left, and the button
    sits nowhere near the right one. */
-.werkzeugleiste .menue-werkzeug .menue-inhalt { right: auto; left: 0; min-width: 0; white-space: nowrap; }
-/* Prefixed with .werkzeugleiste throughout, because the bar styles every
+.toolbar .menu-tool .menu-content { right: auto; left: 0; min-width: 0; white-space: nowrap; }
+/* Prefixed with .toolbar throughout, because the bar styles every
    button inside it and would otherwise reach these too. */
-.werkzeugleiste .menue-inhalt .menue-eintrag {
+.toolbar .menu-content .menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -661,62 +661,62 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   text-align: left;
   cursor: pointer;
 }
-.werkzeugleiste .menue-inhalt .menue-eintrag:hover { border-color: transparent; background: var(--flaeche); }
-.werkzeugleiste .menue-inhalt .menue-eintrag.ist-aktiv { color: var(--akzent); }
+.toolbar .menu-content .menu-item:hover { border-color: transparent; background: var(--surface); }
+.toolbar .menu-content .menu-item.is-active { color: var(--accent); }
 /* The width wears its value instead of an icon: "33 %" says what it is,
    and no picture of a percentage would. Tabular figures so the button does
    not change width as the number changes. */
-.werkzeugleiste .werkzeug-wort {
+.toolbar .tool-word {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 2.75rem;
   height: 1.75rem;
   padding: 0 6px;
-  color: var(--schrift);
+  color: var(--text);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 /* Off while the text is above or below the player, where there is no width
    to choose. Not hidden: a button that vanishes and comes back as one
    switches sides is harder to find again than one that greys out. */
-.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary {
+.toolbar .menu-tool[aria-disabled="true"] > summary {
   opacity: 0.35;
   cursor: default;
 }
-.werkzeugleiste .menue-werkzeug[aria-disabled="true"] > summary:hover {
+.toolbar .menu-tool[aria-disabled="true"] > summary:hover {
   border-color: transparent;
   background: transparent;
 }
-.werkzeugleiste .menue-eintrag-icon {
+.toolbar .menu-item-icon {
   flex: 0 0 auto;
   width: 1rem;
   height: 1rem;
   background: currentColor;
-  -webkit-mask: var(--knopf-icon) center / contain no-repeat;
-  mask: var(--knopf-icon) center / contain no-repeat;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
 }
 
-.werkzeugleiste button:hover:not(:disabled) { border-color: var(--rand); background: var(--papier); }
-.werkzeugleiste button:disabled { opacity: 0.35; cursor: default; }
-.werkzeugleiste button.ist-aktiv { border-color: var(--akzent); background: var(--papier); }
-.werkzeugleiste .werkzeug-icon.ist-aktiv { color: var(--akzent); }
-.leiste-trenner { width: 1px; height: 18px; margin: 0 3px; background: var(--rand); }
+.toolbar button:hover:not(:disabled) { border-color: var(--border); background: var(--paper); }
+.toolbar button:disabled { opacity: 0.35; cursor: default; }
+.toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
+.toolbar .tool-icon.is-active { color: var(--accent); }
+.toolbar-divider { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
 
-.feld-rahmen {
+.field-frame {
   min-height: 180px;
   max-height: 46vh;
   overflow-y: auto;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
-  background: var(--papier);
+  background: var(--paper);
 }
 /* The focus ring belongs on the frame, because the field inside it no
    longer touches the edge once OverlayScrollbars has moved it into its
    viewport. */
-.feld-rahmen:has(.inhalt-feld:focus),
-.feld-rahmen:has(.quelltext-feld:focus) { outline: 2px solid var(--akzent); outline-offset: -2px; }
-.inhalt-feld, .quelltext-feld {
+.field-frame:has(.content-field:focus),
+.field-frame:has(.source-field:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.content-field, .source-field {
   display: block;
   width: 100%;
   min-height: 178px;
@@ -726,10 +726,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   color: inherit;
   font: inherit;
 }
-.inhalt-feld:focus, .quelltext-feld:focus { outline: none; }
-.inhalt-feld:empty::before { content: attr(data-platzhalter); color: var(--gedaempft); }
-.inhalt-feld p { margin: 0 0 0.7em; }
-.inhalt-feld ul, .inhalt-feld ol { margin: 0 0 0.7em; padding-left: 1.4em; }
+.content-field:focus, .source-field:focus { outline: none; }
+.content-field:empty::before { content: attr(data-placeholder); color: var(--muted); }
+.content-field p { margin: 0 0 0.7em; }
+.content-field ul, .content-field ol { margin: 0 0 0.7em; padding-left: 1.4em; }
 /* Mark paragraphs that only appear on click visibly in the editor --
    otherwise there is a surprise waiting during the talk. */
 /* A code block in the rich-text field: an object, not text. It is sealed
@@ -737,26 +737,26 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    a click opens its dialog, backspace next to it removes the whole block.
    No syntax colours here on purpose: the field is for writing, the preview
    beside it shows what the wall shows. */
-.inhalt-feld .code-block {
+.content-field .code-block {
   position: relative;
   margin: 8px 0;
   padding: 22px 10px 8px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--flaeche);
+  background: var(--surface);
   cursor: pointer;
 }
-.inhalt-feld .code-block:hover { border-color: var(--akzent); }
-.inhalt-feld .code-marke {
+.content-field .code-block:hover { border-color: var(--accent); }
+.content-field .code-mark {
   position: absolute;
   top: 4px;
   left: 10px;
   font-size: 11px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--gedaempft);
+  color: var(--muted);
 }
-.inhalt-feld .code-weg {
+.content-field .code-remove {
   position: absolute;
   top: 2px;
   right: 4px;
@@ -765,11 +765,11 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   background: none;
   font-size: 15px;
   line-height: 1;
-  color: var(--gedaempft);
+  color: var(--muted);
   cursor: pointer;
 }
-.inhalt-feld .code-weg:hover { color: var(--gefahr); }
-.inhalt-feld .code-block pre {
+.content-field .code-remove:hover { color: var(--danger); }
+.content-field .code-block pre {
   margin: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
@@ -779,7 +779,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 /* The dialog's own code field: a plain, roomy textarea -- this is where the
    code is actually written. */
-/* The dialog's code field. Deliberately NOT the .quelltext-feld of the
+/* The dialog's code field. Deliberately NOT the .source-field of the
    form: that one has its border taken away because the frame around it
    supplies one. Here there is no frame, so without this the field would
    look like a piece of text nobody may touch. */
@@ -795,21 +795,21 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   resize: vertical;
   tab-size: 4;
 }
-.code-fragment-zeile {
+.code-fragment-line {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   cursor: pointer;
 }
-.code-fragment-zeile input { width: auto; margin: 0; }
+.code-fragment-line input { width: auto; margin: 0; }
 
-.inhalt-feld .fragment { border-left: 3px solid var(--akzent); padding-left: 8px; margin-left: -11px; }
-.quelltext-feld { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; resize: none; }
+.content-field .fragment { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+.source-field { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; resize: none; }
 
-.bild-zeile { display: flex; align-items: center; gap: 10px; }
-.bild-vorschau { width: 120px; height: 72px; object-fit: cover; border: 1px solid var(--rand); border-radius: var(--radius); }
-.bild-knoepfe { display: flex; flex-direction: column; gap: 5px; }
+.image-row { display: flex; align-items: center; gap: 10px; }
+.image-preview { width: 120px; height: 72px; object-fit: cover; border: 1px solid var(--border); border-radius: var(--radius); }
+.image-buttons { display: flex; flex-direction: column; gap: 5px; }
 
 /* The colour choice is a single round dot in the chosen colour. Coloris
    supplies the machinery, not the look: it wraps the input in a .clr-field,
@@ -822,13 +822,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    the picker, which is where someone who wants the number looks. */
 /* Both dots on one line, each with its word beside it -- a fieldset per
    dot left two large boxes almost empty. */
-.farbzeile { display: flex; flex-wrap: wrap; gap: 20px; }
+.colorRow { display: flex; flex-wrap: wrap; gap: 20px; }
 .farbwahl {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--gedaempft);
+  color: var(--muted);
   cursor: pointer;
 }
 .clr-field {
@@ -836,17 +836,17 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   height: 1.75rem;
   vertical-align: middle;
 }
-.clr-field input.farbfeld {
+.clr-field input.color-field {
   width: 100%;
   height: 100%;
   padding: 0;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: 50%;
   background: none;
   color: transparent;
   cursor: pointer;
 }
-.clr-field input.farbfeld:hover { border-color: var(--akzent); }
+.clr-field input.color-field:hover { border-color: var(--accent); }
 .clr-field button {
   inset: 0;
   width: 100%;
@@ -856,84 +856,84 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 /* No colour of its own: a struck-through circle, the way the option used
    to look before the picker arrived. */
-.clr-field.ist-leer button { display: none; }
-.clr-field.ist-leer input.farbfeld {
+.clr-field.is-empty button { display: none; }
+.clr-field.is-empty input.color-field {
   background:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px)),
-    var(--papier);
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px)),
+    var(--paper);
 }
 
 /* The gradient: a row of samples, each wearing what it does, and a field
    for anyone writing their own CSS. The samples are wide rather than round
    -- a gradient needs a distance to be a gradient, and a dot the size of the
    colour picker's would show a single mixed tone. */
-.verlauf-vorlagen {
+.gradient-presets {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
 }
-.verlauf-probe {
+.gradient-probe {
   width: 46px;
   height: 28px;
   padding: 0;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: var(--papier);
+  background-color: var(--paper);
   cursor: pointer;
 }
-.verlauf-probe:hover { border-color: var(--akzent); }
+.gradient-probe:hover { border-color: var(--accent); }
 /* The chosen one is named by a ring outside the swatch: a border of its own
    would sit on top of the gradient and change what the sample shows. */
-.verlauf-probe.ist-aktiv {
-  border-color: var(--akzent);
-  outline: 2px solid var(--akzent);
+.gradient-probe.is-active {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 /* "No gradient" carries the same struck-through circle as a colour dot
    without a colour -- the same statement, so the same picture. */
-.verlauf-ohne {
+.gradient-none {
   background-image:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px));
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px));
 }
-.verlauf-feld {
+.gradient-field {
   width: 100%;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
 }
-.verlauf-feld[aria-invalid="true"] { border-color: var(--gefahr); }
+.gradient-field[aria-invalid="true"] { border-color: var(--danger); }
 
-/* The effect tiles share the samples' size and ring -- they stand in the
-   same row of decisions. A still, not the animation: a form that moves
+/* The effect tiles share the samples' size and ring -- they state in the
+   same row of decisions. A quiet, not the animation: a form that moves
    while someone is writing in it is a form that is hard to write in. The
    wave is the same shape the slide uses, just held at an angle
    (css/slides.css). */
-.effekt-kacheln { display: flex; flex-wrap: wrap; gap: 6px; }
-.effekt-kachel {
+.effect-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.effect-tile {
   position: relative;
   width: 46px;
   height: 28px;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: var(--papier);
+  background-color: var(--paper);
   cursor: pointer;
 }
-.effekt-kachel:hover { border-color: var(--akzent); }
-.effekt-kachel.ist-aktiv {
-  border-color: var(--akzent);
-  outline: 2px solid var(--akzent);
+.effect-tile:hover { border-color: var(--accent); }
+.effect-tile.is-active {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-.effekt-kachel[data-effect="waves"] { background-color: #4973ff; }
-.effekt-kachel[data-effect="waves"]::before {
+.effect-tile[data-effect="waves"] { background-color: #4973ff; }
+.effect-tile[data-effect="waves"]::before {
   content: "";
   position: absolute;
   top: 0;
   left: 50%;
   /* The same proportions as the slide (css/slides.css), held at an angle --
-     a still of the effect rather than a picture of its own. Lifted a little
+     a quiet of the effect rather than a picture of its own. Lifted a little
      further than on the slide: in a tile 28 pixels tall the true proportion
      would leave a blue sliver nobody can see. */
   height: 325%;
@@ -945,10 +945,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 
 /* A dozen dots is a night sky at this size; the slide's own few hundred
    would just be a grey smear in 46 by 28 pixels. */
-.effekt-kachel[data-effect="starfield"] {
+.effect-tile[data-effect="starfield"] {
   background-image: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
 }
-.effekt-kachel[data-effect="starfield"]::before {
+.effect-tile[data-effect="starfield"]::before {
   content: "";
   position: absolute;
   top: 3px;
@@ -963,8 +963,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
     17px 7px #fff, 8px 11px #fff;
 }
 
-/* The blobs as a still: four dots in the pen's colours on its yellow. */
-.effekt-kachel[data-effect="blobs"] {
+/* The blobs as a quiet: four dots in the pen's colours on its yellow. */
+.effect-tile[data-effect="blobs"] {
   background-color: #fee440;
   background-image:
     radial-gradient(circle at 20% 28%, #9b5de5 0 32%, transparent 33%),
@@ -973,25 +973,25 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
     radial-gradient(circle at 64% 34%, #00f5d4 0 18%, transparent 19%);
 }
 
-.effekt-ohne {
+.effect-none {
   background-image:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--gefahr) 50%, transparent calc(50% + 1px));
+    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px));
 }
-.hilfe-fehler { color: var(--gefahr); }
+.hint-error { color: var(--danger); }
 
 /* --- Preview ---------------------------------------------------------- */
-.vorschau { display: flex; flex-direction: column; }
-.vorschau-rahmen {
+.preview { display: flex; flex-direction: column; }
+.preview-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   background: #000;
 }
-.vorschau-rahmen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-.vorschau-hilfe { text-align: center; }
+.preview-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.preview-hint { text-align: center; }
 
 /* --- Tooltips ---------------------------------------------------------
    Ours rather than the browser's, so they carry the same paper, border and
@@ -1003,10 +1003,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   z-index: 100;
   max-width: 260px;
   padding: 5px 9px;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--papier);
-  color: var(--schrift);
+  background: var(--paper);
+  color: var(--text);
   font-size: 12px;
   line-height: 1.35;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
@@ -1015,42 +1015,42 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   opacity: 0;
   transition: opacity 120ms ease;
 }
-.tooltip.ist-sichtbar { opacity: 1; }
+.tooltip.is-visible { opacity: 1; }
 
 /* --- Dialog ----------------------------------------------------------- */
 .dialog {
   width: min(680px, 92vw);
   padding: 0;
-  border: 1px solid var(--rand);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: var(--papier);
-  color: var(--schrift);
+  background: var(--paper);
+  color: var(--text);
 }
 .dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
-.dialog-kopf {
+.dialog-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--rand);
+  border-bottom: 1px solid var(--border);
 }
-.dialog-kopf h2 { margin: 0; font-size: 16px; }
-.dialog-inhalt { padding: 14px; }
+.dialog-head h2 { margin: 0; font-size: 16px; }
+.dialog-content { padding: 14px; }
 /* A dialog holding a single field has no business being as wide as the
-   image picker. Has to stand AFTER .dialog: same specificity, so source
+   image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
 .dialog-fuss { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-.hochladen { display: inline-block; margin-bottom: 12px; }
-.bild-galerie { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
-.galerie-bild { padding: 0; border: 1px solid var(--rand); border-radius: var(--radius); background: none; cursor: pointer; overflow: hidden; }
-.galerie-bild:hover { border-color: var(--akzent); }
-.galerie-bild img { display: block; width: 100%; height: 84px; object-fit: cover; }
+.upload { display: inline-block; margin-bottom: 12px; }
+.image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.gallery-image { padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; overflow: hidden; }
+.gallery-image:hover { border-color: var(--accent); }
+.gallery-image img { display: block; width: 100%; height: 84px; object-fit: cover; }
 
 /* Narrow windows: the three columns become stacked areas. */
 @media (max-width: 1100px) {
-  .seite-editor { height: auto; overflow: visible; }
+  .side-editor { height: auto; overflow: visible; }
   .editor { grid-template-columns: 1fr; height: auto; }
-  .spalte { overflow: visible; }
-  .kopf { flex-wrap: wrap; }
+  .column { overflow: visible; }
+  .head { flex-wrap: wrap; }
 }

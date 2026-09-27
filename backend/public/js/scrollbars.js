@@ -38,11 +38,11 @@ function anhaengen(el) {
 // The editor fills the window and has no page scroll of its own -- only
 // its columns scroll. Attaching one there would be a scrollbar for nothing.
 // (Below 1100px the editor stacks and the page does scroll, natively.)
-var seiteScrollt = !document.body.classList.contains("seite-editor");
+var sideScrolls = !document.body.classList.contains("side-editor");
 
 [
-  seiteScrollt ? document.body : null,
-  ...document.querySelectorAll(".spalte, .feld-rahmen, .bild-galerie"),
+  sideScrolls ? document.body : null,
+  ...document.querySelectorAll(".column, .field-frame, .image-gallery"),
 ].forEach(anhaengen);
 
 // The theme switch has to reach the scrollbars too, otherwise a dark

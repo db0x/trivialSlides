@@ -4,7 +4,7 @@
 // moving it into Relay is a copy rather than a rewrite: the whole editor
 // hangs off ONE router (routes/decks.js). Inside Relay that becomes
 //
-//     app.use(BASE + "/folien", loginRequired, require("./routes/folien"));
+//     app.use(BASE + "/slides", loginRequired, require("./routes/slides"));
 //
 // with authentication, layout and sharing all coming from Relay.
 const path = require("path");
@@ -49,29 +49,29 @@ app.use(BASE + "/coloris", express.static(path.join(__dirname, "node_modules", "
 // headers from anyone, and PUBLIC_URL answers the same question without the
 // risk.
 app.use((req, res, next) => {
-  const basis = PUBLIC_URL || `${req.protocol}://${req.get("host")}${BASE}`;
-  res.locals.ABS = (pfad) => basis + pfad;
-  res.locals.HIER = basis + (req.originalUrl.slice(BASE.length).split("?")[0] || "/");
+  const base = PUBLIC_URL || `${req.protocol}://${req.get("host")}${BASE}`;
+  res.locals.ABS = (path) => base + path;
+  res.locals.HIER = base + (req.originalUrl.slice(BASE.length).split("?")[0] || "/");
   next();
 });
 
 app.use(BASE || "/", require("./routes/decks"));
 
-app.use((req, res) => res.status(404).send(req.t("server.nichtGefunden")));
+app.use((req, res) => res.status(404).send(req.t("server.notFound")));
 
 // Never hand a raw error to the browser: the details go to the log, the
 // user gets a single sentence.
 app.use((err, req, res, next) => { // eslint-disable-line no-unused-vars
   console.error(err);
-  res.status(500).send(req.t("server.serverfehler"));
+  res.status(500).send(req.t("server.serverError"));
 });
 
-storage.sicherstellen();
+storage.ensure();
 app.listen(PORT, () => {
   console.log(`trivialSlides is listening on port ${PORT}${BASE ? ` (sub-path ${BASE})` : ""}`);
   // Report a missing browser once at startup rather than surprising
   // whoever clicks "PDF". Everything else keeps working without it.
-  if (!pdf.browserPfad()) {
+  if (!pdf.browserPath()) {
     console.log("Note: no browser found, so PDF export is unavailable. Set BROWSER_PATH if yours lives elsewhere.");
   }
 });

@@ -1,9 +1,9 @@
 // Driving the preview. Two paths, deliberately kept apart:
 //
-//   folieZeichnen()  - while typing. Fetches ONLY the one slide as HTML and
+//   slideZeichnen()  - while typing. Fetches ONLY the one slide as HTML and
 //                      has the iframe swap it in. The frame stays put,
 //                      nothing flickers, the slide is live as you write.
-//   neuLaden()       - when the structure changes (a slide added, deleted,
+//   newLoad()       - when the structure changes (a slide added, deleted,
 //                      moved, a different look). The iframe has to be
 //                      rebuilt anyway, and the state must be saved first
 //                      because the preview reads from the file.
@@ -12,30 +12,30 @@
 // shout: the iframe can be finished before this module has even loaded (it
 // sits behind several rounds of imports). Its "bereit" would then have gone
 // unheard and the preview would stay mute for the rest of the session.
-import { schreibKopf } from "./base.js";
+import { schreibHead } from "./base.js";
 
-export function createVorschau(iframe, basis) {
+export function createPreview(iframe, base) {
   var bereit = false;
-  var warteschlange = []; // messages that arrived before "bereit"
+  var queue = []; // messages that arrived before "bereit"
   var klopfen = null;
 
   function sende(nachricht) {
-    if (!bereit) { vormerken(nachricht); return; }
+    if (!bereit) { schedule(nachricht); return; }
     iframe.contentWindow.postMessage(nachricht, "*");
   }
 
   // Of each kind only the last message counts -- someone who switches
   // slides three times while the frame loads wants to see the third.
-  function vormerken(nachricht) {
-    warteschlange = warteschlange.filter(function (n) {
-      return n.typ !== nachricht.typ || n.index !== nachricht.index;
+  function schedule(nachricht) {
+    queue = queue.filter(function (n) {
+      return n.kind !== nachricht.kind || n.index !== nachricht.index;
     });
-    warteschlange.push(nachricht);
+    queue.push(nachricht);
   }
 
   function anklopfen() {
     if (bereit) return;
-    try { iframe.contentWindow.postMessage({ typ: "hallo" }, "*"); } catch (e) { /* still loading */ }
+    try { iframe.contentWindow.postMessage({ kind: "hallo" }, "*"); } catch (e) { /* quiet loading */ }
   }
 
   // Only the first time is there any knocking: that is when the frame can
@@ -49,35 +49,35 @@ export function createVorschau(iframe, basis) {
 
   window.addEventListener("message", function (ev) {
     if (ev.source !== iframe.contentWindow) return;
-    if (ev.data && ev.data.typ === "bereit") {
+    if (ev.data && ev.data.kind === "bereit") {
       bereit = true;
       clearInterval(klopfen);
-      var offen = warteschlange;
-      warteschlange = [];
-      offen.forEach(sende);
+      var open = queue;
+      queue = [];
+      open.forEach(sende);
     }
   });
 
   ersteBegruessung();
 
   return {
-    zeigeFolie: function (index) {
-      sende({ typ: "gehezu", index: index });
+    showSlide: function (index) {
+      sende({ kind: "gehezu", index: index });
     },
-    folieZeichnen: function (index, folie) {
-      return fetch(basis + "/folie.html", {
+    slideZeichnen: function (index, slide) {
+      return fetch(base + "/slide.html", {
         method: "POST",
-        headers: schreibKopf({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ folie: folie }),
+        headers: schreibHead({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ slide: slide }),
       })
         .then(function (r) { return r.json(); })
-        .then(function (d) { sende({ typ: "folie", index: index, html: d.html }); });
+        .then(function (d) { sende({ kind: "slide", index: index, html: d.html }); });
     },
-    neuLaden: function (index) {
+    newLoad: function (index) {
       bereit = false;
       clearInterval(klopfen);
-      if (index != null) vormerken({ typ: "gehezu", index: index });
-      iframe.src = basis + "/vorschau?t=" + Date.now();
+      if (index != null) schedule({ kind: "gehezu", index: index });
+      iframe.src = base + "/preview?t=" + Date.now();
     },
   };
 }

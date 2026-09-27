@@ -17,38 +17,38 @@ const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
 
 // Placeholder for the stretch between rendering and post-processing. Control
 // characters, because they cannot occur in a slide's text.
-const MARKE_AUF = "\u0001";
-const MARKE_ZU = "\u0002";
+const MARK_OPEN = "\u0001";
+const MARK_CLOSE = "\u0002";
 
-function marke(klassen) {
-  return MARKE_AUF + klassen + MARKE_ZU;
+function brand(classes) {
+  return MARK_OPEN + classes + MARK_CLOSE;
 }
 
 // Puts the class on the element that closes right before `ende`. Walks the
 // opening and closing tags backwards counting depth, so that a marker after
-// a nested list still lands on the outer one.
-function klasseSetzen(html, ende, klassen) {
+// a nested list quiet lands on the outer one.
+function setClass(html, ende, classes) {
   const vor = html.slice(0, ende).replace(/\s+$/, "");
   const zu = /<\/([a-z][a-z0-9]*)>$/i.exec(vor);
   if (!zu) return null;
   const tag = zu[1];
   const re = new RegExp("<(/?)" + tag + "\\b[^>]*>", "gi");
-  const treffer = [];
+  const hit = [];
   let m;
-  while ((m = re.exec(vor)) !== null) treffer.push(m);
-  let tiefe = 0;
-  for (let i = treffer.length - 1; i >= 0; i--) {
-    tiefe += treffer[i][1] ? 1 : -1;
-    if (tiefe === 0) {
-      const auf = treffer[i];
+  while ((m = re.exec(vor)) !== null) hit.push(m);
+  let depth = 0;
+  for (let i = hit.length - 1; i >= 0; i--) {
+    depth += hit[i][1] ? 1 : -1;
+    if (depth === 0) {
+      const auf = hit[i];
       // The element may already have a class of its own -- a code block
       // carries its colour scheme there. A second class attribute would be
       // ignored by every browser, so the two are merged.
-      const vorhanden = /\sclass="([^"]*)"/i.exec(auf[0]);
-      const ersetzt = vorhanden
-        ? auf[0].replace(vorhanden[0], ` class="${vorhanden[1]} ${esc(klassen)}"`)
-        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(klassen)}"`);
-      return html.slice(0, auf.index) + ersetzt + html.slice(auf.index + auf[0].length);
+      const existing = /\sclass="([^"]*)"/i.exec(auf[0]);
+      const replaced = existing
+        ? auf[0].replace(existing[0], ` class="${existing[1]} ${esc(classes)}"`)
+        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(classes)}"`);
+      return html.slice(0, auf.index) + replaced + html.slice(auf.index + auf[0].length);
     }
   }
   return null;
@@ -57,16 +57,16 @@ function klasseSetzen(html, ende, klassen) {
 // Resolves the placeholders left by the renderer. A marker inside a list
 // item is handled by the listitem renderer itself; what arrives here is the
 // block-level case, the marker standing after a finished element.
-function fragmenteAufloesen(html) {
+function resolveFragments(html) {
   for (;;) {
-    const i = html.indexOf(MARKE_AUF);
+    const i = html.indexOf(MARK_OPEN);
     if (i < 0) return html;
-    const j = html.indexOf(MARKE_ZU, i);
+    const j = html.indexOf(MARK_CLOSE, i);
     if (j < 0) return html.slice(0, i) + html.slice(i + 1);
-    const klassen = html.slice(i + 1, j);
-    const ohne = html.slice(0, i) + html.slice(j + 1);
+    const classes = html.slice(i + 1, j);
+    const without = html.slice(0, i) + html.slice(j + 1);
     // Marker removed first, so the scan sees the element unobstructed.
-    html = klasseSetzen(ohne, i, klassen) || ohne;
+    html = setClass(without, i, classes) || without;
   }
 }
 
@@ -75,52 +75,52 @@ function fragmenteAufloesen(html) {
 // talk -- without raw HTML a smuggled-in <script> is impossible to begin
 // with, and the editor does not offer HTML anyway. Anyone who does need it
 // uses reveal.js directly; the .md stays readable either way.
-function markdownRenderer(bildBasis) {
+function markdownRenderer(imageBase) {
   const r = new marked.Renderer();
-  r.html = (roh) => {
-    const t = FRAGMENT_RE.exec(String(roh).trim());
-    return t ? marke(t[1]) : "";
+  r.html = (raw) => {
+    const t = FRAGMENT_RE.exec(String(raw).trim());
+    return t ? brand(t[1]) : "";
   };
   // Inside a list item the marker ends up in the item's own text, where it
   // is easier to catch here than to dig out of the finished markup.
-  const punktOrig = r.listitem.bind(r);
+  const itemOrig = r.listitem.bind(r);
   r.listitem = (text, ...rest) => {
-    const i = text.indexOf(MARKE_AUF);
-    if (i < 0) return punktOrig(text, ...rest);
-    const j = text.indexOf(MARKE_ZU, i);
-    const klassen = text.slice(i + 1, j);
-    const ohne = text.slice(0, i) + text.slice(j + 1);
-    return punktOrig(ohne, ...rest).replace(/^<li/, `<li class="${esc(klassen)}"`);
+    const i = text.indexOf(MARK_OPEN);
+    if (i < 0) return itemOrig(text, ...rest);
+    const j = text.indexOf(MARK_CLOSE, i);
+    const classes = text.slice(i + 1, j);
+    const without = text.slice(0, i) + text.slice(j + 1);
+    return itemOrig(without, ...rest).replace(/^<li/, `<li class="${esc(classes)}"`);
   };
-  // Code blocks. The fence says the language, and after it may stand a
+  // Code blocks. The fence says the language, and after it may state a
   // style for this one block (```java hl=github). Other renderers read the
   // first word and ignore the rest, so the block stays a plain Java block
   // anywhere else -- the style is ours alone, like data-text-color.
-  r.code = (quelltext, info) => {
-    const teile = String(info || "").trim().split(/\s+/).filter(Boolean);
-    const sprache = teile.length && teile[0].indexOf("=") === -1 ? teile[0] : "";
-    let stil = "";
-    teile.forEach((t) => {
-      const treffer = /^hl=([a-z0-9-]+)$/.exec(t);
-      if (treffer && code.isStyle(treffer[1])) stil = treffer[1];
+  r.code = (sourceText, info) => {
+    const parts = String(info || "").trim().split(/\s+/).filter(Boolean);
+    const language = parts.length && parts[0].indexOf("=") === -1 ? parts[0] : "";
+    let style = "";
+    parts.forEach((t) => {
+      const hit = /^hl=([a-z0-9-]+)$/.exec(t);
+      if (hit && code.isStyle(hit[1])) style = hit[1];
     });
-    const preKlasse = stil ? ` class="hl-${stil}"` : "";
-    const codeKlasse = sprache ? ` class="language-${esc(sprache)}"` : "";
-    return `<pre${preKlasse}><code${codeKlasse}>${esc(quelltext)}\n</code></pre>\n`;
+    const preClass = style ? ` class="hl-${style}"` : "";
+    const codeClass = language ? ` class="language-${esc(language)}"` : "";
+    return `<pre${preClass}><code${codeClass}>${esc(sourceText)}\n</code></pre>\n`;
   };
 
-  const bildOrig = r.image.bind(r);
+  const imageOrig = r.image.bind(r);
   // Images in body text: relative paths point at the deck's image folder,
   // absolute ones (http(s)) are left alone.
-  r.image = (href, title, text) => bildOrig(bildUrl(href, bildBasis), title, text);
+  r.image = (href, title, text) => imageOrig(imageUrl(href, imageBase), title, text);
   return r;
 }
 
-function bildUrl(name, basis) {
+function imageUrl(name, base) {
   const s = String(name || "");
   if (!s) return "";
   if (/^(https?:)?\/\//i.test(s) || s.startsWith("data:")) return s;
-  return basis + encodeURIComponent(s.replace(/^.*\//, ""));
+  return base + encodeURIComponent(s.replace(/^.*\//, ""));
 }
 
 function esc(s) {
@@ -129,42 +129,42 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-function md(text, bildBasis) {
+function md(text, imageBase) {
   if (!String(text || "").trim()) return "";
-  const html = marked.parse(String(text), { gfm: true, breaks: false, renderer: markdownRenderer(bildBasis), mangle: false, headerIds: false });
-  return fragmenteAufloesen(html);
+  const html = marked.parse(String(text), { gfm: true, breaks: false, renderer: markdownRenderer(imageBase), mangle: false, headerIds: false });
+  return resolveFragments(html);
 }
 
 // --- a single slide ----------------------------------------------------
 // Always the same shape: <section> carries the layout class and the reveal
-// attributes, inside it a .folie-text with title and body and -- depending
-// on the layout -- a .folie-bild next to it. The video layout is the one
-// exception: there the heading sits beside .folie-text rather than in it,
+// attributes, inside it a .slide-text with title and body and -- depending
+// on the layout -- a .slide-image next to it. The video layout is the one
+// exception: there the heading sits beside .slide-text rather than in it,
 // so that it can stay at the top while the text moves around the player. The arrangement is done
 // entirely by the CSS (public/css/slides.css), not by this module. A layout
 // can therefore be redesigned without touching the renderer.
-function folieHtml(folie, bildBasis) {
-  const layout = layouts.get(folie.layout).id;
+function slideHtml(slide, imageBase) {
+  const layout = layouts.get(slide.layout).id;
   const attrs = [`class="layout-${layout}"`, `data-layout="${layout}"`];
-  if (folie.hintergrund) attrs.push(`data-background-color="${esc(folie.hintergrund)}"`);
+  if (slide.background) attrs.push(`data-background-color="${esc(slide.background)}"`);
   // reveal.js lays the gradient over the background colour by itself
   // (backgrounds.js: style.backgroundImage). Keeping the colour underneath
   // is worth it: reveal reads only the colour to decide whether a slide is
-  // light or dark, so that is what still puts the theme's text on the right
+  // light or dark, so that is what quiet puts the theme's text on the right
   // side of the contrast.
-  if (folie.verlauf) attrs.push(`data-background-gradient="${esc(folie.verlauf)}"`);
+  if (slide.gradient) attrs.push(`data-background-gradient="${esc(slide.gradient)}"`);
   // An animated background is a NAME, not a value: the rules behind it are
   // in slides.css. It sits on the <section> here and is copied from there
-  // onto reveal's own background element (js/folien-effekte.js), which is
+  // onto reveal's own background element (js/slide-effects.js), which is
   // the surface that spans the whole slide.
-  if (folie.effekt) attrs.push(`data-background-effect="${esc(folie.effekt)}"`);
+  if (slide.effect) attrs.push(`data-background-effect="${esc(slide.effect)}"`);
   // reveal knows nothing about a text colour of its own, so besides the
   // attribute -- which keeps the file readable and round-trips -- the
   // colour is set right on the slide. The themes colour every heading
   // themselves; slides.css hands those the slide's colour instead.
-  if (folie.textfarbe) {
-    attrs.push(`data-text-color="${esc(folie.textfarbe)}"`);
-    attrs.push(`style="color: ${esc(folie.textfarbe)}"`);
+  if (slide.textColor) {
+    attrs.push(`data-text-color="${esc(slide.textColor)}"`);
+    attrs.push(`style="color: ${esc(slide.textColor)}"`);
   }
   // Where the text goes in relation to the player. On the <section>
   // because that is the box the arrangement happens in, and as an
@@ -172,45 +172,45 @@ function folieHtml(folie, bildBasis) {
   // (slides.css) -- the renderer keeps putting out the same markup in the
   // same reading order, heading first, whichever side is chosen.
   if (layout === "video") {
-    attrs.push(`data-textseite="${esc(video.nurSeite(folie.textseite))}"`);
+    attrs.push(`data-textseite="${esc(video.onlySide(slide.textSide))}"`);
   }
   // How wide the text may get where it stands beside something -- a picture
   // or a player. On a video slide it says nothing while the text is above
   // or below, but it goes on the slide all the same, so switching sides
   // needs nothing but the one other attribute.
-  if (layouts.hatFeld(layout, "textbreite")) {
-    attrs.push(`data-textbreite="${esc(layouts.nurBreite(folie.textbreite, layout))}"`);
+  if (layouts.hasField(layout, "textWidth")) {
+    attrs.push(`data-textbreite="${esc(layouts.onlyWidth(slide.textWidth, layout))}"`);
   }
   // A full-bleed image is a slide background in reveal.js -- that way
   // reveal handles the scaling and the transition.
-  if (layout === "bild-voll" && folie.bild) {
-    attrs.push(`data-background-image="${esc(bildUrl(folie.bild, bildBasis))}"`);
+  if (layout === "bild-voll" && slide.image) {
+    attrs.push(`data-background-image="${esc(imageUrl(slide.image, imageBase))}"`);
     attrs.push('data-background-size="cover"');
   }
 
-  const ueberschrift = folie.titel
-    ? `<h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>${esc(folie.titel)}</h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>`
+  const heading = slide.title
+    ? `<h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>${esc(slide.title)}</h${layout === "titel" || layout === "abschnitt" ? 1 : 2}>`
     : "";
 
-  let innen;
+  let inner;
   if (layout === "zitat") {
-    innen =
-      `<blockquote>${md(folie.inhalt, bildBasis) || "<p></p>"}</blockquote>` +
-      (folie.quelle ? `<cite>${esc(folie.quelle)}</cite>` : "");
-    innen = `<div class="folie-text">${ueberschrift}${innen}</div>`;
+    inner =
+      `<blockquote>${md(slide.content, imageBase) || "<p></p>"}</blockquote>` +
+      (slide.source ? `<cite>${esc(slide.source)}</cite>` : "");
+    inner = `<div class="slide-text">${heading}${inner}</div>`;
   } else if (layout === "video") {
-    // The one layout whose heading sits OUTSIDE .folie-text. It names the
+    // The one layout whose heading sits OUTSIDE .slide-text. It names the
     // slide, not the text next to the player, so it stays at the top
     // whichever side the text is put on (data-textseite) -- and it can only
     // stay there if it is not inside the box that moves.
     //
-    // And no empty .folie-text when there is no body: beside the player that
+    // And no empty .slide-text when there is no body: beside the player that
     // box is half the width, and an empty half would take the room from the
     // picture for nothing.
-    const koerper = md(folie.inhalt, bildBasis);
-    innen = ueberschrift + (koerper ? `<div class="folie-text">${koerper}</div>` : "");
+    const body = md(slide.content, imageBase);
+    inner = heading + (body ? `<div class="slide-text">${body}</div>` : "");
   } else {
-    innen = `<div class="folie-text">${ueberschrift}${md(folie.inhalt, bildBasis)}</div>`;
+    inner = `<div class="slide-text">${heading}${md(slide.content, imageBase)}</div>`;
   }
 
   // The player. data-src rather than src: reveal.js loads it when the slide
@@ -220,67 +220,67 @@ function folieHtml(folie, bildBasis) {
   //
   // The link below it is not decoration: on paper an iframe shows nothing,
   // so that is where the address has to be readable (see slides.css).
-  // data-bild is the still image, for the case where there can be no player
+  // data-image is the quiet image, for the case where there can be no player
   // at all: YouTube refuses to configure one for a document opened from the
-  // file system, which is exactly what the export is (js/folien-video.js).
+  // file system, which is exactly what the export is (js/slide-video.js).
   // The address is built here like the other two -- the page never composes
   // a YouTube URL of its own.
-  if (layout === "video" && folie.video) {
-    const adresse = esc(video.watchUrl(folie.video));
-    innen += `<div class="folie-video" data-bild="${esc(video.thumbUrl(folie.video))}">` +
-      `<iframe data-src="${esc(video.embedUrl(folie.video))}" title="${esc(folie.titel || "Video")}"` +
+  if (layout === "video" && slide.video) {
+    const address = esc(video.watchUrl(slide.video));
+    inner += `<div class="slide-video" data-image="${esc(video.thumbUrl(slide.video))}">` +
+      `<iframe data-src="${esc(video.embedUrl(slide.video))}" title="${esc(slide.title || "Video")}"` +
       ` allow="autoplay; accelerometer; clipboard-write; encrypted-media; picture-in-picture"` +
       ` allowfullscreen loading="lazy"></iframe>` +
-      `<a class="video-adresse" href="${adresse}">${adresse}</a>` +
+      `<a class="video-address" href="${address}">${address}</a>` +
       `</div>`;
   }
 
-  if (layouts.hatFeld(layout, "bild") && layout !== "bild-voll" && folie.bild) {
-    const bild = `<div class="folie-bild"><img src="${esc(bildUrl(folie.bild, bildBasis))}" alt=""></div>`;
+  if (layouts.hasField(layout, "image") && layout !== "bild-voll" && slide.image) {
+    const image = `<div class="slide-image"><img src="${esc(imageUrl(slide.image, imageBase))}" alt=""></div>`;
     // Order in the markup = reading order; which side it appears on is
     // decided by the CSS grid columns.
-    innen = layout === "bild-links" ? bild + innen : innen + bild;
+    inner = layout === "bild-links" ? image + inner : inner + image;
   }
 
-  return `<section ${attrs.join(" ")}>\n${innen}\n</section>`;
+  return `<section ${attrs.join(" ")}>\n${inner}\n</section>`;
 }
 
 // --- all slides --------------------------------------------------------
 // Vertical slides are grouped into a nested <section> in reveal.js
 // (a "stack").
-function foliengruppen(folien) {
-  const gruppen = [];
-  (folien || []).forEach((f, i) => {
-    if (i > 0 && f.vertikal && gruppen.length) gruppen[gruppen.length - 1].push(f);
-    else gruppen.push([f]);
+function slideGroups(slides) {
+  const groups = [];
+  (slides || []).forEach((f, i) => {
+    if (i > 0 && f.vertical && groups.length) groups[groups.length - 1].push(f);
+    else groups.push([f]);
   });
-  return gruppen;
+  return groups;
 }
 
-// bildBasis: URL prefix the image file name is appended to. A route in the
-// editor and the presentation, the "bilder/" subfolder in the export.
-function slidesHtml(deck, bildBasis) {
-  return foliengruppen(deck.folien)
-    .map((gruppe) =>
-      gruppe.length === 1
-        ? folieHtml(gruppe[0], bildBasis)
-        : `<section>\n${gruppe.map((f) => folieHtml(f, bildBasis)).join("\n")}\n</section>`
+// imageBase: URL prefix the image file name is appended to. A route in the
+// editor and the presentation, the "images/" subfolder in the export.
+function slidesHtml(deck, imageBase) {
+  return slideGroups(deck.slides)
+    .map((group) =>
+      group.length === 1
+        ? slideHtml(group[0], imageBase)
+        : `<section>\n${group.map((f) => slideHtml(f, imageBase)).join("\n")}\n</section>`
     )
     .join("\n");
 }
 
 // Index of each slide in the flat list -> [horizontal, vertical] for
 // Reveal.slide(). The preview uses it to jump to the slide being edited.
-function indizes(folien) {
+function indices(slides) {
   const out = [];
   let h = -1;
   let v = 0;
-  (folien || []).forEach((f, i) => {
-    if (i > 0 && f.vertikal) v++;
+  (slides || []).forEach((f, i) => {
+    if (i > 0 && f.vertical) v++;
     else { h++; v = 0; }
     out.push([h, v]);
   });
   return out;
 }
 
-module.exports = { slidesHtml, folieHtml, indizes, esc, bildUrl };
+module.exports = { slidesHtml, slideHtml, indices, esc, imageUrl };

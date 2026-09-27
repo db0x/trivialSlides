@@ -20,12 +20,12 @@
   // back of the room, and the honest answer is "put less on it" rather than
   // a smaller size -- so from here on the slide is allowed to run over
   // again, which is what shows the author that there is a problem.
-  var KLEINSTE = 0.55;
+  var SMALLEST = 0.55;
 
   // Halving the interval seven times lands within a thousandth of the
-  // largest size that still fits -- finer than anyone can see, and seven
+  // largest size that quiet fits -- finer than anyone can see, and seven
   // measurements cost nothing.
-  var SCHRITTE = 7;
+  var STEPS = 7;
 
   // The box a slide has to fit in.
   //
@@ -38,11 +38,11 @@
   // way down. What is available there is therefore the page minus that
   // offset. Measured against the 700 of the screen instead, a slide that
   // just fits on the wall comes out of the printer a line short.
-  function zielHoehe(folie) {
-    var seite = folie.closest ? folie.closest(".pdf-page") : null;
-    if (seite) {
-      var oben = folie.getBoundingClientRect().top - seite.getBoundingClientRect().top;
-      return Math.max(1, seite.clientHeight - Math.max(0, oben));
+  function targetHeight(slide) {
+    var side = slide.closest ? slide.closest(".pdf-page") : null;
+    if (side) {
+      var oben = slide.getBoundingClientRect().top - side.getBoundingClientRect().top;
+      return Math.max(1, side.clientHeight - Math.max(0, oben));
     }
     var masse = window.Reveal && Reveal.getComputedSlideSize && Reveal.getComputedSlideSize();
     return (masse && masse.height) || 700;
@@ -51,8 +51,8 @@
   // No slack: scrollHeight is already rounded to whole pixels, and a pixel
   // granted here is a pixel the print view cuts off -- its page clips what
   // sticks out.
-  function passt(folie, hoehe) {
-    return folie.scrollHeight <= hoehe;
+  function fits(slide, height) {
+    return slide.scrollHeight <= height;
   }
 
   // A slide that is not on screen is display:none, and something that is
@@ -70,84 +70,84 @@
   // something that is display:none is not laid out however it is set
   // itself, so the whole chain has to be opened, or the measurement comes
   // back as zero -- which reads as "fits" and leaves the slide cut off.
-  function auslegen(folie) {
-    var zurueck = [];
-    for (var el = folie; el && !el.classList.contains("slides"); el = el.parentElement) {
+  function layOut(slide) {
+    var back = [];
+    for (var el = slide; el && !el.classList.contains("slides"); el = el.parentElement) {
       if (getComputedStyle(el).display !== "none") continue;
-      zurueck.push({ el: el, display: el.style.display, visibility: el.style.visibility });
+      back.push({ el: el, display: el.style.display, visibility: el.style.visibility });
       el.style.display = "block";
       el.style.visibility = "hidden";
     }
-    return zurueck;
+    return back;
   }
 
-  function zuruecklegen(zurueck) {
-    zurueck.forEach(function (n) {
+  function restore(back) {
+    back.forEach(function (n) {
       n.el.style.display = n.display;
       n.el.style.visibility = n.visibility;
     });
   }
 
-  function anpassen(folie, hoehe) {
+  function fitSlide(slide, height) {
     // Always measured at full size first -- otherwise a slide that has been
     // shortened since would keep the size it needed when it was long.
-    folie.style.fontSize = "";
-    folie.removeAttribute("data-passform");
-    var vorher = auslegen(folie);
+    slide.style.fontSize = "";
+    slide.removeAttribute("data-fit");
+    var before = layOut(slide);
     // Nothing may be mid-transition while this measures -- a fragment
     // carries `transition: all`, and that includes the size being set here
     // (slides.css).
-    folie.classList.add("folien-messen");
+    slide.classList.add("is-measuring");
     try {
-      if (passt(folie, hoehe)) return;
+      if (fits(slide, height)) return;
 
-      var klein = KLEINSTE;   // taken as fitting; where it does not, it is the floor
-      var gross = 1;          // known not to fit -- just measured
-      for (var i = 0; i < SCHRITTE; i++) {
-        var mitte = (klein + gross) / 2;
-        folie.style.fontSize = mitte + "em";
-        if (passt(folie, hoehe)) klein = mitte; else gross = mitte;
+      var low = SMALLEST;   // taken as fitting; where it does not, it is the floor
+      var high = 1;          // known not to fit -- just measured
+      for (var i = 0; i < STEPS; i++) {
+        var mid = (low + high) / 2;
+        slide.style.fontSize = mid + "em";
+        if (fits(slide, height)) low = mid; else high = mid;
       }
-      folie.style.fontSize = klein + "em";
+      slide.style.fontSize = low + "em";
       // Visible in the inspector, so a slide that came out small can be
       // told apart from one that was written small.
-      folie.setAttribute("data-passform", klein.toFixed(3));
+      slide.setAttribute("data-fit", low.toFixed(3));
     } finally {
-      folie.classList.remove("folien-messen");
-      zuruecklegen(vorher);
+      slide.classList.remove("is-measuring");
+      restore(before);
     }
   }
 
-  function sammeln(bereich) {
+  function collect(scope) {
     // A stack is a <section> as well and carries no data-layout: it holds
     // slides, not text of its own (render.js).
-    if (bereich && bereich.matches && bereich.matches("section[data-layout]")) return [bereich];
-    return [].slice.call((bereich || document).querySelectorAll(".reveal .slides section[data-layout]"));
+    if (scope && scope.matches && scope.matches("section[data-layout]")) return [scope];
+    return [].slice.call((scope || document).querySelectorAll(".reveal .slides section[data-layout]"));
   }
 
-  function alle(bereich) {
+  function all(scope) {
     // The height is asked for per slide, not once for all of them: on paper
     // every slide sits in a page of its own and starts at its own offset
     // inside it.
-    sammeln(bereich).forEach(function (folie) { anpassen(folie, zielHoehe(folie)); });
+    collect(scope).forEach(function (slide) { fitSlide(slide, targetHeight(slide)); });
   }
 
   // ready: the first layout is done. resize: on a narrow window the image
   // layouts stack text under picture (slides.css), which changes what fits.
   // Caught where they bubble to -- before initialize() there is no reveal
   // element to hang a listener on.
-  document.addEventListener("ready", function () { alle(); });
-  document.addEventListener("resize", function () { alle(); });
+  document.addEventListener("ready", function () { all(); });
+  document.addEventListener("resize", function () { all(); });
   // Pictures and fonts arrive after the first measurement and change the
   // height with them. A second pass costs nothing on a deck that fits.
-  window.addEventListener("load", function () { alle(); });
+  window.addEventListener("load", function () { all(); });
   // The print view is a second layout in a second kind of box (see
-  // zielHoehe), and reveal builds it after "ready". Caught before the
+  // targetHeight), and reveal builds it after "ready". Caught before the
   // export's own pdf-ready listener, which reports the page fit to print:
   // this file is loaded first and listeners run in the order they were
-  // added (dokument.js).
-  document.addEventListener("pdf-ready", function () { alle(); });
+  // added (document.js).
+  document.addEventListener("pdf-ready", function () { all(); });
   // The editor's preview redraws single slides and calls this by name
   // afterwards, the same way it does for the effects (views/reveal.ejs).
-  window.folienPassform = alle;
+  window.slideFit = all;
 })();

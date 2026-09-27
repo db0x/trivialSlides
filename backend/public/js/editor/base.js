@@ -2,25 +2,25 @@
 // without a CORS grant -- which makes forged calls come to nothing. Inside
 // Relay its csrf.js replaces this, which is why it sits in exactly one
 // place here.
-export function schreibKopf(weitere) {
-  return Object.assign({ "X-Folien": "1" }, weitere || {});
+export function schreibHead(weitere) {
+  return Object.assign({ "X-Slides": "1" }, weitere || {});
 }
 
 // The strings the page builds itself. The server puts only the subset the
 // browser needs into the page (see i18n.js); everything it rendered
 // already arrived as finished text.
-var TEXTE = {};
+var TEXTS = {};
 try {
-  var tafel = document.getElementById("daten-texte");
-  if (tafel) TEXTE = JSON.parse(tafel.textContent);
+  var table = document.getElementById("data-texte");
+  if (table) TEXTS = JSON.parse(table.textContent);
 } catch (e) { /* without the table the keys show through, which is loud enough */ }
 
-export function t(schluessel, werte) {
-  var text = TEXTE[schluessel];
+export function t(schluessel, values) {
+  var text = TEXTS[schluessel];
   if (text === undefined) return schluessel;
-  if (!werte) return text;
-  return text.replace(/\{(\w+)\}/g, function (ganz, name) {
-    return Object.prototype.hasOwnProperty.call(werte, name) ? String(werte[name]) : ganz;
+  if (!values) return text;
+  return text.replace(/\{(\w+)\}/g, function (whole, name) {
+    return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : whole;
   });
 }
 

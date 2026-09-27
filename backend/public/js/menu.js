@@ -2,28 +2,28 @@
 // is not how a menu behaves anywhere else -- a click beside it, or Escape,
 // is expected to close it, and so is choosing something from it.
 (function () {
-  function schliessen(ausser) {
-    document.querySelectorAll("details.menue[open]").forEach(function (d) {
+  function close(ausser) {
+    document.querySelectorAll("details.menu[open]").forEach(function (d) {
       if (d !== ausser) d.open = false;
     });
   }
 
   document.addEventListener("click", function (ev) {
-    var innen = ev.target.closest("details.menue");
+    var inner = ev.target.closest("details.menu");
     // Beside it: everything closes. Inside it: choosing an entry closes it
     // too, the summary is left to the browser.
-    if (!innen) return schliessen(null);
-    if (ev.target.closest(".menue-inhalt")) return schliessen(null);
-    schliessen(innen);
+    if (!inner) return close(null);
+    if (ev.target.closest(".menu-content")) return close(null);
+    close(inner);
   });
 
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Escape") return;
-    var offen = document.querySelector("details.menue[open]");
-    if (!offen) return;
-    offen.open = false;
+    var open = document.querySelector("details.menu[open]");
+    if (!open) return;
+    open.open = false;
     // Back to where it was opened from, or the focus would be nowhere.
-    var kopf = offen.querySelector("summary");
-    if (kopf) kopf.focus();
+    var head = open.querySelector("summary");
+    if (head) head.focus();
   });
 })();

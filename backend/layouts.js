@@ -4,66 +4,66 @@
 //
 // Important for the storage format: a layout NEVER changes a slide's
 // Markdown text, only its attributes. That keeps the body plain Markdown,
-// which a stock reveal.js (or a text editor) still renders sensibly --
+// which a stock reveal.js (or a text editor) quiet renders sensibly --
 // just without the finer points of the arrangement.
 //
 // The words belong to i18n.js, keyed by id -- layout.<id>.label and
-// layout.<id>.hilfe. What stays here is the structure.
+// layout.<id>.hint. What stays here is the structure.
 //
-// felder: which input fields the editor shows for this layout.
-//   bild   - image picker (data-image)
-//   quelle - attribution below the quote (data-quelle)
+// fields: which input fields the editor shows for this layout.
+//   image   - image picker (data-image)
+//   source - attribution below the quote (data-quelle)
 //   video  - a YouTube link (data-video, see video.js)
-//   textseite - where the text goes in relation to the player
+//   textSide - where the text goes in relation to the player
 //            (data-textseite, see video.js)
-//   textbreite - how wide the text may get beside the picture or the
-//            player (data-textbreite, see BREITEN below)
+//   textWidth - how wide the text may get beside the picture or the
+//            player (data-textbreite, see WIDTHS below)
 // Every layout has a title and a body, so those are not in the list.
 const LAYOUTS = [
   {
     id: "titel",
-    felder: [],
+    fields: [],
   },
   {
     id: "abschnitt",
-    felder: [],
+    fields: [],
   },
   {
     id: "text",
-    felder: [],
+    fields: [],
   },
   {
     id: "spalten",
-    felder: [],
+    fields: [],
   },
   {
     id: "spalten-drei",
-    felder: [],
+    fields: [],
   },
   {
     id: "bild-rechts",
-    felder: ["bild", "textbreite"],
+    fields: ["image", "textWidth"],
     // Half and half, which is what this layout has always looked like.
-    breite: "50",
+    width: "50",
   },
   {
     id: "bild-links",
-    felder: ["bild", "textbreite"],
+    fields: ["image", "textWidth"],
     // Half and half, which is what this layout has always looked like.
-    breite: "50",
+    width: "50",
   },
   {
     id: "bild-voll",
-    felder: ["bild"],
+    fields: ["image"],
   },
   {
     id: "video",
-    felder: ["video", "textseite", "textbreite"],
-    breite: "33",
+    fields: ["video", "textSide", "textWidth"],
+    width: "33",
   },
   {
     id: "zitat",
-    felder: ["quelle"],
+    fields: ["source"],
   },
 ];
 
@@ -83,18 +83,18 @@ const LAYOUTS = [
 // always split the slide down the middle and a video slide has always given
 // the player two thirds. Those are what they look like before anybody
 // chooses, so those are their defaults -- a deck written before this
-// existed reads exactly as it did. `breite` on a layout below says so; a
+// existed reads exactly as it did. `width` on a layout below says so; a
 // layout that names none falls back to the middle value.
-const BREITEN = ["25", "33", "50"];
-const BREITE_STANDARD = "33";
+const WIDTHS = ["25", "33", "50"];
+const WIDTH_DEFAULT = "33";
 
-function standardBreite(id) {
-  return get(id).breite || BREITE_STANDARD;
+function defaultWidth(id) {
+  return get(id).width || WIDTH_DEFAULT;
 }
 
-function nurBreite(wert, layoutId) {
-  const s = String(wert == null ? "" : wert).trim();
-  return BREITEN.includes(s) ? s : standardBreite(layoutId);
+function onlyWidth(value, layoutId) {
+  const s = String(value == null ? "" : value).trim();
+  return WIDTHS.includes(s) ? s : defaultWidth(layoutId);
 }
 
 const DEFAULT_LAYOUT = "text";
@@ -107,8 +107,8 @@ function get(id) {
   return byId.get(String(id || "")) || byId.get(DEFAULT_LAYOUT);
 }
 
-function hatFeld(id, feld) {
-  return get(id).felder.includes(feld);
+function hasField(id, field) {
+  return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hatFeld, BREITEN, BREITE_STANDARD, standardBreite, nurBreite };
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField, WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth };

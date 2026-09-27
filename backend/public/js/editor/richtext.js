@@ -5,7 +5,7 @@ import { t } from "./base.js";
 //
 // Deliberately ONLY a small subset -- paragraph, bold, italic, list, link,
 // fragment. Those are the things there are buttons for. Anything beyond
-// that the field cannot convert back without loss, so istEinfach() spots
+// that the field cannot convert back without loss, so isSimple() spots
 // such slides and the editor shows them as source instead (see index.js).
 // Better an honest fallback than a field that silently eats the user's
 // content.
@@ -22,13 +22,13 @@ var FRAGMENT = '<!-- .element: class="fragment" -->';
 // object with its own dialog (see below), and it travels back into the .md
 // exactly as it came. Everything between the fences is skipped here --
 // inside a code block a hash or a backtick is code, not Markdown.
-function istEinfach(md) {
+function isSimple(md) {
   var text = String(md || "");
   if (!text.trim()) return true;
-  var zeilen = text.split("\n");
+  var lines = text.split("\n");
   var imCode = false;
-  for (var i = 0; i < zeilen.length; i++) {
-    var z = zeilen[i];
+  for (var i = 0; i < lines.length; i++) {
+    var z = lines[i];
     if (ZAUN.test(z)) { imCode = !imCode; continue; }
     if (imCode) continue;
     if (z.trim() === "" || z.trim() === FRAGMENT) continue;
@@ -56,38 +56,38 @@ function istEinfach(md) {
 var ZAUN = /^\s*```/;
 
 function codeInfoLesen(info) {
-  var teile = String(info || "").trim().split(/\s+/).filter(Boolean);
-  var sprache = teile.length && teile[0].indexOf("=") === -1 ? teile[0] : "";
-  var stil = "";
-  teile.forEach(function (teil) {
-    var treffer = /^hl=([a-z0-9-]+)$/.exec(teil);
-    if (treffer) stil = treffer[1];
+  var parts = String(info || "").trim().split(/\s+/).filter(Boolean);
+  var language = parts.length && parts[0].indexOf("=") === -1 ? parts[0] : "";
+  var style = "";
+  parts.forEach(function (teil) {
+    var hit = /^hl=([a-z0-9-]+)$/.exec(teil);
+    if (hit) style = hit[1];
   });
-  return { sprache: sprache, stil: stil };
+  return { language: language, style: style };
 }
 
 // The label says what the block is, because the field shows no syntax and
 // the colours only appear in the preview.
-function codeBlockHtml(sprache, stil, quelltext, fragment) {
-  var marke = [sprache || t("code.ohneSprache"), stil].filter(Boolean).join(" \u00b7 ");
+function codeBlockHtml(language, style, sourceText, fragment) {
+  var brand = [language || t("code.noLanguage"), style].filter(Boolean).join(" \u00b7 ");
   return '<div class="code-block' + (fragment ? " fragment" : "") + '" contenteditable="false"' +
-    ' data-sprache="' + escHtml(sprache) + '" data-stil="' + escHtml(stil) + '"' +
-    ' data-tip="' + escHtml(t("code.klicken")) + '">' +
-    '<span class="code-marke">' + escHtml(marke) + "</span>" +
+    ' data-language="' + escHtml(language) + '" data-style="' + escHtml(style) + '"' +
+    ' data-tip="' + escHtml(t("code.click")) + '">' +
+    '<span class="code-mark">' + escHtml(brand) + "</span>" +
     // A sealed block cannot be deleted with the keyboard the way a
     // paragraph can -- the caret has no place inside it to delete from. So
     // it carries its own way out.
-    '<button type="button" class="code-weg" tabindex="-1"' +
-    ' data-tip="' + escHtml(t("code.entfernen")) + '"' +
-    ' aria-label="' + escHtml(t("code.entfernen")) + '">\u00d7</button>' +
-    "<pre>" + escHtml(quelltext) + "</pre></div>";
+    '<button type="button" class="code-remove" tabindex="-1"' +
+    ' data-tip="' + escHtml(t("code.remove")) + '"' +
+    ' aria-label="' + escHtml(t("code.remove")) + '">\u00d7</button>' +
+    "<pre>" + escHtml(sourceText) + "</pre></div>";
 }
 
 function codeBlockZuMd(el) {
   var pre = el.querySelector("pre");
-  var sprache = el.dataset.sprache || "";
-  var stil = el.dataset.stil || "";
-  var info = sprache + (stil ? (sprache ? " " : "") + "hl=" + stil : "");
+  var language = el.dataset.language || "";
+  var style = el.dataset.style || "";
+  var info = language + (style ? (language ? " " : "") + "hl=" + style : "");
   return "```" + info + "\n" + (pre ? pre.textContent : "") + "\n```";
 }
 
@@ -107,19 +107,19 @@ function inlineZuHtml(text) {
   return s;
 }
 
-function mdZuHtml(md) {
-  var zeilen = String(md || "").split("\n");
+function mdToHtml(md) {
+  var lines = String(md || "").split("\n");
   var out = [];
-  var liste = null;    // "ul" | "ol" | null
-  var absatz = [];
+  var list = null;    // "ul" | "ol" | null
+  var paragraph = [];
 
-  function absatzSchliessen() {
-    if (!absatz.length) return;
-    out.push("<p>" + absatz.join("<br>") + "</p>");
-    absatz = [];
+  function paragraphClose() {
+    if (!paragraph.length) return;
+    out.push("<p>" + paragraph.join("<br>") + "</p>");
+    paragraph = [];
   }
-  function listeSchliessen() {
-    if (liste) { out.push("</" + liste + ">"); liste = null; }
+  function listClose() {
+    if (list) { out.push("</" + list + ">"); list = null; }
   }
   // The fragment refers to the element written last -- so the class is
   // attached to that one after the fact.
@@ -135,53 +135,53 @@ function mdZuHtml(md) {
   }
 
   var imCode = false;
-  var codeZeilen = [];
+  var codeLines = [];
   var codeInfo = "";
 
-  function codeSchliessen() {
-    out.push(codeBlockHtml(codeInfo.sprache, codeInfo.stil, codeZeilen.join("\n"), false));
+  function codeClose() {
+    out.push(codeBlockHtml(codeInfo.language, codeInfo.style, codeLines.join("\n"), false));
     imCode = false;
-    codeZeilen = [];
+    codeLines = [];
   }
 
-  zeilen.forEach(function (zeile) {
+  lines.forEach(function (line) {
     if (imCode) {
-      if (ZAUN.test(zeile)) codeSchliessen();
-      else codeZeilen.push(zeile);
+      if (ZAUN.test(line)) codeClose();
+      else codeLines.push(line);
       return;
     }
-    if (ZAUN.test(zeile)) {
-      absatzSchliessen();
-      listeSchliessen();
+    if (ZAUN.test(line)) {
+      paragraphClose();
+      listClose();
       imCode = true;
-      codeInfo = codeInfoLesen(zeile.replace(/^\s*```/, ""));
-      codeZeilen = [];
+      codeInfo = codeInfoLesen(line.replace(/^\s*```/, ""));
+      codeLines = [];
       return;
     }
-    if (zeile.trim() === FRAGMENT) {
+    if (line.trim() === FRAGMENT) {
       // Close the running paragraph first -- otherwise the class lands on
       // the paragraph BEFORE it. The list, by contrast, stays open: a
       // fragment may well belong to a single item mid-list.
-      absatzSchliessen();
+      paragraphClose();
       fragmentAnhaengen();
       return;
     }
-    var ul = /^\s*[-*+]\s+(.*)$/.exec(zeile);
-    var ol = /^\s*\d+[.)]\s+(.*)$/.exec(zeile);
+    var ul = /^\s*[-*+]\s+(.*)$/.exec(line);
+    var ol = /^\s*\d+[.)]\s+(.*)$/.exec(line);
     if (ul || ol) {
-      absatzSchliessen();
+      paragraphClose();
       var art = ul ? "ul" : "ol";
-      if (liste !== art) { listeSchliessen(); out.push("<" + art + ">"); liste = art; }
+      if (list !== art) { listClose(); out.push("<" + art + ">"); list = art; }
       out.push("<li>" + inlineZuHtml((ul || ol)[1]) + "</li>");
       return;
     }
-    listeSchliessen();
-    if (zeile.trim() === "") absatzSchliessen();
-    else absatz.push(inlineZuHtml(zeile));
+    listClose();
+    if (line.trim() === "") paragraphClose();
+    else paragraph.push(inlineZuHtml(line));
   });
-  if (imCode) codeSchliessen();   // a fence nobody closed
-  absatzSchliessen();
-  listeSchliessen();
+  if (imCode) codeClose();   // a fence nobody closed
+  paragraphClose();
+  listClose();
   return out.join("");
 }
 
@@ -214,29 +214,29 @@ function inlineZuMd(knoten) {
 // Elements that mean something in themselves rather than framing a block.
 var INLINE = /^(a|b|strong|i|em|s|strike|del|code|span|font)$/;
 
-function htmlZuMd(wurzel) {
-  var bloecke = [];
+function htmlToMd(wurzel) {
+  var blocks = [];
   function fragment(el) {
     return el.classList && el.classList.contains("fragment") ? "\n" + FRAGMENT : "";
   }
   Array.prototype.forEach.call(wurzel.childNodes, function (k) {
     if (k.nodeType === 3) {
-      if (k.nodeValue.trim()) bloecke.push(mdEscape(k.nodeValue.trim()));
+      if (k.nodeValue.trim()) blocks.push(mdEscape(k.nodeValue.trim()));
       return;
     }
     if (k.nodeType !== 1) return;
     if (k.classList && k.classList.contains("code-block")) {
-      bloecke.push(codeBlockZuMd(k) + fragment(k));
+      blocks.push(codeBlockZuMd(k) + fragment(k));
       return;
     }
     var tag = k.tagName.toLowerCase();
     if (tag === "ul" || tag === "ol") {
-      var zeilen = [];
+      var lines = [];
       Array.prototype.forEach.call(k.children, function (li, i) {
         var text = inlineZuMd(li).replace(/\n/g, " ").trim();
-        if (text) zeilen.push((tag === "ul" ? "- " : i + 1 + ". ") + text + fragment(li));
+        if (text) lines.push((tag === "ul" ? "- " : i + 1 + ". ") + text + fragment(li));
       });
-      if (zeilen.length) bloecke.push(zeilen.join("\n"));
+      if (lines.length) blocks.push(lines.join("\n"));
     } else if (tag === "br") {
       // a lone <br> between blocks: the browser keeps an empty line open
       // with it, in Markdown it is nothing
@@ -247,10 +247,10 @@ function htmlZuMd(wurzel) {
       // the inline path as a CHILD -- passed as a block, only its contents
       // would be read and the formatting would be dropped on saving.
       var t = (INLINE.test(tag) ? inlineZuMd({ childNodes: [k] }) : inlineZuMd(k)).trim();
-      if (t) bloecke.push(t + fragment(k));
+      if (t) blocks.push(t + fragment(k));
     }
   });
-  return bloecke.join("\n\n").trim();
+  return blocks.join("\n\n").trim();
 }
 
 // --- Buttons -----------------------------------------------------------
@@ -258,15 +258,15 @@ function htmlZuMd(wurzel) {
 // the only thing that applies bold/italic/list correctly across a selection
 // with working undo. Rebuilding that would be far more code with far more
 // rough edges.
-function befehl(feld, name) {
-  feld.focus();
+function befehl(field, name) {
+  field.focus();
   if (name === "link") {
-    var url = window.prompt(t("meldung.linkZiel"), "https://");
+    var url = window.prompt(t("message.linkTarget"), "https://");
     if (url) document.execCommand("createLink", false, url);
     return;
   }
   if (name === "fragment") {
-    fragmentUmschalten(feld);
+    fragmentToggle(field);
     return;
   }
   document.execCommand(name, false, null);
@@ -274,30 +274,30 @@ function befehl(feld, name) {
 
 // "Reveal one by one" applies to the paragraph or list item the cursor is
 // in.
-function fragmentUmschalten(feld) {
+function fragmentToggle(field) {
   var sel = window.getSelection();
   if (!sel || !sel.rangeCount) return;
   var k = sel.getRangeAt(0).startContainer;
-  while (k && k !== feld && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
+  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
   if (!k) return;
-  if (k === feld) {
+  if (k === field) {
     // Bare text straight in the field: the browser only wraps a line in a
     // paragraph once there is a second one. Without a paragraph there is
     // nothing to hang the class on, so one is made here -- otherwise the
     // button would quietly do nothing on a slide someone has just started.
-    if (!feld.firstChild) return;
-    var absatz = document.createElement("p");
-    while (feld.firstChild) absatz.appendChild(feld.firstChild);
-    feld.appendChild(absatz);
+    if (!field.firstChild) return;
+    var paragraph = document.createElement("p");
+    while (field.firstChild) paragraph.appendChild(field.firstChild);
+    field.appendChild(paragraph);
     // The DOM surgery loses the caret, so it is put back at the end.
-    var bereich = document.createRange();
-    bereich.selectNodeContents(absatz);
-    bereich.collapse(false);
+    var scope = document.createRange();
+    scope.selectNodeContents(paragraph);
+    scope.collapse(false);
     sel.removeAllRanges();
-    sel.addRange(bereich);
-    k = absatz;
+    sel.addRange(scope);
+    k = paragraph;
   }
   k.classList.toggle("fragment");
 }
 
-export { istEinfach, mdZuHtml, htmlZuMd, befehl, codeBlockHtml, FRAGMENT };
+export { isSimple, mdToHtml, htmlToMd, befehl, codeBlockHtml, FRAGMENT };

@@ -4,8 +4,8 @@
 
    Shape of the markup (see render.js):
      <section class="layout-...">
-       <div class="folie-text"> heading + body </div>
-       <div class="folie-bild"> <img> </div>       (image layouts only)
+       <div class="slide-text"> heading + body </div>
+       <div class="slide-image"> <img> </div>       (image layouts only)
      </section>
 
    On the !important: reveal.js writes `display: block` straight into the
@@ -17,10 +17,10 @@
   text-align: left;
 }
 
-.reveal .folie-text > :first-child { margin-top: 0; }
-.reveal .folie-text > :last-child { margin-bottom: 0; }
+.reveal .slide-text > :first-child { margin-top: 0; }
+.reveal .slide-text > :last-child { margin-bottom: 0; }
 
-.reveal .folie-bild img {
+.reveal .slide-image img {
   display: block;
   width: 100%;
   height: 100%;
@@ -42,17 +42,17 @@
   text-align: center;
 }
 .reveal .layout-titel h1 { font-size: 2.1em; line-height: 1.1; margin-bottom: 0.4em; }
-.reveal .layout-titel .folie-text > p { font-size: 0.75em; opacity: 0.85; }
+.reveal .layout-titel .slide-text > p { font-size: 0.75em; opacity: 0.85; }
 
 .reveal .layout-abschnitt h1 { font-size: 2.4em; line-height: 1.1; }
-.reveal .layout-abschnitt .folie-text > p { font-size: 0.7em; opacity: 0.8; }
+.reveal .layout-abschnitt .slide-text > p { font-size: 0.7em; opacity: 0.8; }
 
 /* --- Columns ---------------------------------------------------------- */
 /* The body flows in columns, the heading runs across all of them. No need
    to split the text -- in the .md the slide body stays a perfectly ordinary
    list or paragraph, and the same text can be moved between two columns and
    three by changing the layout alone. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text {
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text {
   column-count: 2;
   column-gap: 1.2em;
 }
@@ -60,7 +60,7 @@
    theme's own size that is a handful of characters per line, so the type
    steps down with the column count -- three columns are for short points,
    which is what the layout's own help text says. */
-.reveal .layout-spalten-drei .folie-text {
+.reveal .layout-spalten-drei .slide-text {
   column-count: 3;
   /* Wider than the two-column gap, not narrower: the bullets of the next
      column would otherwise sit right against the longest line of the one
@@ -71,8 +71,8 @@
 }
 /* reveal indents lists by a fixed amount, which in a third of a slide is a
    sizeable part of the column. */
-.reveal .layout-spalten-drei .folie-text :is(ul, ol) { padding-left: 0.8em; }
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text h2 {
+.reveal .layout-spalten-drei .slide-text :is(ul, ol) { padding-left: 0.8em; }
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text h2 {
   column-span: all;
 }
 /* Two pitfalls at once:
@@ -81,12 +81,12 @@
       would have no effect. Hence back to block here.
    2. The break rule applies to the individual list item, NOT to the list --
       otherwise you would have the same effect all over again. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text ul,
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text ol {
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text ul,
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text ol {
   display: block;
   width: 100%;
 }
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text li {
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text li {
   break-inside: avoid;
 }
 
@@ -99,16 +99,16 @@
   gap: 1em;
 }
 /* The markup is always in reading order (text first, except for
-   bild-links). Column assignment is therefore done entirely in CSS, so
+   image-links). Column assignment is therefore done entirely in CSS, so
    that screen readers and sighted readers get the same order. */
-.reveal .layout-bild-links .folie-bild { grid-column: 1; grid-row: 1; }
-.reveal .layout-bild-links .folie-text { grid-column: 2; grid-row: 1; }
+.reveal .layout-bild-links .slide-image { grid-column: 1; grid-row: 1; }
+.reveal .layout-bild-links .slide-text { grid-column: 2; grid-row: 1; }
 /* How much of the slide the text gets beside the picture (data-textbreite,
    see layouts.js). The TRACK is what is sized, not the item: in a grid a
    narrower item would leave the rest of its column standing empty instead
    of handing it to the picture.
-   The text is the first column on bild-rechts and the second on
-   bild-links, hence the two sets. 50 is written as a pair of equal shares
+   The text is the first column on image-rechts and the second on
+   image-links, hence the two sets. 50 is written as a pair of equal shares
    rather than as a percentage, so the gap between them comes off both
    sides and the two really are the same width -- which is what this
    layout has always looked like. */
@@ -127,7 +127,7 @@
   align-items: flex-end;
   min-height: 100%;
 }
-.reveal .layout-bild-voll .folie-text {
+.reveal .layout-bild-voll .slide-text {
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   padding: 0.6em 0.8em;
@@ -135,8 +135,8 @@
   max-width: 70%;
   backdrop-filter: blur(3px);
 }
-.reveal .layout-bild-voll .folie-text h2,
-.reveal .layout-bild-voll .folie-text a { color: #fff; }
+.reveal .layout-bild-voll .slide-text h2,
+.reveal .layout-bild-voll .slide-text a { color: #fff; }
 
 /* --- Video ------------------------------------------------------------
    Text and player, in whichever of the four arrangements the slide asks
@@ -151,20 +151,20 @@
   display: flex !important;
   flex-direction: column;
 }
-.reveal .layout-video .folie-text { flex: 0 0 auto; }
+.reveal .layout-video .slide-text { flex: 0 0 auto; }
 
 /* The heading names the SLIDE, not the text beside the player, so it stays
    at the top in all four arrangements. It can do that because it sits
-   outside .folie-text here (render.js) and because what moves below it
+   outside .slide-text here (render.js) and because what moves below it
    moves by `order` rather than by turning the whole box around -- turning
    the box would take the heading with it. */
 .reveal .layout-video > :is(h1, h2) { order: 1; flex: 0 0 auto; }
-.reveal .layout-video .folie-text { order: 2; }
-.reveal .layout-video .folie-video { order: 3; }
+.reveal .layout-video .slide-text { order: 2; }
+.reveal .layout-video .slide-video { order: 3; }
 
 /* Text below: the two under the heading trade places, the heading stays. */
-.reveal .slides section.layout-video[data-textseite="unten"] .folie-text { order: 3; }
-.reveal .slides section.layout-video[data-textseite="unten"] .folie-video { order: 2; }
+.reveal .slides section.layout-video[data-textseite="unten"] .slide-text { order: 3; }
+.reveal .slides section.layout-video[data-textseite="unten"] .slide-video { order: 2; }
 
 /* Text beside: a row under the heading. The wrap plus a heading that takes
    the whole width is what gives it a line of its own -- and keeps it a
@@ -180,8 +180,8 @@
 .reveal .slides section.layout-video[data-textseite="rechts"] > :is(h1, h2) {
   flex: 0 0 100%;
 }
-.reveal .slides section.layout-video[data-textseite="rechts"] .folie-text { order: 3; }
-.reveal .slides section.layout-video[data-textseite="rechts"] .folie-video { order: 2; }
+.reveal .slides section.layout-video[data-textseite="rechts"] .slide-text { order: 3; }
+.reveal .slides section.layout-video[data-textseite="rechts"] .slide-video { order: 2; }
 /* Both share the width rather than keeping the 0 0 auto above -- side by
    side the two are a division of the slide, not "as much as the text
    happens to need". How far the text may go is the slide's own affair
@@ -191,10 +191,10 @@
 
    min-width: 0 because a flex item refuses to go below its longest word
    otherwise, and one long word would push the player out. */
-.reveal .slides section.layout-video[data-textseite="links"] .folie-text,
-.reveal .slides section.layout-video[data-textseite="rechts"] .folie-text,
-.reveal .slides section.layout-video[data-textseite="links"] .folie-video,
-.reveal .slides section.layout-video[data-textseite="rechts"] .folie-video {
+.reveal .slides section.layout-video[data-textseite="links"] .slide-text,
+.reveal .slides section.layout-video[data-textseite="rechts"] .slide-text,
+.reveal .slides section.layout-video[data-textseite="links"] .slide-video,
+.reveal .slides section.layout-video[data-textseite="rechts"] .slide-video {
   flex: 1 1 0;
   min-width: 0;
 }
@@ -205,10 +205,10 @@
    player the text has the full width, and a cap carried along from a time
    when the slide was arranged side by side would narrow it there for no
    reason anybody could see. */
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="25"] .folie-text { max-width: 25%; }
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="33"] .folie-text { max-width: 33%; }
-.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="50"] .folie-text { max-width: 50%; }
-.reveal .layout-video .folie-video {
+.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="25"] .slide-text { max-width: 25%; }
+.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="33"] .slide-text { max-width: 33%; }
+.reveal .slides section.layout-video:is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="50"] .slide-text { max-width: 50%; }
+.reveal .layout-video .slide-video {
   position: relative;
   flex: 1 1 auto;
   width: 100%;
@@ -219,7 +219,7 @@
      shrink this box -- the slide has no height of its own to shrink it
      against -- and 16:9 across the full width is 540 of the 700 units a
      slide has, so a few lines too many push the player off the bottom.
-     Stepping the type down (js/folien-passform.js) then brings the text
+     Stepping the type down (js/slide-fit.js) then brings the text
      back but not the player. In em it comes along.
 
      23em is just past the full width at the theme's own size (42px, so
@@ -231,7 +231,7 @@
   border-radius: 0.2em;
   overflow: hidden;
 }
-.reveal .layout-video .folie-video iframe {
+.reveal .layout-video .slide-video iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -247,7 +247,7 @@
 }
 /* On screen the address is behind the player; it is there for the case
    where the player cannot be. */
-.reveal .layout-video .video-adresse {
+.reveal .layout-video .video-address {
   position: absolute;
   left: 0;
   right: 0;
@@ -260,18 +260,18 @@
 /* On paper an iframe shows nothing at all -- so the handout gets the black
    box with the address in it, which is the one thing a reader can act on. */
 @media print {
-  .reveal .layout-video .folie-video iframe { display: none; }
+  .reveal .layout-video .slide-video iframe { display: none; }
 }
 
-/* --- The player's stand-in ---------------------------------------------
+/* --- The player's state-in ---------------------------------------------
    Where YouTube will not configure a player -- a document opened from the
    file system, which is what the export is -- the box holds the video's
-   still image with a play mark on it, and a click opens the video on
-   youtube.com (js/folien-video.js). The still is a background rather than
+   quiet image with a play mark on it, and a click opens the video on
+   youtube.com (js/slide-video.js). The quiet is a background rather than
    an <img> so that it covers the box like a slide background does, and so
    that a missing one simply leaves the black box the address is legible on
    anyway. */
-.reveal .layout-video .folie-video .video-ersatz {
+.reveal .layout-video .slide-video .video-standin {
   position: absolute;
   inset: 0;
   display: flex;
@@ -284,7 +284,7 @@
 }
 /* The play mark, drawn rather than an image or a glyph: a font may not have
    the triangle, and the export carries no files next to it. */
-.reveal .layout-video .folie-video .video-ersatz::after {
+.reveal .layout-video .slide-video .video-standin::after {
   content: "";
   width: 0;
   height: 0;
@@ -294,29 +294,29 @@
   filter: drop-shadow(0 0 0.15em rgba(0, 0, 0, 0.7));
   transition: transform 0.15s ease-out;
 }
-.reveal .layout-video .folie-video .video-ersatz:hover::after { transform: scale(1.15); }
-/* With the still behind it the address moves off the middle of the picture
+.reveal .layout-video .slide-video .video-standin:hover::after { transform: scale(1.15); }
+/* With the quiet behind it the address moves off the middle of the picture
    and down to the edge, where a dark strip keeps it readable over any
    image. */
-.reveal .layout-video .folie-video.ohne-player .video-adresse {
+.reveal .layout-video .slide-video.without-player .video-address {
   bottom: 0;
   padding: 0.35em 0.5em;
   background: rgba(0, 0, 0, 0.6);
 }
 
 /* --- While a slide is being measured -----------------------------------
-   js/folien-passform.js sets a type size and reads the height back in the
+   js/slide-fit.js sets a type size and reads the height back in the
    same breath. Nothing on the slide may be on its way from one size to
    another while that happens: reveal gives a fragment `transition: all
    .2s`, and `all` includes the font-size being set here. Read back at once,
-   the height would still be the one from before the change -- every size
+   the height would quiet be the one from before the change -- every size
    would look too big, and the slide would end up at the smallest one
    allowed for no reason.
 
    Switched on for the length of the measurement only, so nothing of this
    reaches what the audience sees. */
-.reveal .folien-messen,
-.reveal .folien-messen * {
+.reveal .is-measuring,
+.reveal .is-measuring * {
   transition: none !important;
   animation: none !important;
 }
@@ -330,15 +330,15 @@
    Links keep the theme's colour on purpose: they have to stay
    recognisable as links, and that is what their colour is for. */
 .reveal .slides section[data-text-color] :is(h1, h2, h3, h4, h5, h6,
-p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
+p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
   color: inherit;
 }
 
 /* --- Background effects ------------------------------------------------
    An animated background. It does not sit on the <section> -- that box is
    only as tall as its text -- but on the background element reveal.js
-   builds for every slide, where js/folien-effekte.js hangs the layers and
-   carries the name across. So the effect spans the whole slide, lies behind
+   builds for every slide, where js/slide-effects.js hangs the layers and
+   carries the name across. So the effect spans the whole slide, read behind
    everything, rides along with the transitions and survives into the print
    view.
 
@@ -354,17 +354,17 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
    slide's own colour. That is part of the picture, not an oversight.
 
    Only print draws it differently, for the reason given further down. */
-.reveal .slide-background[data-background-effect] > .folie-effekt {
+.reveal .slide-background[data-background-effect] > .slide-effect {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-.reveal .slide-background[data-background-effect="waves"] > .folie-effekt {
+.reveal .slide-background[data-background-effect="waves"] > .slide-effect {
   background: #4973ff;
   box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
 }
-.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span {
+.reveal .slide-background[data-background-effect="waves"] > .slide-effect > span {
   position: absolute;
   top: 0;
   left: 50%;
@@ -377,31 +377,31 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
   height: 325%;
   aspect-ratio: 1;
   transform: translate(-50%, -75%) rotate(0deg);
-  animation: folie-waves 5s linear infinite;
+  animation: slide-waves 5s linear infinite;
 }
-.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(1) {
+.reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(1) {
   border-radius: 45%;
   background: rgba(20, 20, 20, 1);
 }
-.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(2) {
+.reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(2) {
   border-radius: 40%;
   background: rgba(20, 20, 20, 0.5);
   animation-duration: 10s;
 }
-.reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(3) {
+.reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(3) {
   border-radius: 42.5%;
   background: rgba(20, 20, 20, 0.5);
   animation-duration: 15s;
 }
 
-@keyframes folie-waves {
+@keyframes slide-waves {
   to { transform: translate(-50%, -75%) rotate(360deg); }
 }
 
 /* --- Stars -------------------------------------------------------------
    Three star fields drifting upwards at three speeds -- near stars quickly,
    far ones slowly, which is what makes the sky look deep. A field is a
-   single pixel wearing a few hundred box-shadows; js/folien-effekte.js
+   single pixel wearing a few hundred box-shadows; js/slide-effects.js
    scatters them, because positions have to be drawn from somewhere and this
    project has no build step to do it (the pen this comes from has its SCSS
    compiler roll them).
@@ -413,46 +413,46 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
 
    Like the waves this effect brings its own ground -- a night sky is not a
    tint on someone else's colour. */
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect {
   background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
 }
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect > span {
   position: absolute;
   top: 0;
   left: 0;
   background: transparent;
-  box-shadow: var(--sterne-feld);
-  animation: folie-starfield 50s linear infinite;
+  box-shadow: var(--stars-field);
+  animation: slide-starfield 50s linear infinite;
 }
 /* The copy below. inherit rather than a repeat of the sizes: its only job
    is to be the same field one height further down. */
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span::after {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect > span::after {
   content: "";
   position: absolute;
-  top: var(--sterne-hoehe);
+  top: var(--stars-height);
   left: 0;
   width: inherit;
   height: inherit;
   background: transparent;
-  box-shadow: var(--sterne-feld);
+  box-shadow: var(--stars-field);
 }
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(1) {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect > span:nth-child(1) {
   width: 1px;
   height: 1px;
 }
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(2) {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect > span:nth-child(2) {
   width: 2px;
   height: 2px;
   animation-duration: 100s;
 }
-.reveal .slide-background[data-background-effect="starfield"] > .folie-effekt > span:nth-child(3) {
+.reveal .slide-background[data-background-effect="starfield"] > .slide-effect > span:nth-child(3) {
   width: 3px;
   height: 3px;
   animation-duration: 150s;
 }
 
-@keyframes folie-starfield {
-  to { transform: translateY(calc(-1 * var(--sterne-hoehe))); }
+@keyframes slide-starfield {
+  to { transform: translateY(calc(-1 * var(--stars-height))); }
 }
 
 /* --- Blobs -------------------------------------------------------------
@@ -460,16 +460,16 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
    the upper left, one in the lower right, each of the pair at its own speed
    so they drift apart and together again instead of moving as one.
 
-   The drawing is an inline SVG (js/folien-effekte.js), not a background
+   The drawing is an inline SVG (js/slide-effects.js), not a background
    image: an SVG used as a background does not animate. The path data,
    colours and class names are the pen's; what turns how fast is here.
 
    The viewBox is deliberately smaller than the shapes, with "slice": the
    blobs are meant to hang over the edges of the slide, not to sit in it. */
-.reveal .slide-background[data-background-effect="blobs"] > .folie-effekt {
+.reveal .slide-background[data-background-effect="blobs"] > .slide-effect {
   background: #fee440;
 }
-.reveal .slide-background[data-background-effect="blobs"] > .folie-effekt > svg {
+.reveal .slide-background[data-background-effect="blobs"] > .slide-effect > svg {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -479,35 +479,35 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
    numbers and not percentages: they name a point in the drawing. */
 .reveal .slide-background[data-background-effect="blobs"] .out-top {
   transform-origin: 13px 25px;
-  animation: folie-blobs 20s linear infinite;
+  animation: slide-blobs 20s linear infinite;
 }
 .reveal .slide-background[data-background-effect="blobs"] .in-top {
   transform-origin: 13px 25px;
-  animation: folie-blobs 10s linear infinite;
+  animation: slide-blobs 10s linear infinite;
 }
 .reveal .slide-background[data-background-effect="blobs"] .out-bottom {
   transform-origin: 84px 93px;
-  animation: folie-blobs 25s linear infinite;
+  animation: slide-blobs 25s linear infinite;
 }
 .reveal .slide-background[data-background-effect="blobs"] .in-bottom {
   transform-origin: 84px 93px;
-  animation: folie-blobs 15s linear infinite;
+  animation: slide-blobs 15s linear infinite;
 }
 
-@keyframes folie-blobs {
+@keyframes slide-blobs {
   to { transform: rotate(360deg); }
 }
 
 /* Someone who has asked their system for less movement gets the picture
-   without the motion: waves, stars and blobs stay, they just stand still. A
+   without the motion: waves, stars and blobs stay, they just state quiet. A
    background is not worth a headache. */
 @media (prefers-reduced-motion: reduce) {
-  .reveal .slide-background[data-background-effect] > .folie-effekt :is(span, path) {
+  .reveal .slide-background[data-background-effect] > .slide-effect :is(span, path) {
     animation: none;
   }
 }
 
-/* On paper the waves are a still anyway -- and they have to be drawn a
+/* On paper the waves are a quiet anyway -- and they have to be drawn a
    different way to get there. The print renderer drops both a rounding and
    a gradient once the element is this much larger than the page and carries
    a transform; what comes out is a straight band across the handout. So for
@@ -518,10 +518,10 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
 @media print {
   /* Whatever the effect, paper gets its first frame rather than whichever
      one the browser happened to be on. */
-  .reveal .slide-background[data-background-effect] > .folie-effekt :is(span, path) {
+  .reveal .slide-background[data-background-effect] > .slide-effect :is(span, path) {
     animation: none;
   }
-  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span {
+  .reveal .slide-background[data-background-effect="waves"] > .slide-effect > span {
     top: 0;
     left: 0;
     width: 100%;
@@ -531,15 +531,15 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
   }
   /* The rounding sits on the rules below on screen, so it has to be undone
      on those same rules -- a less specific one would not reach it. */
-  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(1) {
+  .reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(1) {
     border-radius: 0;
     background: radial-gradient(ellipse 150% 88% at 50% 1%, rgba(20, 20, 20, 1) 0 99.6%, transparent 100%);
   }
-  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(2) {
+  .reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(2) {
     border-radius: 0;
     background: radial-gradient(ellipse 150% 80% at 38% -2%, rgba(20, 20, 20, 0.5) 0 99.6%, transparent 100%);
   }
-  .reveal .slide-background[data-background-effect="waves"] > .folie-effekt > span:nth-child(3) {
+  .reveal .slide-background[data-background-effect="waves"] > .slide-effect > span:nth-child(3) {
     border-radius: 0;
     background: radial-gradient(ellipse 150% 84% at 62% 4%, rgba(20, 20, 20, 0.5) 0 99.6%, transparent 100%);
   }
@@ -554,39 +554,39 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
    can count them, and the steps are deliberately coarse -- the aim is a
    table that fits, not one typeset to the pixel. Anything past the last
    step is a table that does not belong on a slide. */
-.reveal .folie-text table {
+.reveal .slide-text table {
   width: 100%;
   margin: 0.4em 0;
   font-size: 0.72em;
   line-height: 1.25;
   border-collapse: collapse;
 }
-.reveal .folie-text table th,
-.reveal .folie-text table td {
+.reveal .slide-text table th,
+.reveal .slide-text table td {
   padding: 0.3em 0.6em;
   vertical-align: top;
 }
 /* Counting the header row as well, these are 6, 9, 12 and 15 rows on the
    slide. */
-.reveal .folie-text table:has(tbody tr:nth-child(5)) { font-size: 0.6em; }
-.reveal .folie-text table:has(tbody tr:nth-child(8)) { font-size: 0.5em; }
-.reveal .folie-text table:has(tbody tr:nth-child(11)) { font-size: 0.42em; }
-.reveal .folie-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
+.reveal .slide-text table:has(tbody tr:nth-child(5)) { font-size: 0.6em; }
+.reveal .slide-text table:has(tbody tr:nth-child(8)) { font-size: 0.5em; }
+.reveal .slide-text table:has(tbody tr:nth-child(11)) { font-size: 0.42em; }
+.reveal .slide-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
 
 /* Columns plus a table are a tight fit already -- one notch smaller. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text table { font-size: 0.55em; }
+.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text table { font-size: 0.55em; }
 
 /* --- Code --------------------------------------------------------------
    The colours come from the highlighter's own stylesheet (reveal.js'
    monokai). What is left here is the box around them: reveal gives the
    block five pixels of padding, which leaves the first character sitting on
    the edge. */
-.reveal .folie-text pre {
+.reveal .slide-text pre {
   width: 100%;
   margin: 0.4em 0;
   box-shadow: none;
 }
-.reveal .folie-text pre code {
+.reveal .slide-text pre code {
   padding: 0.6em 0.8em;
   border-radius: 0.2em;
   max-height: none;
@@ -613,12 +613,12 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
 
    Lists are deliberately NOT included: reveal gives them no vertical
    margin at all, so a rule here would add space rather than convert it. */
-.reveal .folie-text p { margin: 0.5em 0; }
+.reveal .slide-text p { margin: 0.5em 0; }
 
-.reveal .folie-text:has(> :nth-child(8)) { font-size: 0.92em; }
-.reveal .folie-text:has(> :nth-child(10)) { font-size: 0.84em; }
-.reveal .folie-text:has(> :nth-child(13)) { font-size: 0.75em; }
-.reveal .folie-text:has(> :nth-child(16)) { font-size: 0.68em; }
+.reveal .slide-text:has(> :nth-child(8)) { font-size: 0.92em; }
+.reveal .slide-text:has(> :nth-child(10)) { font-size: 0.84em; }
+.reveal .slide-text:has(> :nth-child(13)) { font-size: 0.75em; }
+.reveal .slide-text:has(> :nth-child(16)) { font-size: 0.68em; }
 
 /* --- Staged reveals in the editor preview -----------------------------
    reveal hides a fragment until it is clicked, which is right on the wall
@@ -626,7 +626,7 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .folie-text) {
    slide that shows nothing. In the preview they are visible but dimmed,
    with a bar in the margin -- you see what is there AND that it only
    appears later. Presentation and export are untouched. */
-body.ist-vorschau .reveal .fragment {
+body.is-preview .reveal .fragment {
   visibility: visible !important;
   opacity: 0.5;
   border-left: 3px solid currentColor;
@@ -653,18 +653,18 @@ body.ist-vorschau .reveal .fragment {
    change its appearance because of what hangs beneath it, which is
    nonsense to anyone looking at it. Every slide carries data-layout and no
    stack does, so that attribute is what tells the two apart. */
-.reveal .slides section[data-layout]:not(.layout-zitat) .folie-text blockquote {
+.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text blockquote {
   width: 100%;
   margin: 0.45em 0;
   padding: 0.35em 0.7em;
   font-size: 0.8em;
   line-height: 1.3;
 }
-.reveal .slides section[data-layout]:not(.layout-zitat) .folie-text blockquote p {
+.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text blockquote p {
   margin: 0.25em 0;
 }
-.reveal .slides section[data-layout]:not(.layout-zitat) .folie-text:has(blockquote:nth-of-type(3)) blockquote { font-size: 0.72em; }
-.reveal .slides section[data-layout]:not(.layout-zitat) .folie-text:has(blockquote:nth-of-type(5)) blockquote { font-size: 0.62em; }
+.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text:has(blockquote:nth-of-type(3)) blockquote { font-size: 0.72em; }
+.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text:has(blockquote:nth-of-type(5)) blockquote { font-size: 0.62em; }
 
 /* --- Quote ------------------------------------------------------------ */
 .reveal .slides section.layout-zitat { text-align: center; }
@@ -699,9 +699,9 @@ body.ist-vorschau .reveal .fragment {
   .reveal .slides section.layout-bild-links[data-textbreite] {
     grid-template-columns: 1fr;
   }
-  .reveal .layout-bild-links .folie-bild,
-  .reveal .layout-bild-links .folie-text { grid-column: 1; grid-row: auto; }
-  .reveal :is(.layout-spalten, .layout-spalten-drei) .folie-text { column-count: 1; }
+  .reveal .layout-bild-links .slide-image,
+  .reveal .layout-bild-links .slide-text { grid-column: 1; grid-row: auto; }
+  .reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text { column-count: 1; }
 }
 
 /* --- Print view (PDF export) ------------------------------------------
@@ -727,7 +727,7 @@ html.reveal-print .reveal .slides section.layout-bild-voll {
    there is a choice of sides: without this line the handout would put the
    text above the player whichever side the slide asks for. The direction
    itself survives -- reveal only writes `display`, so the rules that turn
-   the box into a row still apply. */
+   the box into a row quiet apply. */
 html.reveal-print .reveal .slides section.layout-video {
   display: flex !important;
 }

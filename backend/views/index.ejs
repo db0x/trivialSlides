@@ -1,65 +1,65 @@
 <!doctype html>
 <html lang="<%= t('html.lang') %>">
 <head>
-<%- include("partials/head", { titel: "trivialSlides" }) %>
+<%- include("partials/head", { title: "trivialSlides" }) %>
 </head>
-<body class="seite-uebersicht">
-  <header class="kopf">
-    <a class="marke" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32"><span class="marke-wort">trivialSlides<small class="marke-version">v<%= VERSION %></small></span></a>
-    <button id="sprache-umschalter" class="knopf knopf-still sprache" type="button"
-            data-ziel="<%= SPRACHE === 'de' ? 'en' : 'de' %>"
-            data-tip="<%= t('kopf.spracheWechseln') %>"
-            aria-label="<%= t('kopf.spracheWechseln') %>"><%= SPRACHE === 'de' ? 'en' : 'de' %></button>
-    <button id="theme-umschalter" class="knopf knopf-still knopf-icon" type="button"></button>
+<body class="page-overview">
+  <header class="head">
+    <a class="brand" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32"><span class="brand-word">trivialSlides<small class="brand-version">v<%= VERSION %></small></span></a>
+    <button id="language-toggle" class="button button-quiet language" type="button"
+            data-target="<%= LANGUAGE === 'de' ? 'en' : 'de' %>"
+            data-tip="<%= t('header.switchLanguage') %>"
+            aria-label="<%= t('header.switchLanguage') %>"><%= LANGUAGE === 'de' ? 'en' : 'de' %></button>
+    <button id="theme-toggle" class="button button-quiet button-icon" type="button"></button>
   </header>
 
-  <main class="inhalt">
+  <main class="content">
     <% if (!decks.length) { %>
-      <p class="leer"><%= t('uebersicht.leer') %></p>
+      <p class="empty"><%= t('overview.empty') %></p>
     <% } %>
-    <ul class="deckliste">
+    <ul class="deck-list">
       <% decks.forEach(function (d) { %>
         <li>
           <a href="<%= BASE %>/d/<%= d.slug %>">
-            <span class="deck-titel"><%= d.titel %></span>
-            <span class="deck-meta"><%= t("uebersicht.folien", { n: d.folien }) %> &middot; <%= t("uebersicht.geaendert", { zeit: new Date(d.geaendert).toLocaleString(t("datum.locale"), { dateStyle: "medium", timeStyle: "short" }) }) %></span>
+            <span class="deck-title"><%= d.title %></span>
+            <span class="deck-meta"><%= t("overview.slides", { n: d.slides }) %> &middot; <%= t("overview.changed", { time: new Date(d.changed).toLocaleString(t("date.locale"), { dateStyle: "medium", timeStyle: "short" }) }) %></span>
           </a>
-          <span class="deck-aktionen">
-            <a class="knopf knopf-still knopf-icon deck-vorfuehren" data-tip="<%= t('kopf.vorfuehren') %>" aria-label="<%= t('kopf.vorfuehren') %>"
-               href="<%= BASE %>/d/<%= d.slug %>/praesentation" target="_blank" rel="noopener"></a>
+          <span class="deck-actions">
+            <a class="button button-quiet button-icon deck-vorfuehren" data-tip="<%= t('header.present') %>" aria-label="<%= t('header.present') %>"
+               href="<%= BASE %>/d/<%= d.slug %>/present" target="_blank" rel="noopener"></a>
           </span>
         </li>
       <% }); %>
       <!-- The new deck sits where a new deck belongs: at the end of the
            list, in the same shape as the rest of them. -->
-      <li class="deck-neu">
-        <button type="button" id="deck-neu" class="deck-neu-knopf">
-          <span class="deck-neu-zeichen" aria-hidden="true"></span>
-          <span class="deck-titel"><%= t('uebersicht.neu') %></span>
+      <li class="deck-fresh">
+        <button type="button" id="deck-fresh" class="deck-fresh-button">
+          <span class="deck-fresh-zeichen" aria-hidden="true"></span>
+          <span class="deck-title"><%= t('overview.new') %></span>
         </button>
       </li>
     </ul>
   </main>
 
-  <dialog id="neu-dialog" class="dialog dialog-schmal">
-    <form method="dialog" class="dialog-kopf">
-      <h2><%= t('dialog.neuTitel') %></h2>
-      <button class="knopf knopf-still" value="abbruch"><%= t('dialog.schliessen') %></button>
+  <dialog id="fresh-dialog" class="dialog dialog-schmal">
+    <form method="dialog" class="dialog-head">
+      <h2><%= t('dialog.newTitle') %></h2>
+      <button class="button button-quiet" value="abbruch"><%= t('dialog.close') %></button>
     </form>
-    <form method="post" action="<%= BASE %>/neu" class="dialog-inhalt">
-      <label class="feld">
-        <span class="feld-name"><%= t('dialog.titel') %></span>
-        <input id="neu-titel" name="titel" maxlength="120" required
-               placeholder="<%= t('dialog.platzhalter') %>" autocomplete="off">
+    <form method="post" action="<%= BASE %>/new" class="dialog-content">
+      <label class="field">
+        <span class="field-label"><%= t('dialog.title') %></span>
+        <input id="fresh-title" name="titel" maxlength="120" required
+               placeholder="<%= t('dialog.placeholder') %>" autocomplete="off">
       </label>
-      <p class="hilfe"><%= t('dialog.hinweis') %></p>
+      <p class="hint"><%= t('dialog.note') %></p>
       <div class="dialog-fuss">
-        <button type="button" class="knopf" data-schliessen><%= t('dialog.abbrechen') %></button>
-        <button type="submit" class="knopf knopf-haupt"><%= t('dialog.anlegen') %></button>
+        <button type="button" class="button" data-close><%= t('dialog.cancel') %></button>
+        <button type="submit" class="button button-haupt"><%= t('dialog.create') %></button>
       </div>
     </form>
   </dialog>
 
-  <script src="<%= BASE %>/static/js/uebersicht.js" defer></script>
+  <script src="<%= BASE %>/static/js/overview.js" defer></script>
 </body>
 </html>

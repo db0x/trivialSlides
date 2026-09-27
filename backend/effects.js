@@ -8,27 +8,27 @@
 // without touching a single deck.
 //
 // The list is deliberately not extensible through a file the way the
-// gradients are (verlaeufe.js): a new effect needs its own CSS rules, and
+// gradients are (gradients.js): a new effect needs its own CSS rules, and
 // those live in the project, not next to the decks.
 //
-// The words belong to i18n.js, keyed effekt.<id>.
-const EFFEKTE = [
+// The words belong to i18n.js, keyed effect.<id>.
+const EFFECTS = [
   { id: "waves" },
   { id: "starfield" },
   { id: "blobs" },
 ];
 
-const ids = new Set(EFFEKTE.map((e) => e.id));
+const ids = new Set(EFFECTS.map((e) => e.id));
 
 // An unknown name (a hand-written deck, an effect that has since gone)
 // becomes "no effect" rather than an attribute nothing answers.
-function gibt(id) {
+function exists(id) {
   return ids.has(String(id || ""));
 }
 
-function nurEffekt(wert) {
-  const s = String(wert == null ? "" : wert).trim();
-  return gibt(s) ? s : "";
+function onlyEffect(value) {
+  const s = String(value == null ? "" : value).trim();
+  return exists(s) ? s : "";
 }
 
-module.exports = { EFFEKTE, gibt, nurEffekt };
+module.exports = { EFFECTS, exists, onlyEffect };

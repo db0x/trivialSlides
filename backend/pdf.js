@@ -17,7 +17,7 @@ const puppeteer = require("puppeteer-core");
 // first, the Snap packaging last -- it runs in its own view of the file
 // system and cannot always create the working directory the browser
 // needs.
-const KANDIDATEN = [
+const CANDIDATES = [
   process.env.BROWSER_PATH,
   "/usr/bin/chromium",
   "/usr/bin/google-chrome",
@@ -33,15 +33,15 @@ const KANDIDATEN = [
 // reveal.js' slide format. The PDF's page size is set by reveal itself via
 // @page (slide plus margin); what follows is only the window the layout is
 // computed in.
-const BREITE = 960;
-const HOEHE = 700;
+const WIDTH = 960;
+const HEIGHT = 700;
 
-function browserPfad() {
-  return KANDIDATEN.find((p) => p && fs.existsSync(p)) || null;
+function browserPath() {
+  return CANDIDATES.find((p) => p && fs.existsSync(p)) || null;
 }
 
-function keinBrowser() {
-  const err = new Error("Kein Browser gefunden, mit dem sich ein PDF erzeugen laesst.");
+function noBrowser() {
+  const err = new Error("Kein Browser gefunden, mit dem sich ein PDF generate laesst.");
   err.code = "KEIN_BROWSER";
   return err;
 }
@@ -49,21 +49,21 @@ function keinBrowser() {
 // A browser costs memory and CPU time. Several requests at once would
 // knock over a small server, so they run one after another -- an export
 // takes seconds, nobody notices.
-let warteschlange = Promise.resolve();
+let queue = Promise.resolve();
 
-function nacheinander(arbeit) {
-  const ergebnis = warteschlange.then(arbeit, arbeit);
-  warteschlange = ergebnis.then(() => {}, () => {});
-  return ergebnis;
+function oneAtATime(arbeit) {
+  const result = queue.then(arbeit, arbeit);
+  queue = result.then(() => {}, () => {});
+  return result;
 }
 
-async function erzeuge(html) {
-  const pfad = browserPfad();
-  if (!pfad) throw keinBrowser();
+async function generate(html) {
+  const path = browserPath();
+  if (!path) throw noBrowser();
 
-  return nacheinander(async () => {
+  return oneAtATime(async () => {
     const browser = await puppeteer.launch({
-      executablePath: pfad,
+      executablePath: path,
       headless: true,
       // --no-sandbox: inside the container the process runs as root, and
       // Chrome's sandbox needs privileges a container usually does not
@@ -74,17 +74,17 @@ async function erzeuge(html) {
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
     });
     try {
-      const seite = await browser.newPage();
-      await seite.setViewport({ width: BREITE, height: HOEHE });
-      await seite.setContent(html, { waitUntil: "load", timeout: 30000 });
+      const side = await browser.newPage();
+      await side.setViewport({ width: WIDTH, height: HEIGHT });
+      await side.setContent(html, { waitUntil: "load", timeout: 30000 });
       // Do not print as soon as the page is up: reveal.js builds the page
       // breaks afterwards and announces itself with "pdf-ready". Printing
       // earlier yields a single page holding the first slide.
-      await seite.waitForFunction("window.pdfFertig === true", { timeout: 30000 });
+      await side.waitForFunction("window.pdfReady === true", { timeout: 30000 });
       // Buffer.from: puppeteer returns a Uint8Array, which express would
       // read as an object and send as JSON -- the recipient would get a
       // file full of numbers instead of a PDF.
-      return Buffer.from(await seite.pdf({
+      return Buffer.from(await side.pdf({
         // Background colours and images belong to the slide, not to
         // decoration -- without this a section slide would come out white.
         printBackground: true,
@@ -99,4 +99,4 @@ async function erzeuge(html) {
   });
 }
 
-module.exports = { erzeuge, browserPfad };
+module.exports = { generate, browserPath };

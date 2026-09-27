@@ -1,8 +1,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><%= typeof titel !== "undefined" ? titel : "trivialSlides" %></title>
+<title><%= typeof title !== "undefined" ? title : "trivialSlides" %></title>
 <link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
-<meta name="description" content="<%= t('app.beschreibung') %>">
+<meta name="description" content="<%= t('app.description') %>">
 <meta name="theme-color" content="#1c1f23">
 
 <!-- The card shown when someone pastes a link into Slack, Teams, Mastodon
@@ -12,8 +12,8 @@
      config.js. -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="trivialSlides">
-<meta property="og:title" content="<%= typeof titel !== "undefined" ? titel : "trivialSlides" %>">
-<meta property="og:description" content="<%= t('app.kurz') %>">
+<meta property="og:title" content="<%= typeof title !== "undefined" ? title : "trivialSlides" %>">
+<meta property="og:description" content="<%= t('app.short') %>">
 <meta property="og:url" content="<%= HIER %>">
 
 <link rel="manifest" href="<%= BASE %>/manifest.webmanifest">
@@ -29,9 +29,9 @@
     if (m) document.documentElement.setAttribute("data-theme", m);
   } catch (e) { /* private window, storage blocked */ }
 </script>
-<script type="application/json" id="daten-texte"><%- JSON.stringify(TEXTE) %></script>
+<script type="application/json" id="data-texte"><%- JSON.stringify(TEXTS) %></script>
 <script src="<%= BASE %>/static/js/theme.js" defer></script>
 <script src="<%= BASE %>/static/js/tooltip.js" defer></script>
-<script src="<%= BASE %>/static/js/sprache.js" defer></script>
-<script src="<%= BASE %>/static/js/menue.js" defer></script>
+<script src="<%= BASE %>/static/js/language.js" defer></script>
+<script src="<%= BASE %>/static/js/menu.js" defer></script>
 <script type="module" src="<%= BASE %>/static/js/scrollbars.js"></script>

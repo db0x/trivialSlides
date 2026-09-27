@@ -3,91 +3,91 @@
 //
 // Guiding idea: the model (deck) is the truth, the fields are merely its
 // display. Every change takes the same route
-//   field -> ernte() -> deck -> merken() -> save + preview
+//   field -> harvest() -> deck -> remember() -> save + preview
 // so that no second, half-baked state can exist.
-import { $, $$, t, schreibKopf, verzoegert } from "./base.js";
+import { $, $$, t, schreibHead, verzoegert } from "./base.js";
 import * as rt from "./richtext.js";
-import { createVorschau } from "./preview.js";
-import { zeichneListe, ziehenAktivieren } from "./slide-list.js";
+import { createPreview } from "./preview.js";
+import { drawList, dragEnable } from "./slide-list.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
-var BASIS = window.FOLIEN_BASIS;
-var deck = JSON.parse($("#daten-deck").textContent);
-var LAYOUTS = JSON.parse($("#daten-layouts").textContent);
-var bilder = JSON.parse($("#daten-bilder").textContent);
+var BASE = window.SLIDES_BASE;
+var deck = JSON.parse($("#data-deck").textContent);
+var LAYOUTS = JSON.parse($("#data-layouts").textContent);
+var images = JSON.parse($("#data-images").textContent);
 var layoutsById = {};
 LAYOUTS.forEach(function (l) { layoutsById[l.id] = l; });
 
-var aktiv = 0;
-var quelltextModus = false; // shows the current slide as Markdown
+var active = 0;
+var sourceMode = false; // shows the current slide as Markdown
 var schmutzig = false;
 
 var el = {
-  liste: $("#folienliste"),
-  titel: $("#folie-titel"),
-  inhalt: $("#folie-inhalt"),
-  inhaltRahmen: $("#inhalt-rahmen"),
-  quelltext: $("#folie-quelltext"),
-  quelltextRahmen: $("#quelltext-rahmen"),
-  quelltextHinweis: $("#quelltext-hinweis"),
-  quelltextKnopf: $("#quelltext-umschalten"),
-  quelle: $("#folie-quelle"),
-  video: $("#folie-video"),
-  videoHinweis: $("#video-hinweis"),
-  textseiteMenue: $("#textseite-menue"),
-  textseiteKnopf: $("#textseite-knopf"),
-  textbreiteMenue: $("#textbreite-menue"),
-  textbreiteKnopf: $("#textbreite-knopf"),
-  feldBild: $(".feld-bild"),
-  feldQuelle: $(".feld-quelle"),
-  feldVideo: $(".feld-video"),
-  bildVorschau: $("#bild-vorschau"),
-  bildEntfernen: $("#bild-entfernen"),
-  layoutHilfe: $("#layout-hilfe"),
-  stand: $("#speicherstand"),
-  eigenfarbe: $("#hintergrund-eigen"),
-  eigenTextfarbe: $("#textfarbe-eigen"),
-  verlauf: $("#folie-verlauf"),
-  verlaufHilfe: $("#verlauf-hilfe"),
-  verlaufVorlagen: $("#verlauf-vorlagen"),
-  effektKacheln: $("#effekt-kacheln"),
-  farbenGruppe: $("#farben-gruppe"),
-  codeKnopf: $("#code-einfuegen"),
+  list: $("#slide-list"),
+  title: $("#slide-title"),
+  content: $("#slide-content"),
+  contentFrame: $("#content-frame"),
+  sourceText: $("#slide-source-text"),
+  sourceFrame: $("#source-frame"),
+  sourceNote: $("#source-note"),
+  sourceButton: $("#source-toggle"),
+  source: $("#slide-source"),
+  video: $("#slide-video"),
+  videoNote: $("#video-note"),
+  textSideMenu: $("#text-side-menu"),
+  textSideButton: $("#text-side-button"),
+  textWidthMenu: $("#text-width-menu"),
+  textWidthButton: $("#text-width-button"),
+  fieldImage: $(".field-image"),
+  fieldSource: $(".field-source"),
+  fieldVideo: $(".field-video"),
+  imagePreview: $("#image-preview"),
+  imageRemove: $("#image-remove"),
+  layoutHint: $("#layout-hint"),
+  state: $("#save-state"),
+  customColor: $("#background-custom"),
+  customTextColor: $("#text-color-custom"),
+  gradient: $("#slide-gradient"),
+  gradientHint: $("#gradient-hint"),
+  gradientVorlagen: $("#gradient-presets"),
+  effectTiles: $("#effect-tiles"),
+  colorsGroup: $("#colors-group"),
+  codeButton: $("#code-insert"),
   codeDialog: $("#code-dialog"),
-  codeSprache: $("#code-sprache"),
-  codeStil: $("#code-stil"),
+  codeLanguage: $("#code-language"),
+  codeStyle: $("#code-style"),
   codeText: $("#code-text"),
-  codeTitel: $("#code-titel"),
+  codeTitle: $("#code-title"),
   codeOk: $("#code-ok"),
-  codeHinweis: $("#code-hinweis"),
+  codeNote: $("#code-note"),
   codeFragment: $("#code-fragment"),
 };
 
-var vorschau = createVorschau($("#vorschau"), BASIS);
+var preview = createPreview($("#preview"), BASE);
 
 // --- Notices -------------------------------------------------------------
 // One dialog, one line of text. The browser's alert would do the same job,
 // but it cannot be styled, it announces the host it comes from, and it
 // stops the page dead -- see views/editor.ejs.
-var hinweisDialog = $("#hinweis-dialog");
-var hinweisText = $("#hinweis-text");
+var noteDialog = $("#note-dialog");
+var noteText = $("#note-text");
 
-function hinweis(text) {
-  hinweisText.textContent = text;
-  hinweisDialog.showModal();
+function note(text) {
+  noteText.textContent = text;
+  noteDialog.showModal();
 }
 
 // --- Saving ------------------------------------------------------------
-function standAnzeigen(text, klasse) {
-  el.stand.textContent = text;
-  el.stand.className = "speicherstand " + (klasse || "");
+function stateShow(text, cls) {
+  el.state.textContent = text;
+  el.state.className = "save-state " + (cls || "");
 }
 
-function speichernJetzt() {
-  ernte();
-  return fetch(BASIS + "/deck.json", {
+function saveNow() {
+  harvest();
+  return fetch(BASE + "/deck.json", {
     method: "PUT",
-    headers: schreibKopf({ "Content-Type": "application/json" }),
+    headers: schreibHead({ "Content-Type": "application/json" }),
     body: JSON.stringify({ deck: deck }),
   })
     .then(function (r) {
@@ -102,44 +102,44 @@ function speichernJetzt() {
       schmutzig = false;
       // Saved is the normal state, and the normal state says nothing.
       // What is worth a word is the wait and the failure.
-      standAnzeigen("");
+      stateShow("");
     })
     .catch(function (e) {
       console.error(e);
-      standAnzeigen(t("stand.offline"), "ist-fehler");
+      stateShow(t("state.offline"), "is-error");
     });
 }
 
-var speichernBald = verzoegert(900, speichernJetzt);
+var saveSoon = verzoegert(900, saveNow);
 
 // Anything that wants to leave the page -- the language switch, for one --
-// has to be able to flush what is still owed. Saving is on a delay, and a
+// has to be able to flush what is quiet owed. Saving is on a delay, and a
 // reload inside that window would throw the last keystroke away.
-window.trivialSlidesSpeichern = function () {
-  return schmutzig ? speichernJetzt() : Promise.resolve();
+window.trivialSlidesSave = function () {
+  return schmutzig ? saveNow() : Promise.resolve();
 };
 
-function merken() {
-  ernte();
+function remember() {
+  harvest();
   schmutzig = true;
   // Deliberately silent. Saving follows within the second, and a label
   // reading "not saved" after every keystroke would be a complaint about
   // the normal course of things. What guards the real risk -- leaving with
   // something unsaved -- is the beforeunload below.
-  speichernBald();
-  vorschauBald();
+  saveSoon();
+  previewSoon();
 }
 
-var vorschauBald = verzoegert(350, function () {
-  vorschau.folieZeichnen(aktiv, deck.folien[aktiv]);
+var previewSoon = verzoegert(350, function () {
+  preview.slideZeichnen(active, deck.slides[active]);
 });
 
 // Structural changes: save first, then rebuild the preview completely --
 // it renders from the file, not from the browser's memory.
-function aufbauGeaendert(neuerIndex) {
-  aktiv = Math.max(0, Math.min(neuerIndex == null ? aktiv : neuerIndex, deck.folien.length - 1));
-  zeichneAlles();
-  speichernJetzt().then(function () { vorschau.neuLaden(aktiv); });
+function structureChanged(newIndex) {
+  active = Math.max(0, Math.min(newIndex == null ? active : newIndex, deck.slides.length - 1));
+  drawAll();
+  saveNow().then(function () { preview.newLoad(active); });
 }
 
 window.addEventListener("beforeunload", function (ev) {
@@ -149,172 +149,172 @@ window.addEventListener("beforeunload", function (ev) {
 });
 
 // --- Fields <-> model --------------------------------------------------
-// ernte(): reads the form fields into the model. Called before every save
+// harvest(): reads the form fields into the model. Called before every save
 // and before every slide change, so that no input is ever lost that the
 // delayed save has not seen yet.
-function ernte() {
-  var folie = deck.folien[aktiv];
-  if (!folie) return;
-  deck.titel = $("#deck-titel").value;
+function harvest() {
+  var slide = deck.slides[active];
+  if (!slide) return;
+  deck.title = $("#deck-title").value;
   deck.theme = $("#deck-theme").value;
   deck.transition = $("#deck-transition").value;
-  folie.titel = el.titel.value;
-  folie.inhalt = quelltextModus ? el.quelltext.value : rt.htmlZuMd(el.inhalt);
-  folie.quelle = el.quelle.value;
+  slide.title = el.title.value;
+  slide.content = sourceMode ? el.sourceText.value : rt.htmlToMd(el.content);
+  slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
   // it does so for the live preview too. So a pasted link is a video
   // before it has been saved anywhere.
-  folie.video = el.video.value;
+  slide.video = el.video.value;
   // The bar shows the side as an icon, so the chosen one lives on the
   // button rather than in a field value.
-  folie.textseite = el.textseiteKnopf.dataset.seite || "oben";
-  folie.textbreite = el.textbreiteKnopf.dataset.breite || standardBreite();
+  slide.textSide = el.textSideButton.dataset.side || "oben";
+  slide.textWidth = el.textWidthButton.dataset.width || defaultWidth();
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
-  // stripping the slide of the background it still has.
-  var verlauf = el.verlauf.value.trim();
-  if (!verlauf || el.verlauf.checkValidity()) folie.verlauf = verlauf;
+  // stripping the slide of the background it quiet has.
+  var gradient = el.gradient.value.trim();
+  if (!gradient || el.gradient.checkValidity()) slide.gradient = gradient;
 }
 
-function zeigeFolie() {
-  var folie = deck.folien[aktiv];
-  if (!folie) return;
-  el.titel.value = folie.titel || "";
+function showSlide() {
+  var slide = deck.slides[active];
+  if (!slide) return;
+  el.title.value = slide.title || "";
 
   // Rich text or source? Slides with Markdown outside our subset are
   // shown as source rather than damaged on the way back.
-  var einfach = rt.istEinfach(folie.inhalt);
-  quelltextModus = !einfach;
-  setzeInhaltsModus(folie);
+  var einfach = rt.isSimple(slide.content);
+  sourceMode = !einfach;
+  setContentMode(slide);
 
-  el.quelle.value = folie.quelle || "";
-  el.video.value = folie.video || "";
+  el.source.value = slide.source || "";
+  el.video.value = slide.video || "";
   // A slide that has never been arranged is arranged the way it has always
   // looked, so the button shows the same thing the slide does.
-  zeigeTextseite(folie.textseite || "oben");
-  zeigeTextbreite(folie.textbreite || standardBreite());
-  videoZeigen();
+  showTextSide(slide.textSide || "oben");
+  showTextWidth(slide.textWidth || defaultWidth());
+  showVideo();
 
-  $$(".layout-kachel").forEach(function (k) {
-    k.classList.toggle("ist-aktiv", k.dataset.layout === folie.layout);
+  $$(".layout-tile").forEach(function (k) {
+    k.classList.toggle("is-active", k.dataset.layout === slide.layout);
   });
-  el.layoutHilfe.textContent = (layoutsById[folie.layout] || {}).hilfe || "";
+  el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
 
-  var def = layoutsById[folie.layout] || { felder: [] };
-  el.feldBild.hidden = def.felder.indexOf("bild") === -1;
-  el.feldQuelle.hidden = def.felder.indexOf("quelle") === -1;
-  el.feldVideo.hidden = def.felder.indexOf("video") === -1;
-  el.textseiteMenue.hidden = def.felder.indexOf("textseite") === -1;
-  el.textbreiteMenue.hidden = def.felder.indexOf("textbreite") === -1;
+  var def = layoutsById[slide.layout] || { fields: [] };
+  el.fieldImage.hidden = def.fields.indexOf("image") === -1;
+  el.fieldSource.hidden = def.fields.indexOf("source") === -1;
+  el.fieldVideo.hidden = def.fields.indexOf("video") === -1;
+  el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
+  el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
   // A menu left standing open over a layout that no longer has the button
   // would hang in the bar with nothing under it.
-  if (el.textseiteMenue.hidden) el.textseiteMenue.open = false;
-  if (el.textbreiteMenue.hidden) el.textbreiteMenue.open = false;
-  zeigeBild(folie.bild);
+  if (el.textSideMenu.hidden) el.textSideMenu.open = false;
+  if (el.textWidthMenu.hidden) el.textWidthMenu.open = false;
+  showImage(slide.image);
 
-  farbfeldZeigen(el.eigenfarbe, folie.hintergrund);
-  farbfeldZeigen(el.eigenTextfarbe, folie.textfarbe);
-  el.verlauf.value = folie.verlauf || "";
-  verlaufZeigen();
-  $$(".effekt-kachel").forEach(function (k) {
-    k.classList.toggle("ist-aktiv", k.dataset.effect === (folie.effekt || ""));
+  showColorField(el.customColor, slide.background);
+  showColorField(el.customTextColor, slide.textColor);
+  el.gradient.value = slide.gradient || "";
+  gradientShow();
+  $$(".effect-tile").forEach(function (k) {
+    k.classList.toggle("is-active", k.dataset.effect === (slide.effect || ""));
   });
   // Folded, the group shows nothing of what the slide carries. The mark on
   // its label says that there is something to unfold.
-  el.farbenGruppe.classList.toggle("hat-eigenes",
-    !!(folie.hintergrund || folie.textfarbe || folie.verlauf || folie.effekt));
+  el.colorsGroup.classList.toggle("has-own",
+    !!(slide.background || slide.textColor || slide.gradient || slide.effect));
 }
 
-function setzeInhaltsModus(folie) {
+function setContentMode(slide) {
   // The frames carry the visible border, so those are what get hidden --
   // hiding the field alone would leave an empty box behind.
-  el.inhaltRahmen.hidden = quelltextModus;
-  el.quelltextRahmen.hidden = !quelltextModus;
+  el.contentFrame.hidden = sourceMode;
+  el.sourceFrame.hidden = !sourceMode;
   // The notice only appears when source mode was not chosen freely but
   // forced by the slide.
-  el.quelltextHinweis.hidden = !quelltextModus || rt.istEinfach(folie.inhalt);
-  el.quelltextKnopf.classList.toggle("ist-aktiv", quelltextModus);
-  $$(".werkzeugleiste button[data-befehl]").forEach(function (b) { b.disabled = quelltextModus; });
-  if (quelltextModus) el.quelltext.value = folie.inhalt || "";
-  else el.inhalt.innerHTML = rt.mdZuHtml(folie.inhalt);
+  el.sourceNote.hidden = !sourceMode || rt.isSimple(slide.content);
+  el.sourceButton.classList.toggle("is-active", sourceMode);
+  $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  if (sourceMode) el.sourceText.value = slide.content || "";
+  else el.content.innerHTML = rt.mdToHtml(slide.content);
 }
 
-function zeichneAlles() {
-  zeichneListe(el.liste, deck, aktiv, layoutsById);
-  zeigeFolie();
+function drawAll() {
+  drawList(el.list, deck, active, layoutsById);
+  showSlide();
 }
 
-function waehle(i) {
-  if (i === aktiv || i < 0 || i >= deck.folien.length) return;
-  ernte();
-  aktiv = i;
-  zeichneAlles();
-  vorschau.zeigeFolie(aktiv);
+function select(i) {
+  if (i === active || i < 0 || i >= deck.slides.length) return;
+  harvest();
+  active = i;
+  drawAll();
+  preview.showSlide(active);
 }
 
 // --- Slide list --------------------------------------------------------
-function leereFolie(layout) {
-  return { layout: layout || "text", vertikal: false, titel: "", inhalt: "", bild: "", quelle: "", textseite: "oben", hintergrund: "", textfarbe: "", verlauf: "", effekt: "" };
+function emptySlide(layout) {
+  return { layout: layout || "text", vertical: false, title: "", content: "", image: "", source: "", textSide: "oben", background: "", textColor: "", gradient: "", effect: "" };
 }
 
-el.liste.addEventListener("click", function (ev) {
-  var karte = ev.target.closest(".folie-karte");
-  if (!karte) return;
-  var i = Number(karte.dataset.index);
-  var knopf = ev.target.closest(".karte-knopf");
-  if (!knopf) { waehle(i); return; }
+el.list.addEventListener("click", function (ev) {
+  var card = ev.target.closest(".slide-card");
+  if (!card) return;
+  var i = Number(card.dataset.index);
+  var button = ev.target.closest(".card-button");
+  if (!button) { select(i); return; }
 
-  var aktion = knopf.dataset.aktion;
-  ernte();
-  if (aktion === "loeschen") {
-    if (deck.folien.length === 1) { hinweis(t("meldung.mindestensEine")); return; }
-    if (!window.confirm(t("meldung.folieLoeschen"))) return;
-    deck.folien.splice(i, 1);
-    aufbauGeaendert(Math.min(i, deck.folien.length - 1));
-  } else if (aktion === "doppeln") {
-    deck.folien.splice(i + 1, 0, JSON.parse(JSON.stringify(deck.folien[i])));
-    aufbauGeaendert(i + 1);
-  } else if (aktion === "hoch" && i > 0) {
-    deck.folien.splice(i - 1, 0, deck.folien.splice(i, 1)[0]);
-    aufbauGeaendert(i - 1);
-  } else if (aktion === "runter" && i < deck.folien.length - 1) {
-    deck.folien.splice(i + 1, 0, deck.folien.splice(i, 1)[0]);
-    aufbauGeaendert(i + 1);
-  } else if (aktion === "einruecken") {
+  var action = button.dataset.action;
+  harvest();
+  if (action === "delete") {
+    if (deck.slides.length === 1) { note(t("message.atLeastOne")); return; }
+    if (!window.confirm(t("message.deleteSlide"))) return;
+    deck.slides.splice(i, 1);
+    structureChanged(Math.min(i, deck.slides.length - 1));
+  } else if (action === "duplicate") {
+    deck.slides.splice(i + 1, 0, JSON.parse(JSON.stringify(deck.slides[i])));
+    structureChanged(i + 1);
+  } else if (action === "up" && i > 0) {
+    deck.slides.splice(i - 1, 0, deck.slides.splice(i, 1)[0]);
+    structureChanged(i - 1);
+  } else if (action === "down" && i < deck.slides.length - 1) {
+    deck.slides.splice(i + 1, 0, deck.slides.splice(i, 1)[0]);
+    structureChanged(i + 1);
+  } else if (action === "indent") {
     if (i === 0) return; // the first slide has nothing it could hang from
-    deck.folien[i].vertikal = !deck.folien[i].vertikal;
-    aufbauGeaendert(i);
+    deck.slides[i].vertical = !deck.slides[i].vertical;
+    structureChanged(i);
   }
 });
 
-ziehenAktivieren(el.liste, function (von, nach) {
-  ernte();
-  deck.folien.splice(nach, 0, deck.folien.splice(von, 1)[0]);
-  aufbauGeaendert(nach);
+dragEnable(el.list, function (von, nach) {
+  harvest();
+  deck.slides.splice(nach, 0, deck.slides.splice(von, 1)[0]);
+  structureChanged(nach);
 });
 
-$("#folie-neu").addEventListener("click", function () {
-  ernte();
-  deck.folien.splice(aktiv + 1, 0, leereFolie("text"));
-  aufbauGeaendert(aktiv + 1);
+$("#slide-new").addEventListener("click", function () {
+  harvest();
+  deck.slides.splice(active + 1, 0, emptySlide("text"));
+  structureChanged(active + 1);
 });
 
 // --- Form fields -------------------------------------------------------
-$("#deck-titel").addEventListener("input", merken);
-$("#deck-theme").addEventListener("change", function () { ernte(); speichernJetzt().then(function () { vorschau.neuLaden(aktiv); }); });
-$("#deck-transition").addEventListener("change", function () { ernte(); speichernJetzt(); });
+$("#deck-title").addEventListener("input", remember);
+$("#deck-theme").addEventListener("change", function () { harvest(); saveNow().then(function () { preview.newLoad(active); }); });
+$("#deck-transition").addEventListener("change", function () { harvest(); saveNow(); });
 
-el.titel.addEventListener("input", function () {
-  merken();
+el.title.addEventListener("input", function () {
+  remember();
   // The card in the list carries the heading -- it has to follow along as
   // you type, otherwise the list looks frozen.
-  var karte = el.liste.children[aktiv];
-  if (karte) $(".karte-titel", karte).textContent = el.titel.value || "(ohne Titel)";
+  var card = el.list.children[active];
+  if (card) $(".card-title", card).textContent = el.title.value || "(without Title)";
 });
-el.inhalt.addEventListener("input", merken);
-el.quelltext.addEventListener("input", merken);
-el.quelle.addEventListener("input", merken);
+el.content.addEventListener("input", remember);
+el.sourceText.addEventListener("input", remember);
+el.source.addEventListener("input", remember);
 
 // --- Where the text sits on a video slide ------------------------------
 // The bar has room for an icon and no more, so the name of the side has to
@@ -322,139 +322,139 @@ el.quelle.addEventListener("input", merken);
 // nothing at all to a screen reader or to a mouse that rests on it. The
 // names come from the menu entries, which the server has already put words
 // into; nothing has to be translated a second time here.
-function zeigeTextseite(seite) {
-  el.textseiteKnopf.dataset.seite = seite;
-  var gewaehlt = null;
-  $$("#textseite-menue .menue-eintrag").forEach(function (b) {
-    var ist = b.dataset.seite === seite;
-    b.classList.toggle("ist-aktiv", ist);
-    b.setAttribute("aria-checked", ist ? "true" : "false");
-    if (ist) gewaehlt = b;
+function showTextSide(side) {
+  el.textSideButton.dataset.side = side;
+  var chosen = null;
+  $$("#text-side-menu .menu-item").forEach(function (b) {
+    var is = b.dataset.side === side;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-checked", is ? "true" : "false");
+    if (is) chosen = b;
   });
-  var name = el.textseiteMenue.dataset.name + (gewaehlt ? ": " + gewaehlt.textContent.trim() : "");
-  el.textseiteKnopf.setAttribute("aria-label", name);
-  el.textseiteKnopf.dataset.tip = name;
+  var name = el.textSideMenu.dataset.name + (chosen ? ": " + chosen.textContent.trim() : "");
+  el.textSideButton.setAttribute("aria-label", name);
+  el.textSideButton.dataset.tip = name;
   // The button next door follows the side: beside the player the width is a
   // choice, above and below it is not one (slides.css).
-  schalteTextbreite();
+  toggleTextWidth();
 }
 
 // --- How wide the text may get beside the picture or the player --------
 // A choice only where the text actually stands beside something. On the
 // image layouts it always does; on a video slide only once the text has
 // been put left or right of the player.
-function schalteTextbreite() {
-  var folie = deck.folien[aktiv];
-  var def = layoutsById[folie && folie.layout] || { felder: [] };
-  var seitlich = def.felder.indexOf("textseite") === -1 ||
-    el.textseiteKnopf.dataset.seite === "links" || el.textseiteKnopf.dataset.seite === "rechts";
-  var an = def.felder.indexOf("textbreite") !== -1 && seitlich;
-  el.textbreiteMenue.setAttribute("aria-disabled", an ? "false" : "true");
-  if (!an) el.textbreiteMenue.open = false;
+function toggleTextWidth() {
+  var slide = deck.slides[active];
+  var def = layoutsById[slide && slide.layout] || { fields: [] };
+  var seitlich = def.fields.indexOf("textSide") === -1 ||
+    el.textSideButton.dataset.side === "links" || el.textSideButton.dataset.side === "rechts";
+  var an = def.fields.indexOf("textWidth") !== -1 && seitlich;
+  el.textWidthMenu.setAttribute("aria-disabled", an ? "false" : "true");
+  if (!an) el.textWidthMenu.open = false;
 }
 
 // What the slide has before anybody chooses differs by layout: half and
 // half beside a picture, a third beside a player (layouts.js). The tiles
 // carry it into the page along with the rest of the layout definition.
-function standardBreite() {
-  var folie = deck.folien[aktiv];
-  return ((layoutsById[folie && folie.layout] || {}).breite) || "33";
+function defaultWidth() {
+  var slide = deck.slides[active];
+  return ((layoutsById[slide && slide.layout] || {}).width) || "33";
 }
 
 // What the text stands beside depends on the layout -- a picture here, a
 // player there -- and the button says so. Read off the layout's fields
 // rather than off its name, so a layout added later gets the right wording
 // by declaring the field it already has to declare (layouts.js).
-function breiteName() {
-  var folie = deck.folien[aktiv];
-  var def = layoutsById[folie && folie.layout] || { felder: [] };
-  var d = el.textbreiteMenue.dataset;
-  return def.felder.indexOf("video") !== -1 ? d.nameVideo : d.nameBild;
+function widthName() {
+  var slide = deck.slides[active];
+  var def = layoutsById[slide && slide.layout] || { fields: [] };
+  var d = el.textWidthMenu.dataset;
+  return def.fields.indexOf("video") !== -1 ? d.nameVideo : d.nameImage;
 }
 
-function zeigeTextbreite(breite) {
-  el.textbreiteKnopf.dataset.breite = breite;
-  var gewaehlt = null;
-  $$("#textbreite-menue .menue-eintrag").forEach(function (b) {
-    var ist = b.dataset.breite === breite;
-    b.classList.toggle("ist-aktiv", ist);
-    b.setAttribute("aria-checked", ist ? "true" : "false");
-    if (ist) gewaehlt = b;
+function showTextWidth(width) {
+  el.textWidthButton.dataset.width = width;
+  var chosen = null;
+  $$("#text-width-menu .menu-item").forEach(function (b) {
+    var is = b.dataset.width === width;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-checked", is ? "true" : "false");
+    if (is) chosen = b;
   });
-  // The button wears the value, so it needs no icon -- but it still needs
+  // The button wears the value, so it needs no icon -- but it quiet needs
   // to say what the value MEANS, and that goes in the label and the tooltip.
-  var wert = gewaehlt ? gewaehlt.textContent.trim() : breite + "\u00a0%";
-  el.textbreiteKnopf.textContent = wert;
-  var name = breiteName() + ": " + wert;
-  el.textbreiteKnopf.setAttribute("aria-label", name);
-  el.textbreiteKnopf.dataset.tip = name;
+  var value = chosen ? chosen.textContent.trim() : width + "\u00a0%";
+  el.textWidthButton.textContent = value;
+  var name = widthName() + ": " + value;
+  el.textWidthButton.setAttribute("aria-label", name);
+  el.textWidthButton.dataset.tip = name;
 }
 
-$$("#textseite-menue .menue-eintrag").forEach(function (knopf) {
-  knopf.addEventListener("click", function () {
-    zeigeTextseite(knopf.dataset.seite);
-    el.textseiteMenue.open = false;
-    merken();
+$$("#text-side-menu .menu-item").forEach(function (button) {
+  button.addEventListener("click", function () {
+    showTextSide(button.dataset.side);
+    el.textSideMenu.open = false;
+    remember();
   });
 });
 
-$$("#textbreite-menue .menue-eintrag").forEach(function (knopf) {
-  knopf.addEventListener("click", function () {
-    zeigeTextbreite(knopf.dataset.breite);
-    el.textbreiteMenue.open = false;
-    merken();
+$$("#text-width-menu .menu-item").forEach(function (button) {
+  button.addEventListener("click", function () {
+    showTextWidth(button.dataset.width);
+    el.textWidthMenu.open = false;
+    remember();
   });
 });
 
 // <details> has no disabled state of its own, so the click that would open
 // it is the one that has to be turned away.
-el.textbreiteKnopf.addEventListener("click", function (ev) {
-  if (el.textbreiteMenue.getAttribute("aria-disabled") === "true") ev.preventDefault();
+el.textWidthButton.addEventListener("click", function (ev) {
+  if (el.textWidthMenu.getAttribute("aria-disabled") === "true") ev.preventDefault();
 });
 
 // A menu left open would sit over the very field one types in next. Both
 // of them, and each closes only when the click was somewhere outside it --
 // so opening one closes the other.
 document.addEventListener("click", function (ev) {
-  [el.textseiteMenue, el.textbreiteMenue].forEach(function (m) {
+  [el.textSideMenu, el.textWidthMenu].forEach(function (m) {
     if (m.open && !m.contains(ev.target)) m.open = false;
   });
 });
 
-$$(".layout-kachel").forEach(function (kachel) {
-  kachel.addEventListener("click", function () {
-    ernte();
-    deck.folien[aktiv].layout = kachel.dataset.layout;
-    zeichneAlles();
-    merken();
+$$(".layout-tile").forEach(function (tile) {
+  tile.addEventListener("click", function () {
+    harvest();
+    deck.slides[active].layout = tile.dataset.layout;
+    drawAll();
+    remember();
   });
 });
 
-$$(".werkzeugleiste button[data-befehl]").forEach(function (b) {
+$$(".toolbar button[data-command]").forEach(function (b) {
   // mousedown rather than click: otherwise the field loses focus first,
   // and with it the selection the command is meant to act on.
   b.addEventListener("mousedown", function (ev) {
     ev.preventDefault();
-    rt.befehl(el.inhalt, b.dataset.befehl);
-    merken();
+    rt.befehl(el.content, b.dataset.befehl);
+    remember();
   });
 });
 
-el.quelltextKnopf.addEventListener("click", function () {
-  ernte();
-  var folie = deck.folien[aktiv];
-  if (quelltextModus && !rt.istEinfach(folie.inhalt)) {
-    hinweis(t("meldung.bleibtQuelltext"));
+el.sourceButton.addEventListener("click", function () {
+  harvest();
+  var slide = deck.slides[active];
+  if (sourceMode && !rt.isSimple(slide.content)) {
+    note(t("message.staysSource"));
     return;
   }
-  quelltextModus = !quelltextModus;
-  setzeInhaltsModus(folie);
+  sourceMode = !sourceMode;
+  setContentMode(slide);
 });
 
 // Ctrl+B / Ctrl+I in the body field -- the browser does this by itself,
 // but the model has to hear about it.
-el.inhalt.addEventListener("keyup", function (ev) {
-  if (ev.ctrlKey || ev.metaKey) merken();
+el.content.addEventListener("keyup", function (ev) {
+  if (ev.ctrlKey || ev.metaKey) remember();
 });
 
 // --- Video ---------------------------------------------------------------
@@ -462,19 +462,19 @@ el.inhalt.addEventListener("keyup", function (ev) {
 // in it is decided by the server's own pattern, handed to the page -- so
 // the field says "no video in this" with the same rule that would later
 // drop the value on saving.
-var videoMuster = new RegExp(el.video.dataset.muster || "");
+var videoPattern = new RegExp(el.video.dataset.pattern || "");
 
-function videoZeigen() {
-  var wert = el.video.value.trim();
-  var gefunden = !wert || videoMuster.test(wert);
+function showVideo() {
+  var value = el.video.value.trim();
+  var gefunden = !value || videoPattern.test(value);
   el.video.setAttribute("aria-invalid", gefunden ? "false" : "true");
-  el.videoHinweis.textContent = gefunden ? "" : t("editor.videoUnbekannt");
-  el.videoHinweis.classList.toggle("hilfe-fehler", !gefunden);
+  el.videoNote.textContent = gefunden ? "" : t("editor.videoUnknown");
+  el.videoNote.classList.toggle("hint-error", !gefunden);
 }
 
 el.video.addEventListener("input", function () {
-  videoZeigen();
-  merken();
+  showVideo();
+  remember();
 });
 
 // --- Code blocks --------------------------------------------------------
@@ -496,103 +496,103 @@ function codeZuletzt() {
 function codeDialogOeffnen(block) {
   codeBearbeitet = block || null;
   var letzte = codeZuletzt();
-  el.codeSprache.value = block ? (block.dataset.sprache || "") : (letzte.sprache || "");
-  el.codeStil.value = block ? (block.dataset.stil || "") : (letzte.stil || "");
+  el.codeLanguage.value = block ? (block.dataset.language || "") : (letzte.language || "");
+  el.codeStyle.value = block ? (block.dataset.style || "") : (letzte.style || "");
   var pre = block && block.querySelector("pre");
   el.codeText.value = pre ? pre.textContent : "";
   el.codeFragment.checked = !!(block && block.classList.contains("fragment"));
   // The same dialog does both jobs, so it says which one it is doing.
-  el.codeTitel.textContent = t(block ? "dialog.codeBearbeiten" : "dialog.codeTitel");
-  el.codeOk.textContent = t(block ? "dialog.codeUebernehmen" : "dialog.codeEinfuegen");
-  el.codeHinweis.hidden = !!block;
+  el.codeTitle.textContent = t(block ? "dialog.codeEdit" : "dialog.codeTitle");
+  el.codeOk.textContent = t(block ? "dialog.codeApply" : "dialog.codeInsert");
+  el.codeNote.hidden = !!block;
   el.codeDialog.returnValue = "";
   el.codeDialog.showModal();
 }
 
-el.codeKnopf.addEventListener("click", function () { codeDialogOeffnen(null); });
+el.codeButton.addEventListener("click", function () { codeDialogOeffnen(null); });
 
 // A click on a block in the field opens it. The block is sealed, so the
 // click cannot land inside it -- it lands on it.
-el.inhalt.addEventListener("click", function (ev) {
+el.content.addEventListener("click", function (ev) {
   if (!ev.target.closest) return;
   var block = ev.target.closest(".code-block");
-  if (!block || !el.inhalt.contains(block)) return;
-  if (ev.target.closest(".code-weg")) {
+  if (!block || !el.content.contains(block)) return;
+  if (ev.target.closest(".code-remove")) {
     block.remove();
-    merken();
+    remember();
     return;
   }
   codeDialogOeffnen(block);
 });
 
 // In a code field Tab is indentation, not "on to the next control". Shift
-// and Escape still get out, so the field is not a trap.
+// and Escape quiet get out, so the field is not a trap.
 el.codeText.addEventListener("keydown", function (ev) {
   if (ev.key !== "Tab" || ev.shiftKey) return;
   ev.preventDefault();
   var von = el.codeText.selectionStart;
   var bis = el.codeText.selectionEnd;
-  var wert = el.codeText.value;
-  el.codeText.value = wert.slice(0, von) + "    " + wert.slice(bis);
+  var value = el.codeText.value;
+  el.codeText.value = value.slice(0, von) + "    " + value.slice(bis);
   el.codeText.setSelectionRange(von + 4, von + 4);
 });
 
 el.codeDialog.addEventListener("click", function (ev) {
-  if (ev.target.closest("[data-schliessen]")) el.codeDialog.close();
+  if (ev.target.closest("[data-close]")) el.codeDialog.close();
 });
 
 // On close, not on submit: a dialog hands the focus back to whatever had it
 // before, and it does so AFTER the submit handler.
 el.codeDialog.addEventListener("close", function () {
   if (el.codeDialog.returnValue !== "einfuegen") { codeBearbeitet = null; return; }
-  var sprache = el.codeSprache.value;
-  var stil = el.codeStil.value;
+  var language = el.codeLanguage.value;
+  var style = el.codeStyle.value;
   try {
-    localStorage.setItem(CODE_LETZTE, JSON.stringify({ sprache: sprache, stil: stil }));
+    localStorage.setItem(CODE_LETZTE, JSON.stringify({ language: language, style: style }));
   } catch (e) { /* private window, storage blocked */ }
   // Emptied out: that is how one gets rid of a block from inside the
   // dialog, and it beats leaving an empty fence on the slide.
-  var quelltext = el.codeText.value.replace(/\s+$/, "");
-  if (!quelltext.trim() && codeBearbeitet) {
+  var sourceText = el.codeText.value.replace(/\s+$/, "");
+  if (!sourceText.trim() && codeBearbeitet) {
     codeBearbeitet.remove();
-    merken();
+    remember();
     codeBearbeitet = null;
     return;
   }
-  codeUebernehmen(sprache, stil, quelltext, el.codeFragment.checked);
+  codeUebernehmen(language, style, sourceText, el.codeFragment.checked);
   codeBearbeitet = null;
 });
 
-function codeUebernehmen(sprache, stil, quelltext, fragment) {
-  ernte();
-  var folie = deck.folien[aktiv];
+function codeUebernehmen(language, style, sourceText, fragment) {
+  harvest();
+  var slide = deck.slides[active];
 
   // A slide that is in source mode for some OTHER reason -- a table, say --
   // has no field to put a block into. There the fence goes in as text.
-  if (quelltextModus) {
-    var zaun = "```" + sprache + (stil ? " hl=" + stil : "");
-    var block = zaun + "\n" + quelltext + "\n```" + (fragment ? "\n" + rt.FRAGMENT : "");
-    var vorher = (folie.inhalt || "").replace(/\s+$/, "");
-    folie.inhalt = vorher ? vorher + "\n\n" + block : block;
-    setzeInhaltsModus(folie);
-    merken();
+  if (sourceMode) {
+    var zaun = "```" + language + (style ? " hl=" + style : "");
+    var block = zaun + "\n" + sourceText + "\n```" + (fragment ? "\n" + rt.FRAGMENT : "");
+    var before = (slide.content || "").replace(/\s+$/, "");
+    slide.content = before ? before + "\n\n" + block : block;
+    setContentMode(slide);
+    remember();
     return;
   }
 
   var huelle = document.createElement("div");
-  huelle.innerHTML = rt.codeBlockHtml(sprache, stil, quelltext, fragment);
-  var neu = huelle.firstElementChild;
-  if (codeBearbeitet && el.inhalt.contains(codeBearbeitet)) {
-    codeBearbeitet.replaceWith(neu);
+  huelle.innerHTML = rt.codeBlockHtml(language, style, sourceText, fragment);
+  var fresh = huelle.firstElementChild;
+  if (codeBearbeitet && el.content.contains(codeBearbeitet)) {
+    codeBearbeitet.replaceWith(fresh);
   } else {
-    el.inhalt.appendChild(neu);
+    el.content.appendChild(fresh);
     // Something to carry on typing in: after a sealed block at the very end
     // of the field there is otherwise nowhere for the caret to go.
     var danach = document.createElement("p");
     danach.appendChild(document.createElement("br"));
-    el.inhalt.appendChild(danach);
+    el.content.appendChild(danach);
   }
-  merken();
+  remember();
 }
 
 // --- Colours -----------------------------------------------------------
@@ -600,7 +600,7 @@ function codeUebernehmen(sprache, stil, quelltext, fragment) {
 // alike: the same eight tones work in both roles, dark on light and light
 // on dark. They are the picker's swatches; anything else comes out of its
 // colour area.
-var FARBEN = ["#1b1f23", "#0b3d4c", "#2b3a55", "#4a3b52", "#5c3d2e", "#2f4f3a", "#f5f0e6", "#ffffff"];
+var COLORS = ["#1b1f23", "#0b3d4c", "#2b3a55", "#4a3b52", "#5c3d2e", "#2f4f3a", "#f5f0e6", "#ffffff"];
 
 // "No colour of its own" is a state the picker cannot express through a
 // colour, so its clear button carries it: an empty field means the slide
@@ -608,17 +608,17 @@ var FARBEN = ["#1b1f23", "#0b3d4c", "#2b3a55", "#4a3b52", "#5c3d2e", "#2f4f3a", 
 function colorisEinrichten() {
   Coloris.init();
   Coloris({
-    el: ".farbfeld",
+    el: ".color-field",
     themeMode: document.documentElement.getAttribute("data-theme")
       || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
     theme: "polaroid",
     format: "hex",
     alpha: true,
-    swatches: FARBEN,
+    swatches: COLORS,
     clearButton: true,
-    clearLabel: t("farbe.zuruecksetzen"),
+    clearLabel: t("color.reset"),
     closeButton: true,
-    closeLabel: t("farbe.fertig"),
+    closeLabel: t("color.done"),
   });
   // The picker's own light and dark have to follow the editor's.
   new MutationObserver(function () {
@@ -626,35 +626,35 @@ function colorisEinrichten() {
   }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 }
 
-// Both fields work the same way -- `feldName` is all that differs.
-function farbfeldVerdrahten(feld, feldName) {
-  feld.addEventListener("input", function () {
-    if (feld.dataset.still) return;   // set from the model, not by a person
-    ernte();
-    deck.folien[aktiv][feldName] = feld.value.trim();
-    zeigeFolie();
-    merken();
+// Both fields work the same way -- `fieldName` is all that differs.
+function colorFieldWire(field, fieldName) {
+  field.addEventListener("input", function () {
+    if (field.dataset.quiet) return;   // set from the model, not by a person
+    harvest();
+    deck.slides[active][fieldName] = field.value.trim();
+    showSlide();
+    remember();
   });
 }
 
 // Coloris keeps the swatch beside the field in sync by listening for input
 // events, so the value cannot simply be assigned -- it has to be announced.
 // The flag keeps that announcement from counting as an edit.
-function farbfeldZeigen(feld, wert) {
-  feld.dataset.still = "1";
-  feld.value = wert || "";
-  feld.dispatchEvent(new Event("input", { bubbles: true }));
-  delete feld.dataset.still;
+function showColorField(field, value) {
+  field.dataset.quiet = "1";
+  field.value = value || "";
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  delete field.dataset.quiet;
   // The dot shows the colour, the tooltip names it -- and without a colour
   // it has to show that too, which no colour can express.
-  var punkt = feld.closest(".clr-field");
-  if (punkt) punkt.classList.toggle("ist-leer", !wert);
-  feld.dataset.tip = wert || t("farbe.ohne");
+  var dot = field.closest(".clr-field");
+  if (dot) dot.classList.toggle("is-empty", !value);
+  field.dataset.tip = value || t("color.none");
 }
 
 colorisEinrichten();
-farbfeldVerdrahten(el.eigenfarbe, "hintergrund");
-farbfeldVerdrahten(el.eigenTextfarbe, "textfarbe");
+colorFieldWire(el.customColor, "background");
+colorFieldWire(el.customTextColor, "textColor");
 
 // --- The colour group ---------------------------------------------------
 // Closed to begin with: colours, gradients and effects are what one reaches
@@ -662,15 +662,15 @@ farbfeldVerdrahten(el.eigenTextfarbe, "textfarbe");
 // opened it once is past that point, so the choice is kept -- in the
 // browser, like the light/dark setting, because it belongs to the person
 // and not to the deck.
-var FARBEN_OFFEN = "trivialslides:farben-offen";
+var COLORS_OPEN = "trivialslides:colors-open";
 
 try {
-  el.farbenGruppe.open = localStorage.getItem(FARBEN_OFFEN) === "1";
+  el.colorsGroup.open = localStorage.getItem(COLORS_OPEN) === "1";
 } catch (e) { /* private window, storage blocked */ }
 
-el.farbenGruppe.addEventListener("toggle", function () {
+el.colorsGroup.addEventListener("toggle", function () {
   try {
-    localStorage.setItem(FARBEN_OFFEN, el.farbenGruppe.open ? "1" : "0");
+    localStorage.setItem(COLORS_OPEN, el.colorsGroup.open ? "1" : "0");
   } catch (e) { /* see above */ }
 });
 
@@ -683,124 +683,124 @@ el.farbenGruppe.addEventListener("toggle", function () {
 // The one hint line does double duty -- rule of the field, and complaint
 // when it is broken -- so the original wording is kept before anything
 // overwrites it.
-var verlaufHinweis = el.verlaufHilfe.textContent;
+var gradientNote = el.gradientHint.textContent;
 
-function verlaufZeigen() {
-  var wert = el.verlauf.value.trim();
-  var falsch = !!wert && !el.verlauf.checkValidity();
-  el.verlauf.setAttribute("aria-invalid", falsch ? "true" : "false");
-  el.verlaufHilfe.classList.toggle("hilfe-fehler", falsch);
-  el.verlaufHilfe.textContent = falsch ? t("editor.verlaufUngueltig") : verlaufHinweis;
+function gradientShow() {
+  var value = el.gradient.value.trim();
+  var falsch = !!value && !el.gradient.checkValidity();
+  el.gradient.setAttribute("aria-invalid", falsch ? "true" : "false");
+  el.gradientHint.classList.toggle("hint-error", falsch);
+  el.gradientHint.textContent = falsch ? t("editor.gradientInvalid") : gradientNote;
   // The active swatch is whichever one holds exactly this value -- a
   // hand-written gradient simply marks none of them.
-  $$(".verlauf-probe").forEach(function (p) {
-    p.classList.toggle("ist-aktiv", p.dataset.verlauf === wert);
+  $$(".gradient-probe").forEach(function (p) {
+    p.classList.toggle("is-active", p.dataset.gradient === value);
   });
 }
 
-el.verlauf.addEventListener("input", function () {
-  ernte();
-  verlaufZeigen();
-  merken();
+el.gradient.addEventListener("input", function () {
+  harvest();
+  gradientShow();
+  remember();
 });
 
-el.verlaufVorlagen.addEventListener("click", function (ev) {
-  var probe = ev.target.closest(".verlauf-probe");
+el.gradientVorlagen.addEventListener("click", function (ev) {
+  var probe = ev.target.closest(".gradient-probe");
   if (!probe) return;
-  ernte();
-  el.verlauf.value = probe.dataset.verlauf;
-  deck.folien[aktiv].verlauf = probe.dataset.verlauf;
-  verlaufZeigen();
-  merken();
+  harvest();
+  el.gradient.value = probe.dataset.gradient;
+  deck.slides[active].gradient = probe.dataset.gradient;
+  gradientShow();
+  remember();
 });
 
 // An animated background carries a name, so there is nothing to type: the
 // tiles are the whole control.
-el.effektKacheln.addEventListener("click", function (ev) {
-  var kachel = ev.target.closest(".effekt-kachel");
-  if (!kachel) return;
-  ernte();
-  deck.folien[aktiv].effekt = kachel.dataset.effect;
-  zeigeFolie();
-  merken();
+el.effectTiles.addEventListener("click", function (ev) {
+  var tile = ev.target.closest(".effect-tile");
+  if (!tile) return;
+  harvest();
+  deck.slides[active].effect = tile.dataset.effect;
+  showSlide();
+  remember();
 });
 
 // --- Images ------------------------------------------------------------
-var bildDialog = $("#bild-dialog");
+var imageDialog = $("#image-dialog");
 
-function zeigeBild(name) {
-  el.bildVorschau.hidden = !name;
-  el.bildEntfernen.hidden = !name;
-  if (name) el.bildVorschau.src = BASIS + "/bilder/" + encodeURIComponent(name);
+function showImage(name) {
+  el.imagePreview.hidden = !name;
+  el.imageRemove.hidden = !name;
+  if (name) el.imagePreview.src = BASE + "/images/" + encodeURIComponent(name);
 }
 
-function zeichneGalerie() {
-  var galerie = $("#bild-galerie");
-  galerie.innerHTML = "";
-  $("#bild-leer").hidden = bilder.length > 0;
-  bilder.forEach(function (name) {
+function drawGallery() {
+  var gallery = $("#image-gallery");
+  gallery.innerHTML = "";
+  $("#image-empty").hidden = images.length > 0;
+  images.forEach(function (name) {
     var b = document.createElement("button");
     b.type = "button";
-    b.className = "galerie-bild";
+    b.className = "gallery-image";
     b.dataset.name = name;
     b.dataset.tip = name;
     var img = document.createElement("img");
-    img.src = BASIS + "/bilder/" + encodeURIComponent(name);
+    img.src = BASE + "/images/" + encodeURIComponent(name);
     img.alt = name;
     img.loading = "lazy";
     b.appendChild(img);
-    galerie.appendChild(b);
+    gallery.appendChild(b);
   });
 }
 
-$("#bild-waehlen").addEventListener("click", function () {
-  zeichneGalerie();
-  bildDialog.showModal();
+$("#image-choose").addEventListener("click", function () {
+  drawGallery();
+  imageDialog.showModal();
 });
 
-$("#bild-galerie").addEventListener("click", function (ev) {
-  var b = ev.target.closest(".galerie-bild");
+$("#image-gallery").addEventListener("click", function (ev) {
+  var b = ev.target.closest(".gallery-image");
   if (!b) return;
-  ernte();
-  deck.folien[aktiv].bild = b.dataset.name;
-  zeigeBild(b.dataset.name);
-  bildDialog.close();
-  merken();
+  harvest();
+  deck.slides[active].image = b.dataset.name;
+  showImage(b.dataset.name);
+  imageDialog.close();
+  remember();
 });
 
-el.bildEntfernen.addEventListener("click", function () {
-  ernte();
-  deck.folien[aktiv].bild = "";
-  zeigeBild("");
-  merken();
+el.imageRemove.addEventListener("click", function () {
+  harvest();
+  deck.slides[active].image = "";
+  showImage("");
+  remember();
 });
 
-$("#bild-datei").addEventListener("change", function (ev) {
-  var dateien = ev.target.files;
-  if (!dateien || !dateien.length) return;
-  var daten = new FormData();
-  Array.prototype.forEach.call(dateien, function (f) { daten.append("bild", f); });
-  fetch(BASIS + "/bilder", { method: "POST", headers: schreibKopf(), body: daten })
+$("#image-file").addEventListener("change", function (ev) {
+  var files = ev.target.files;
+  if (!files || !files.length) return;
+  var data = new FormData();
+  Array.prototype.forEach.call(files, function (f) { data.append("image", f); });
+  fetch(BASE + "/images", { method: "POST", headers: schreibHead(), body: data })
     .then(function (r) { return r.json(); })
     .then(function (d) {
-      bilder = d.bilder || bilder;
-      zeichneGalerie();
+      images = d.images || images;
+      drawGallery();
       // A freshly uploaded image is almost always wanted right away.
-      if (d.neu && d.neu.length) {
-        ernte();
-        deck.folien[aktiv].bild = d.neu[0];
-        zeigeBild(d.neu[0]);
-        bildDialog.close();
-        merken();
+      if (d.fresh && d.fresh.length) {
+        harvest();
+        deck.slides[active].image = d.fresh[0];
+        showImage(d.fresh[0]);
+        imageDialog.close();
+        remember();
       }
     })
-    .catch(function (e) { console.error(e); hinweis(t("meldung.bildFehler")); });
+    .catch(function (e) { console.error(e); note(t("message.imageError")); });
   ev.target.value = "";
 });
 
 // --- Startup -----------------------------------------------------------
 // Paragraphs rather than <div> on line break: only then does the field
-// produce the same structure mdZuHtml does, keeping the round trip
+// produce the same structure mdToHtml does, keeping the round trip
 // lossless.
 try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) { /* aeltere Browser */ }
-zeichneAlles();
+drawAll();

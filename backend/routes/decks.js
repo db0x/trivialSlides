@@ -6,12 +6,12 @@ const express = require("express");
 const multer = require("multer");
 
 const deck = require("../deck");
-const dokument = require("../dokument");
+const document = require("../document");
 const pdf = require("../pdf");
 const layouts = require("../layouts");
 const render = require("../render");
-const verlaeufe = require("../verlaeufe");
-const effekte = require("../effekte");
+const gradients = require("../gradients");
+const effects = require("../effects");
 const code = require("../code");
 const video = require("../video");
 const storage = require("../storage");
@@ -31,24 +31,24 @@ const upload = multer({
 // header of our own. A foreign document cannot set that header without a
 // CORS grant -- that is the protection against forged calls here. Inside
 // Relay its csrf.js takes over this job instead.
-function nurEigeneSeite(req, res, next) {
-  if (req.get("X-Folien") !== "1") return res.status(403).json({ fehler: req.t("server.ungueltig") });
+function sameOriginOnly(req, res, next) {
+  if (req.get("X-Slides") !== "1") return res.status(403).json({ error: req.t("server.invalid") });
   next();
 }
 
 // Loads the deck belonging to the URL and puts it on req.deck.
-function deckLaden(req, res, next) {
-  const modell = storage.lade(req.params.slug);
-  if (!modell) return res.status(404).send(req.t("server.deckFehlt"));
+function loadDeck(req, res, next) {
+  const model = storage.load(req.params.slug);
+  if (!model) return res.status(404).send(req.t("server.deckMissing"));
   req.slug = req.params.slug;
-  req.deck = modell;
+  req.deck = model;
   next();
 }
 
 // URL prefix a deck's images live under. Kept in one place because the
 // renderer, the editor and the export all need it.
-function bildBasis(slug) {
-  return `${BASE}/d/${slug}/bilder/`;
+function imageBase(slug) {
+  return `${BASE}/d/${slug}/images/`;
 }
 
 // The web app manifest, which lets the editor be placed on a home screen
@@ -78,12 +78,12 @@ router.get("/manifest.webmanifest", (req, res) => {
 // browser, because the server renders most of the text and only a cookie
 // reaches it. A year is long enough that nobody has to choose twice, and
 // SameSite=Lax keeps it out of requests coming from elsewhere.
-router.post("/sprache/:code", (req, res) => {
+router.post("/language/:code", (req, res) => {
   const code = String(req.params.code || "");
-  if (!i18n.sprachen().includes(code)) return res.status(400).end();
+  if (!i18n.languages().includes(code)) return res.status(400).end();
   res.setHeader("Set-Cookie",
-    `${i18n.KEKS}=${code}; Path=${BASE || "/"}; Max-Age=31536000; SameSite=Lax`);
-  res.json({ ok: true, sprache: code });
+    `${i18n.COOKIE}=${code}; Path=${BASE || "/"}; Max-Age=31536000; SameSite=Lax`);
+  res.json({ ok: true, language: code });
 });
 
 // The code styles, fenced into one class each (see code.js). Generated
@@ -96,73 +96,73 @@ router.get("/code-styles.css", (req, res) => {
 
 // --- Overview ----------------------------------------------------------
 router.get("/", (req, res) => {
-  res.render("index", { decks: storage.liste() });
+  res.render("index", { decks: storage.list() });
 });
 
-router.post("/neu", (req, res) => {
-  const slug = storage.erstelle(req.body.titel || req.t("server.neuerVortrag"));
+router.post("/new", (req, res) => {
+  const slug = storage.create(req.body.title || req.t("server.newTalk"));
   res.redirect(`${BASE}/d/${slug}`);
 });
 
 // --- Editor ------------------------------------------------------------
-router.get("/d/:slug", deckLaden, (req, res) => {
+router.get("/d/:slug", loadDeck, (req, res) => {
   res.render("editor", {
     slug: req.slug,
     deck: req.deck,
-    layouts: i18n.layoutsUebersetzt(layouts.LAYOUTS, req.sprache),
-    verlaeufe: i18n.verlaeufeUebersetzt(verlaeufe.liste(), req.sprache),
-    effekte: i18n.effekteUebersetzt(effekte.EFFEKTE, req.sprache),
-    videoMuster: video.MUSTER,
-    videoSeiten: i18n.videoSeitenUebersetzt(video.SEITEN, req.sprache),
-    textbreiten: layouts.BREITEN,
-    codeSprachen: code.LANGUAGES,
-    codeStile: code.STYLES,
+    layouts: i18n.layoutsTranslated(layouts.LAYOUTS, req.language),
+    gradients: i18n.gradientsTranslated(gradients.list(), req.language),
+    effects: i18n.effectsTranslated(effects.EFFECTS, req.language),
+    videoPattern: video.PATTERN,
+    videoSides: i18n.videoSidesTranslated(video.SIDES, req.language),
+    textWidths: layouts.WIDTHS,
+    codeLanguages: code.LANGUAGES,
+    codeStyles: code.STYLES,
     // The grammar travels with the page and becomes the input's pattern --
     // so the browser refuses a broken gradient with the same rule the
     // server would have applied (deck.js).
-    verlaufMuster: deck.VERLAUF_MUSTER,
-    verlaufMax: deck.VERLAUF_MAX,
+    gradientPattern: deck.GRADIENT_PATTERN,
+    gradientMax: deck.GRADIENT_MAX,
     themes: deck.THEMES,
     transitions: deck.TRANSITIONS,
-    bilder: storage.bilder(req.slug),
+    images: storage.images(req.slug),
   });
 });
 
-router.get("/d/:slug/deck.json", deckLaden, (req, res) => {
-  res.json({ deck: req.deck, bilder: storage.bilder(req.slug) });
+router.get("/d/:slug/deck.json", loadDeck, (req, res) => {
+  res.json({ deck: req.deck, images: storage.images(req.slug) });
 });
 
-router.put("/d/:slug/deck.json", nurEigeneSeite, deckLaden, (req, res) => {
-  const modell = deck.normalize(req.body && req.body.deck);
-  storage.speichere(req.slug, modell);
-  res.json({ ok: true, deck: modell });
+router.put("/d/:slug/deck.json", sameOriginOnly, loadDeck, (req, res) => {
+  const model = deck.normalize(req.body && req.body.deck);
+  storage.save(req.slug, model);
+  res.json({ ok: true, deck: model });
 });
 
 // A single slide as HTML -- so that after every keystroke the preview
 // redraws only what is needed instead of reloading the whole deck.
-router.post("/d/:slug/folie.html", nurEigeneSeite, deckLaden, (req, res) => {
-  const folie = deck.normalize({ folien: [req.body && req.body.folie] }).folien[0];
-  res.json({ html: render.folieHtml(folie, bildBasis(req.slug)) });
+router.post("/d/:slug/slide.html", sameOriginOnly, loadDeck, (req, res) => {
+  const slide = deck.normalize({ slides: [req.body && req.body.slide] }).slides[0];
+  res.json({ html: render.slideHtml(slide, imageBase(req.slug)) });
 });
 
 // --- Viewing -----------------------------------------------------------
-router.get("/d/:slug/vorschau", deckLaden, (req, res) => {
+router.get("/d/:slug/preview", loadDeck, (req, res) => {
   res.render("reveal", {
     slug: req.slug,
     deck: req.deck,
-    slides: render.slidesHtml(req.deck, bildBasis(req.slug)),
-    indizes: render.indizes(req.deck.folien),
-    vorschau: true,
+    slides: render.slidesHtml(req.deck, imageBase(req.slug)),
+    indices: render.indices(req.deck.slides),
+    preview: true,
   });
 });
 
-router.get("/d/:slug/praesentation", deckLaden, (req, res) => {
+router.get("/d/:slug/present", loadDeck, (req, res) => {
   res.render("reveal", {
     slug: req.slug,
     deck: req.deck,
-    slides: render.slidesHtml(req.deck, bildBasis(req.slug)),
-    indizes: render.indizes(req.deck.folien),
-    vorschau: false,
+    slides: render.slidesHtml(req.deck, imageBase(req.slug)),
+    indices: render.indices(req.deck.slides),
+    preview: false,
   });
 });
 
@@ -177,18 +177,18 @@ router.get("/d/:slug/praesentation", deckLaden, (req, res) => {
 // dropped: storing it would only produce the same empty slide later.
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-function svgGeradeziehen(puffer) {
+function repairSvg(puffer) {
   const text = puffer.toString("utf8");
   const auf = text.match(/<svg\b[^>]*>/i);
   if (!auf) return null;
   if (/\sxmlns\s*=/i.test(auf[0])) return puffer;
-  const repariert = auf[0].replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
-  return Buffer.from(text.replace(auf[0], repariert), "utf8");
+  const repaired = auf[0].replace(/^<svg\b/i, `<svg xmlns="${SVG_NS}"`);
+  return Buffer.from(text.replace(auf[0], repaired), "utf8");
 }
 
 // --- Images --------------------------------------------------------------
-router.get("/d/:slug/bilder/:name", (req, res) => {
-  const p = storage.bildPfad(req.params.slug, req.params.name);
+router.get("/d/:slug/images/:name", (req, res) => {
+  const p = storage.imagePath(req.params.slug, req.params.name);
   if (!p || !fs.existsSync(p)) return res.status(404).end();
   // An SVG is a document, and a document can carry a <script>. As a
   // picture that script never runs, but opening the address directly
@@ -198,37 +198,37 @@ router.get("/d/:slug/bilder/:name", (req, res) => {
   res.sendFile(p, { maxAge: "1h" });
 });
 
-router.post("/d/:slug/bilder", nurEigeneSeite, deckLaden, upload.array("bild", 20), (req, res) => {
-  const namen = [];
+router.post("/d/:slug/images", sameOriginOnly, loadDeck, upload.array("image", 20), (req, res) => {
+  const names = [];
   for (const f of req.files || []) {
-    const endung = (path.extname(f.originalname || "").toLowerCase().match(/^\.(jpe?g|png|gif|webp|svg)$/) || [])[0];
-    if (!endung) continue; // skip other file types quietly instead of rejecting the whole upload
+    const ext = (path.extname(f.originalname || "").toLowerCase().match(/^\.(jpe?g|png|gif|webp|svg)$/) || [])[0];
+    if (!ext) continue; // skip other file types quietly instead of rejecting the whole upload
     // Name taken from the original but forced into the same strict shape
     // as the folder names; on a collision a short tag is appended.
-    const basis = storage.slugify(path.basename(f.originalname, endung)).slice(0, 40) || "bild";
-    let name = basis + endung;
-    let ziel = storage.bildPfad(req.slug, name);
-    if (!ziel) continue;
-    if (fs.existsSync(ziel)) {
-      name = `${basis}-${Date.now().toString(36)}${endung}`;
-      ziel = storage.bildPfad(req.slug, name);
+    const base = storage.slugify(path.basename(f.originalname, ext)).slice(0, 40) || "image";
+    let name = base + ext;
+    let target = storage.imagePath(req.slug, name);
+    if (!target) continue;
+    if (fs.existsSync(target)) {
+      name = `${base}-${Date.now().toString(36)}${ext}`;
+      target = storage.imagePath(req.slug, name);
     }
-    let daten = f.buffer;
-    if (endung === ".svg") {
-      daten = svgGeradeziehen(f.buffer);
-      if (!daten) continue;   // called .svg, is not one
+    let data = f.buffer;
+    if (ext === ".svg") {
+      data = repairSvg(f.buffer);
+      if (!data) continue;   // called .svg, is not one
     }
-    fs.mkdirSync(path.dirname(ziel), { recursive: true });
-    fs.writeFileSync(ziel, daten);
-    namen.push(name);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, data);
+    names.push(name);
   }
-  res.json({ ok: true, neu: namen, bilder: storage.bilder(req.slug) });
+  res.json({ ok: true, fresh: names, images: storage.images(req.slug) });
 });
 
 // --- Publishing --------------------------------------------------------
 // The Markdown file itself. The way back into a reveal.js project of your
 // own, or into version control.
-router.get("/d/:slug/vortrag.md", deckLaden, (req, res) => {
+router.get("/d/:slug/vortrag.md", loadDeck, (req, res) => {
   res.type("text/markdown; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${req.slug}.md"`);
   res.send(deck.serialize(req.deck));
@@ -238,10 +238,10 @@ router.get("/d/:slug/vortrag.md", deckLaden, (req, res) => {
 // reveal.js, the theme, our layout CSS, the fonts and every image are
 // inside it. This is the version to send around -- recipients double-click
 // it and present.
-router.get("/d/:slug/export.html", deckLaden, (req, res) => {
+router.get("/d/:slug/export.html", loadDeck, (req, res) => {
   res.type("html");
   res.setHeader("Content-Disposition", `attachment; filename="${req.slug}.html"`);
-  res.send(dokument.html({ slug: req.slug, deck: req.deck, bildBasis: bildBasis(req.slug) }));
+  res.send(document.html({ slug: req.slug, deck: req.deck, imageBase: imageBase(req.slug) }));
 });
 
 // A PDF to hand out: one slide per page, rendered from exactly the
@@ -250,25 +250,25 @@ router.get("/d/:slug/export.html", deckLaden, (req, res) => {
 // the handout looks like the talk rather than like a replica of it.
 //
 // This takes a few seconds: a browser has to start up for it.
-router.get("/d/:slug/export.pdf", deckLaden, async (req, res) => {
-  const html = dokument.html({ slug: req.slug, deck: req.deck, bildBasis: bildBasis(req.slug), druck: true });
+router.get("/d/:slug/export.pdf", loadDeck, async (req, res) => {
+  const html = document.html({ slug: req.slug, deck: req.deck, imageBase: imageBase(req.slug), print: true });
   try {
-    const datei = await pdf.erzeuge(html);
+    const file = await pdf.generate(html);
     res.type("application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${req.slug}.pdf"`);
-    res.send(datei);
+    res.send(file);
   } catch (err) {
     // The only error to expect is a missing browser, and the user cannot
     // guess that one. So this says what is missing and what they can do
     // instead -- rather than "internal error".
     console.error(err);
-    const fehlt = err && err.code === "KEIN_BROWSER";
-    res.status(fehlt ? 503 : 500).type("html").send(`<!doctype html>
+    const missing = err && err.code === "KEIN_BROWSER";
+    res.status(missing ? 503 : 500).type("html").send(`<!doctype html>
 <meta charset="utf-8">
-<title>${req.t("server.pdfTitel")}</title>
-<p>${fehlt ? req.t("server.pdfKeinBrowser") : req.t("server.pdfFehler")}</p>
-<p>${req.t("server.pdfVonHand", { url: `${BASE}/d/${req.slug}/praesentation?print-pdf` })}</p>
-<p><a href="${BASE}/d/${req.slug}">${req.t("server.zurueck")}</a></p>
+<title>${req.t("server.pdfTitle")}</title>
+<p>${missing ? req.t("server.pdfNoBrowser") : req.t("server.pdfError")}</p>
+<p>${req.t("server.pdfByHand", { url: `${BASE}/d/${req.slug}/present?print-pdf` })}</p>
+<p><a href="${BASE}/d/${req.slug}">${req.t("server.back")}</a></p>
 `);
   }
 });

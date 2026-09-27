@@ -11,20 +11,20 @@
 // own -- and the pattern below is what picks the id out of it. It is handed
 // to the page as well, so the browser and the server read a link the same
 // way rather than each having their own idea of one.
-const MUSTER = "(?:youtu\\.be/|[?&]v=|/embed/|/shorts/|/live/)?([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])";
+const PATTERN = "(?:youtu\\.be/|[?&]v=|/embed/|/shorts/|/live/)?([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])";
 
 const ID = /^[A-Za-z0-9_-]{11}$/;
 
-function isId(wert) {
-  return ID.test(String(wert || ""));
+function isId(value) {
+  return ID.test(String(value || ""));
 }
 
 // Anything to an id, or "" if there is no id in it.
-function toId(wert) {
-  const s = String(wert == null ? "" : wert).trim();
+function toId(value) {
+  const s = String(value == null ? "" : value).trim();
   if (isId(s)) return s;
-  const treffer = new RegExp(MUSTER).exec(s);
-  return treffer ? treffer[1] : "";
+  const hit = new RegExp(PATTERN).exec(s);
+  return hit ? hit[1] : "";
 }
 
 // The player, trimmed down to what belongs on a wall:
@@ -33,11 +33,11 @@ function toId(wert) {
 //                     a talk should not end in whatever the algorithm has
 //                     in stock
 //   controls=0        no control bar along the bottom. A click on the
-//                     picture still pauses, which is the one thing a
+//                     picture quiet pauses, which is the one thing a
 //                     speaker needs mid-sentence
 //   disablekb=1       the arrow keys belong to the talk, not to the player
 //   iv_load_policy=3  no annotation overlays
-//   enablejsapi=1     lets the slide start the player (js/folien-video.js)
+//   enablejsapi=1     lets the slide start the player (js/slide-video.js)
 //   playsinline=1     keeps a phone from throwing it into its own
 //                     full screen
 //
@@ -61,12 +61,12 @@ function watchUrl(id) {
   return `https://www.youtube.com/watch?v=${id}`;
 }
 
-// The video's still image. Stands in for the player where there cannot be
-// one -- in the exported file above all (js/folien-video.js).
+// The video's quiet image. Stands in for the player where there cannot be
+// one -- in the exported file above all (js/slide-video.js).
 //
 // hqdefault rather than maxresdefault: it exists for every video, while
 // maxres only exists for those uploaded in HD and otherwise answers with a
-// placeholder. 480x360 is little for a whole slide, but it is a still
+// placeholder. 480x360 is little for a whole slide, but it is a quiet
 // behind a play mark, not the picture the talk is about.
 function thumbUrl(id) {
   return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
@@ -82,12 +82,12 @@ function thumbUrl(id) {
 // is the default and the one a file does not have to spell out. An unknown
 // name falls back to it rather than leaving the slide without an
 // arrangement at all.
-const SEITEN = ["oben", "unten", "links", "rechts"];
-const SEITE_STANDARD = "oben";
+const SIDES = ["oben", "unten", "links", "rechts"];
+const SIDE_DEFAULT = "oben";
 
-function nurSeite(wert) {
-  const s = String(wert == null ? "" : wert).trim();
-  return SEITEN.includes(s) ? s : SEITE_STANDARD;
+function onlySide(value) {
+  const s = String(value == null ? "" : value).trim();
+  return SIDES.includes(s) ? s : SIDE_DEFAULT;
 }
 
-module.exports = { MUSTER, isId, toId, embedUrl, watchUrl, thumbUrl, SEITEN, SEITE_STANDARD, nurSeite };
+module.exports = { PATTERN, isId, toId, embedUrl, watchUrl, thumbUrl, SIDES, SIDE_DEFAULT, onlySide };

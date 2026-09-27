@@ -5,7 +5,7 @@
 // Eight ship with the app. A deck collection extends or replaces them
 // without touching the code, through a file next to the decks:
 //
-//   decks/verlaeufe.json
+//   decks/gradients.json
 //   [
 //     { "id": "firma",  "name": "Corporate blue",
 //       "css": "linear-gradient(180deg, #003057 0%, #0072ce 100%)" },
@@ -17,7 +17,7 @@
 // default is corrected rather than doubled. Everything else is appended in
 // the file's order.
 //
-// The words for our eight live in i18n.js, keyed verlauf.<id>, the way the
+// The words for our eight live in i18n.js, keyed gradient.<id>, the way the
 // layouts do it. An entry from the file brings its own name: nobody is going
 // to translate their own gradient.
 const fs = require("fs");
@@ -25,24 +25,24 @@ const path = require("path");
 const deck = require("./deck");
 const { DECKS_DIR } = require("./config");
 
-const DATEI = "verlaeufe.json";
+const FILE = "gradients.json";
 
 // Built from the same eight tones as the colour picker's swatches
 // (js/editor/index.js), so a gradient and a plain colour on neighbouring
-// slides still look like one deck.
-const STANDARD = [
-  { id: "nacht", css: "linear-gradient(180deg, #1b1f23 0%, #0b3d4c 100%)" },
-  { id: "tiefsee", css: "linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" },
-  { id: "daemmerung", css: "linear-gradient(180deg, #4a3b52 0%, #5c3d2e 100%)" },
-  { id: "wald", css: "linear-gradient(200deg, #2f4f3a 0%, #1b1f23 100%)" },
-  { id: "spotlicht", css: "radial-gradient(circle at 50% 30%, #2b3a55 0%, #1b1f23 70%)" },
-  { id: "morgen", css: "linear-gradient(180deg, #f5f0e6 0%, #ffffff 100%)" },
-  { id: "papier", css: "linear-gradient(135deg, #ffffff 0%, #f5f0e6 100%)" },
+// slides quiet look like one deck.
+const DEFAULT = [
+  { id: "night", css: "linear-gradient(180deg, #1b1f23 0%, #0b3d4c 100%)" },
+  { id: "deepsea", css: "linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" },
+  { id: "dusk", css: "linear-gradient(180deg, #4a3b52 0%, #5c3d2e 100%)" },
+  { id: "forest", css: "linear-gradient(200deg, #2f4f3a 0%, #1b1f23 100%)" },
+  { id: "spotlight", css: "radial-gradient(circle at 50% 30%, #2b3a55 0%, #1b1f23 70%)" },
+  { id: "morning", css: "linear-gradient(180deg, #f5f0e6 0%, #ffffff 100%)" },
+  { id: "paper", css: "linear-gradient(135deg, #ffffff 0%, #f5f0e6 100%)" },
 ];
 
-const MAX_EIGENE = 40;
+const MAX_CUSTOM = 40;
 
-function eineZeile(s, laenge) {
+function oneLine(s, laenge) {
   return String(s == null ? "" : s).replace(/[\r\n]+/g, " ").trim().slice(0, laenge);
 }
 
@@ -50,45 +50,45 @@ function eineZeile(s, laenge) {
 // lives in the mounted decks folder and is edited while the app runs. Having
 // to restart the server to see a new gradient would be a puzzle, not a
 // feature -- and it is one small file per opened editor.
-function eigene() {
-  let roh;
+function own() {
+  let raw;
   try {
-    roh = JSON.parse(fs.readFileSync(path.join(DECKS_DIR, DATEI), "utf8"));
+    raw = JSON.parse(fs.readFileSync(path.join(DECKS_DIR, FILE), "utf8"));
   } catch (err) {
     // No file at all is the normal case. A broken one is worth a line in
     // the log, but it must not take the editor down with it: the eight
-    // defaults still work.
-    if (err.code !== "ENOENT") console.error(`${DATEI}: ${err.message}`);
+    // defaults quiet work.
+    if (err.code !== "ENOENT") console.error(`${FILE}: ${err.message}`);
     return [];
   }
-  if (!Array.isArray(roh)) {
-    console.error(`${DATEI}: expected a list of { id, name, css }`);
+  if (!Array.isArray(raw)) {
+    console.error(`${FILE}: expected a list of { id, name, css }`);
     return [];
   }
-  return roh
+  return raw
     .map((e) => ({
       // Same strictness as everywhere else: the id reaches the page as an
       // attribute and picks a translation key.
-      id: eineZeile(e && e.id, 40).toLowerCase().replace(/[^a-z0-9-]/g, ""),
-      name: eineZeile(e && e.name, 60),
-      css: eineZeile(e && e.css, deck.VERLAUF_MAX),
+      id: oneLine(e && e.id, 40).toLowerCase().replace(/[^a-z0-9-]/g, ""),
+      name: oneLine(e && e.name, 60),
+      css: oneLine(e && e.css, deck.GRADIENT_MAX),
     }))
     .filter((e) => {
-      if (!e.id || !deck.istVerlauf(e.css)) {
-        console.error(`${DATEI}: skipping ${e.id || "(no id)"} -- not a usable gradient`);
+      if (!e.id || !deck.isGradient(e.css)) {
+        console.error(`${FILE}: skipping ${e.id || "(no id)"} -- not a usable gradient`);
         return false;
       }
       return true;
     })
-    .slice(0, MAX_EIGENE);
+    .slice(0, MAX_CUSTOM);
 }
 
-function liste() {
-  const dazu = eigene();
-  const ersetzt = new Map(dazu.map((e) => [e.id, e]));
-  const unsere = STANDARD.map((v) => ersetzt.get(v.id) || v);
-  const neue = dazu.filter((e) => !STANDARD.some((v) => v.id === e.id));
-  return unsere.concat(neue);
+function list() {
+  const extra = own();
+  const replaced = new Map(extra.map((e) => [e.id, e]));
+  const ours = DEFAULT.map((v) => replaced.get(v.id) || v);
+  const added = extra.filter((e) => !DEFAULT.some((v) => v.id === e.id));
+  return ours.concat(added);
 }
 
-module.exports = { STANDARD, liste, DATEI };
+module.exports = { DEFAULT, list, FILE };
