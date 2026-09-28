@@ -34,6 +34,16 @@
 
   /* The button shows where the click leads, not where we are. */
   --icon-toggle: url(../assets/dark.svg);
+
+  /* The deck's source in its dialog. Two hues the surface palette does not
+     have: the page is deliberately grey, but a source text that is grey
+     throughout is one nobody reads twice. Structure (headings, separators)
+     takes the accent, an attribute comment takes the muted grey, and these
+     two carry what is left -- the markup characters and the values. */
+  --source-mark: #9a5b2c;
+  --source-value: #2f7350;
+  --d-source-mark: #d9a273;
+  --d-source-value: #85c7a2;
 }
 
 /* No explicit choice: follow the system. The :not() is what lets a manual
@@ -48,6 +58,8 @@
     --accent: var(--d-accent);
     --accent-text: var(--d-accent-text);
     --danger: var(--d-danger);
+    --source-mark: var(--d-source-mark);
+    --source-value: var(--d-source-value);
     --icon-toggle: url(../assets/light.svg);
   }
 }
@@ -62,6 +74,8 @@
   --accent: var(--d-accent);
   --accent-text: var(--d-accent-text);
   --danger: var(--d-danger);
+  --source-mark: var(--d-source-mark);
+  --source-value: var(--d-source-value);
   --icon-toggle: url(../assets/light.svg);
   color-scheme: dark;
 }
@@ -1359,6 +1373,63 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
+/* And the other way for the one dialog that shows a whole file: as much of
+   the window as a dialog may take without ceasing to be one. */
+.dialog-wide { width: min(1080px, 94vw); }
+/* Two buttons where the dialogs otherwise have one. */
+.dialog-head-buttons { display: flex; gap: 8px; }
+
+/* --- The deck as Markdown --------------------------------------------- */
+/* A head that stays, a foot that stays, and the file scrolling between
+   them -- a source text that pushed the "Copy" button off the top would be
+   a strange thing to offer. [open] and not the plain id: a <dialog> is
+   hidden by display:none from the browser itself, and a display of ours
+   with an id's weight behind it would leave the dialog standing on the
+   page for good. */
+#deck-source-dialog[open] { display: flex; flex-direction: column; max-height: 88vh; }
+/* Dimmed while the file is still on its way -- a "Copy" that would hand
+   over the word "Fetching" is worse than one that cannot be pressed yet.
+   The same 0.35 the disabled buttons in the text bar wear. */
+#deck-source-copy:disabled { opacity: 0.35; cursor: default; }
+.deck-source { flex: 1; min-height: 0; overflow: auto; }
+.deck-source pre {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  /* Wrapped rather than scrolled sideways: one of these lines is a whole
+     paragraph, and a horizontal scrollbar for it would hide the structure
+     the view is opened for. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.deck-source-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+}
+.deck-source-foot .hint { margin: 0; }
+.deck-source-foot .is-error { color: var(--danger); }
+
+/* What the colours mean. Ours are the three shapes the file format brings
+   along (source.js), the hljs-* ones are what the highlighter makes of the
+   Markdown in between. Everything not named here stays body text -- which
+   is what most of a slide is. */
+.deck-source .md-rule { color: var(--accent); font-weight: 600; }
+.deck-source .md-attribute { color: var(--muted); }
+.deck-source .md-key { color: var(--source-mark); }
+.deck-source .md-value { color: var(--source-value); }
+.deck-source .hljs-section { color: var(--accent); font-weight: 600; }
+.deck-source .hljs-bullet, .deck-source .hljs-quote { color: var(--source-mark); }
+.deck-source .hljs-strong { font-weight: 700; }
+.deck-source .hljs-emphasis { font-style: italic; }
+.deck-source .hljs-code { color: var(--source-mark); }
+.deck-source .hljs-string { color: var(--text); }
+.deck-source .hljs-link { color: var(--source-value); }
 
 /* --- Settings dialog -------------------------------------------------- */
 /* The recorded keys, each with its own way out. A <kbd> because that is
@@ -1403,6 +1474,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* While it waits for a key, the button says so by being lit. */
 #prefs-record.is-active { border-color: var(--accent); color: var(--accent); }
 #prefs-open { --button-icon: url(../assets/prefs.svg); }
+#deck-source-open { --button-icon: url(../assets/toolbar/code.svg); }
 /* The last word of the dialog, and the smallest: it applies to everything
    above it. */
 .prefs-scope { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }

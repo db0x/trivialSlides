@@ -10,6 +10,7 @@ import * as rt from "./richtext.js";
 import { createPreview } from "./preview.js";
 import { drawList, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
+import { setupDeckSource } from "./deck-source.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -1180,6 +1181,12 @@ $("#image-file").addEventListener("change", function (ev) {
     .catch(function (e) { console.error(e); note(t("message.imageError")); });
   ev.target.value = "";
 });
+
+// --- The deck as Markdown ----------------------------------------------
+// Its own file, because it shares nothing with the rest of the editor but
+// the address of the deck and the one promise that everything owed has been
+// saved (js/editor/deck-source.js).
+setupDeckSource(BASE, window.trivialSlidesSave);
 
 // --- Startup -----------------------------------------------------------
 // Paragraphs rather than <div> on line break: only then does the field

@@ -13,6 +13,7 @@ const render = require("../render");
 const gradients = require("../gradients");
 const effects = require("../effects");
 const code = require("../code");
+const source = require("../source");
 const emoji = require("../emoji");
 const video = require("../video");
 const storage = require("../storage");
@@ -253,6 +254,18 @@ router.get("/d/:slug/deck.md", loadDeck, (req, res) => {
   res.type("text/markdown; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="${req.slug}.md"`);
   res.send(deck.serialize(req.deck));
+});
+
+// The same Markdown once more, but to be READ rather than saved: coloured
+// markup for the dialog in the editor (source.js), without the
+// Content-Disposition that would make a browser offer it as a file.
+//
+// A fragment, not a page: it goes straight into the <pre> the dialog keeps
+// ready. Serialised here rather than in the browser, because the format
+// lives in deck.js -- a second implementation over there could only drift
+// away from this one.
+router.get("/d/:slug/source.html", loadDeck, (req, res) => {
+  res.type("html").send(source.highlight(deck.serialize(req.deck)));
 });
 
 // A single HTML file that runs without a server and without a network:

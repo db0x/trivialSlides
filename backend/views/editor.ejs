@@ -83,7 +83,7 @@
       <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
     </div>
   </details>
-  <%- include("partials/settings") %>
+  <%- include("partials/settings", { deckSource: true }) %>
 </header>
 
 <main class="editor">
@@ -505,6 +505,34 @@
       <button class="button button-haupt" value="ok" autofocus><%= t('dialog.understood') %></button>
     </div>
   </form>
+</dialog>
+
+<!-- The whole deck as it stands in the file. To be read, not typed in:
+     the file is written from the form, and a second place to write it would
+     be a second truth. Nothing arrives with the page either -- it is
+     fetched when the dialog opens, so it shows what was last SAVED rather
+     than a copy that goes stale with the next keystroke
+     (js/editor/deck-source.js).
+
+     The colouring comes from the server (source.js): the editor carries no
+     highlighter, and the one in the presentation belongs to reveal.js. -->
+<dialog id="deck-source-dialog" class="dialog dialog-wide">
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('dialog.sourceTitle') %></h2>
+    <span class="dialog-head-buttons">
+      <button type="button" id="deck-source-copy" class="button"><%= t('dialog.sourceCopy') %></button>
+      <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+    </span>
+  </form>
+  <div class="dialog-content deck-source">
+    <pre id="deck-source-code"></pre>
+  </div>
+  <p class="deck-source-foot">
+    <span class="hint"><%= t('dialog.sourceNote') %></span>
+    <!-- role=status: what the copy did is heard without the focus having
+         to travel there. -->
+    <span id="deck-source-state" class="hint" role="status"></span>
+  </p>
 </dialog>
 
 <!-- Image picker -->

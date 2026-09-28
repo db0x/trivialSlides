@@ -20,5 +20,13 @@
          dialog rather than living in this menu (partials/prefs.ejs). -->
     <button type="button" id="prefs-open" class="menu-item" role="menuitem"><span
             class="menu-item-icon" aria-hidden="true"></span><%= t('header.prefs') %></button>
+    <!-- Only the editor has a deck to show the source of, and only it
+         carries the dialog (views/editor.ejs), so the overview does not get
+         this row. Whoever includes the partial says so; an include inherits
+         what it was not given, hence the typeof. -->
+    <% if (typeof deckSource !== "undefined" && deckSource) { %>
+      <button type="button" id="deck-source-open" class="menu-item" role="menuitem"><span
+              class="menu-item-icon" aria-hidden="true"></span><%= t('header.deckSource') %></button>
+    <% } %>
   </div>
 </details>
