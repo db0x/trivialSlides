@@ -409,36 +409,40 @@
     <span class="columns-head"><%= t('column.preview') %></span>
     <div class="preview-frame">
       <iframe id="preview" title="<%= t('column.preview') %>" src="<%= BASE %>/d/<%= slug %>/preview"></iframe>
+      <!-- The shape of the screen the talk will run on. reveal.js fits the
+           slide into whatever it is given, so putting the preview into that
+           shape is the one honest way to see beforehand what a 4:3
+           projector will make of a slide. The deck is untouched by it --
+           see preview-format.js.
+
+           A menu of this app's own and not a <select>: a native one brings
+           the operating system's dropdown with it, which is the only thing
+           on this page that does not look like this page. The button wears
+           the screen and the ratio in force, the rows wear the shape they
+           stand for -- in a list of ratios that picture IS the information.
+
+           It stands IN the preview, in its bottom left corner, and shows
+           itself only while the mouse is over the preview: it is a
+           question one has a couple of times a talk, not something that
+           should take a line of the form for good. Inside the frame it
+           also opens upwards, over the slide -- downwards there is
+           nothing left to open into. -->
+      <details id="preview-format-menu" class="menu preview-format"
+               data-tip="<%= t('editor.previewFormat') %>">
+        <summary id="preview-format-button" class="button preview-format-value"
+                 aria-label="<%= t('editor.previewFormat') %>"><span
+                 class="preview-screen" aria-hidden="true"></span><span
+                 id="preview-format-word"><%= previewDefault %></span></summary>
+        <div class="menu-content" role="menu">
+          <% previewFormats.forEach(function (f) { %>
+            <button type="button" class="menu-item format-row" role="menuitemradio"
+                    aria-checked="false" data-format="<%= f %>"><span
+                    class="format-shape" aria-hidden="true"></span><%= f %></button>
+          <% }); %>
+        </div>
+      </details>
     </div>
     <p class="hint preview-hint"><%= t('editor.previewNote') %></p>
-    <!-- The shape of the screen the talk will run on. reveal.js fits the
-         slide into whatever it is given, so putting the preview into that
-         shape is the one honest way to see beforehand what a 4:3 projector
-         will make of a slide. The deck is untouched by it -- see
-         preview-format.js.
-
-         A menu of this app's own and not a <select>: a native one brings
-         the operating system's dropdown with it, which is the only thing on
-         this page that does not look like this page. The button wears the
-         screen and the ratio in force, the rows wear the shape they stand
-         for -- in a list of ratios that picture IS the information.
-
-         It opens upwards: the control sits at the bottom end of the
-         column, and downwards there is nothing left to open into. -->
-    <details id="preview-format-menu" class="menu preview-format"
-             data-tip="<%= t('editor.previewFormat') %>">
-      <summary id="preview-format-button" class="button preview-format-value"
-               aria-label="<%= t('editor.previewFormat') %>"><span
-               class="preview-screen" aria-hidden="true"></span><span
-               id="preview-format-word"><%= previewDefault %></span></summary>
-      <div class="menu-content" role="menu">
-        <% previewFormats.forEach(function (f) { %>
-          <button type="button" class="menu-item format-row" role="menuitemradio"
-                  aria-checked="false" data-format="<%= f %>"><span
-                  class="format-shape" aria-hidden="true"></span><%= f %></button>
-        <% }); %>
-      </div>
-    </details>
   </aside>
 </main>
 
@@ -531,5 +535,7 @@
   window.SLIDES_COLUMNS = <%- JSON.stringify(columns) %>;
 </script>
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
+<%- include("partials/prefs") %>
+
 </body>
 </html>

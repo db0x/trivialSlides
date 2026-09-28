@@ -1,0 +1,32 @@
+<!-- Settings that belong to the BROWSER rather than to a deck: the keys a
+     presenter's spare button sends, and whatever else of that kind comes
+     along. Deliberately not in the header itself -- these are set once and
+     then forgotten, and the header is for what one reaches for while
+     working.
+
+     The same dialog on both pages, because one can present from the
+     overview as well (js/prefs.js drives it, the values live in
+     js/presenter-keys.js). -->
+<dialog id="prefs-dialog" class="dialog dialog-schmal">
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('prefs.title') %></h2>
+    <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+  </form>
+  <div class="dialog-content">
+    <div class="field">
+      <span class="field-label"><%= t('prefs.presenter') %></span>
+      <!-- Filled by the page: which keys these are is only known once they
+           have been pressed. -->
+      <div id="prefs-keys" class="key-list"></div>
+      <div class="prefs-row">
+        <button type="button" id="prefs-record" class="button"><%= t('prefs.record') %></button>
+        <button type="button" id="prefs-reset" class="button button-quiet"><%= t('prefs.reset') %></button>
+      </div>
+      <!-- role=status, so a screen reader hears what was recorded without
+           the focus having to move there. -->
+      <p id="prefs-state" class="hint" role="status"></p>
+      <p class="hint"><%= t('prefs.presenterNote') %></p>
+    </div>
+    <p class="hint prefs-scope"><%= t('prefs.note') %></p>
+  </div>
+</dialog>

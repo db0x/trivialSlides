@@ -1206,12 +1206,33 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 
 /* --- Preview ---------------------------------------------------------- */
 .preview { display: flex; flex-direction: column; }
-/* The format menu stands under the frame at its left edge. max-content
-   keeps it as narrow as what stands in it -- as a block it would take its
-   click and its tooltip along the whole column. */
+/* The format menu stands IN the preview, in its bottom left corner, four
+   pixels off both edges -- over the slide, not beside it. On top of the
+   frame's iframe, which is why it needs a z-index of its own; the iframe is
+   positioned too and would otherwise cover it.
+   It shows itself only while the mouse is over the preview: this is a
+   question one has twice in an evening, and a control that sits there
+   permanently would be a piece of the editor standing on the slide.
+   Kept visible while its menu is open or something in it has the focus --
+   the mouse leaves the frame on its way to nowhere, and a keyboard never
+   hovers anything at all. */
 .preview-format {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  z-index: 2;
   width: max-content;
-  margin-top: 8px;
+  opacity: 0;
+  /* Invisible AND untouchable: at nought opacity it would still be the
+     thing a click in that corner hits. */
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.preview-frame:hover .preview-format,
+.preview-format[open],
+.preview-format:focus-within {
+  opacity: 1;
+  pointer-events: auto;
 }
 /* The button: the screen, then the ratio in force. At the height the
    buttons elsewhere have (2rem, see .button-icon). */
@@ -1224,6 +1245,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   color: var(--muted);
   cursor: pointer;
   list-style: none;
+  /* It stands on a slide that may be any colour at all, so it carries its
+     own shadow to sit off it rather than in it. */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
 .preview-format-value:hover { color: var(--text); border-color: var(--accent); }
 .preview-format[open] > .preview-format-value { border-color: var(--accent); color: var(--accent); }
@@ -1335,6 +1359,53 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
+
+/* --- Settings dialog -------------------------------------------------- */
+/* The recorded keys, each with its own way out. A <kbd> because that is
+   what it is: the name of a key, not a word of prose. */
+.key-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.key-chip kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+.key-remove {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+/* The same cross the slide cards use, so "away with this" looks the same
+   wherever it stands. */
+.key-remove::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  -webkit-mask: url(../assets/delete.svg) center / 0.75rem no-repeat;
+  mask: url(../assets/delete.svg) center / 0.75rem no-repeat;
+}
+.key-remove:hover { background: var(--paper); color: var(--danger); }
+.prefs-row { display: flex; gap: 8px; margin-bottom: 4px; }
+/* While it waits for a key, the button says so by being lit. */
+#prefs-record.is-active { border-color: var(--accent); color: var(--accent); }
+#prefs-open { --button-icon: url(../assets/prefs.svg); }
+/* The last word of the dialog, and the smallest: it applies to everything
+   above it. */
+.prefs-scope { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
 .dialog-fuss { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .upload { display: inline-block; margin-bottom: 12px; }
 .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
