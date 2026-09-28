@@ -57,6 +57,10 @@ const FOR_BROWSER = [
   "card.duplicate", "card.delete", "card.untitled",
   "message.atLeastOne", "message.deleteSlide", "message.staysSource",
   "message.linkTarget", "message.imageError",
+  // The settings dialog says what it just recorded, and the keys it lists
+  // are only known once they have been pressed (js/prefs.js).
+  "prefs.recording", "prefs.recorded", "prefs.taken", "prefs.reserved",
+  "prefs.remove", "prefs.none", "prefs.record",
 ];
 
 function forBrowser(language) {

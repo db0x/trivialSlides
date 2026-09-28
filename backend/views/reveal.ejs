@@ -25,6 +25,10 @@
 <script src="<%= BASE %>/static/js/slide-effects.js"></script>
 <script src="<%= BASE %>/static/js/slide-video.js"></script>
 <script src="<%= BASE %>/static/js/slide-fit.js"></script>
+<!-- Which keys the presenter's spare button sends. Set in the editor's
+     settings dialog, stored per browser, read here. This page has a head of
+     its own, so it is listed here and not in partials/head.ejs. -->
+<script src="<%= BASE %>/static/js/presenter-keys.js"></script>
 <script>
   // The preview inside the editor must not behave like a presentation: no
   // keyboard control (the keys belong to the form next to it), no address
@@ -50,7 +54,118 @@
     // end and would overwrite a Reveal.slide() accepted earlier.
     ready = true;
     if (isPreview) window.parent.postMessage({ kind: "bereit" }, "*");
+    // Only the slide on screen keeps its links reachable by Tab -- see
+    // fokusOrdnung() below. Once at the start and then with every change.
+    if (!isPreview) {
+      fokusOrdnung();
+      Reveal.on("slidechanged", fokusOrdnung);
+    }
   });
+
+  // --- Fullscreen on the presenter's third key --------------------------
+  // A USB presenter is a keyboard. The two paging keys are what reveal.js
+  // listens for anyway (PageDown / PageUp), so they need nothing from us --
+  // the third key is the one that goes to waste, and it is the only one a
+  // hand finds without looking while talking.
+  //
+  // WHICH key that is differs from stick to stick, so it is not written
+  // here: the list comes from the settings dialog, where the button is
+  // pressed once and whatever arrives is kept (js/presenter-keys.js). Out
+  // of the box it holds what a Sharkoon "Wireless Present" (1ea7:1066)
+  // sends on its third button: a plain Tab pressed once, a plain Enter
+  // pressed twice quickly. Both mean the same thing to the hand that
+  // pressed it, so both are in there -- and reveal.js binds neither.
+  //
+  // Taking Tab does cost something: in this view it is the key that reaches
+  // reveal's arrows and the address under a QR code or a video. The guard
+  // below hands Tab back the moment one of them HAS the focus, so tabbing
+  // onward still works -- but from the slide itself Tab now goes to the
+  // fullscreen instead of into that chain. On a page whose whole purpose is
+  // to be driven by keys from across the room, that is the better trade.
+  //
+  // And a toggle of our own, because reveal has none: its F only ever
+  // ENTERS fullscreen, and the way back is the browser's Escape -- which in
+  // reveal is the slide overview. One key that goes both ways is what a
+  // presenter key has to be; one that only ever goes in would be a trap.
+  //
+  // In the keydown handler itself, not later: going fullscreen needs a user
+  // gesture, and a keypress is one. From a timer the browser refuses.
+  // Read once, at the start: someone who changes the list while presenting
+  // is not presenting.
+  var VOLLBILD_TASTEN = window.presenterKeys ? window.presenterKeys.read() : ["Tab", "Enter"];
+
+  // One press of that button means one toggle, whatever the firmware sends
+  // for it. Should a double press ever send its Tab AND its Enter, the
+  // second would switch straight back and the screen would appear not to
+  // react at all. A quarter of a second is far longer than a key sequence
+  // from one press and far shorter than two deliberate presses.
+  var VOLLBILD_SPERRE = 250;
+  var zuletzt = 0;
+
+  if (!isPreview) {
+    document.addEventListener("keydown", function (ev) {
+      if (VOLLBILD_TASTEN.indexOf(ev.key) === -1) return;
+      // With a modifier held it is somebody's shortcut, not the stick.
+      if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+      // On a link or a field these keys belong to it: the address under a QR
+      // code and the link under a video are real links, and taking their
+      // Enter away would leave them reachable by mouse only -- and their Tab
+      // is how one moves on from them.
+      //
+      // reveal's own arrow BUTTONS are deliberately not in that list. A
+      // stray Tab from anywhere puts the focus on one of them, and from
+      // then on the presenter's key would press that arrow instead of
+      // switching the screen -- for an hour, unnoticed, in front of an
+      // audience. Nothing is lost by it: those arrows exist for the mouse,
+      // and the keyboard pages with Page Down and the arrow keys wherever
+      // the focus happens to be.
+      if (ev.target && ev.target.closest && ev.target.closest("a, input, textarea, select, [contenteditable]")) return;
+      // Held down it stays one press -- the key repeat is the keyboard's,
+      // not the speaker's.
+      ev.preventDefault();
+      if (ev.repeat) return;
+      var jetzt = Date.now();
+      if (jetzt - zuletzt < VOLLBILD_SPERRE) return;
+      zuletzt = jetzt;
+      vollbildUmschalten();
+    });
+  }
+
+  // --- Tabbing must not leave the slide ---------------------------------
+  // reveal.js keeps every slide in the document, so the links on the slides
+  // that are NOT being shown stay in the focus order. Two presses of Tab
+  // during a talk are enough to land on the address under a QR code three
+  // slides away, and the next Enter then navigates the browser out of the
+  // presentation -- in front of an audience, with no way back but the back
+  // button.
+  //
+  // So only the slide on screen keeps its links in the order. They stay
+  // clickable with the mouse and readable to a screen reader either way;
+  // what they lose is being reachable by Tab from a slide nobody can see.
+  function fokusOrdnung() {
+    [].forEach.call(document.querySelectorAll(".slides a"), function (link) {
+      var folie = link.closest("section");
+      if (folie && folie.classList.contains("present")) link.removeAttribute("tabindex");
+      else link.setAttribute("tabindex", "-1");
+    });
+  }
+
+  function vollbildUmschalten() {
+    var element = document.documentElement;
+    var drin = document.fullscreenElement || document.webkitFullscreenElement;
+    // The prefixed names are Safari's; every other browser has had the
+    // plain ones for years (the same pair reveal.js keeps, util.js).
+    var verlassen = document.exitFullscreen || document.webkitExitFullscreen;
+    var hinein = element.requestFullscreen || element.webkitRequestFullscreen;
+    if (drin) {
+      if (verlassen) verlassen.call(document);
+    } else if (hinein) {
+      // A refusal is not worth a dialog in front of an audience: the slide
+      // simply stays as it is.
+      var versuch = hinein.call(element);
+      if (versuch && versuch.catch) versuch.catch(function () { /* quiet */ });
+    }
+  }
 
   // Colours the code in a freshly drawn slide. The plugin does this for the
   // whole deck at startup; for one slide it has to be asked.

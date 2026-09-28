@@ -4,11 +4,12 @@ theme: white
 transition: convex
 ---
 
-<!-- .slide: data-layout="titel" data-background-color="#2b3a55" -->
+<!-- .slide: data-layout="titel" -->
 
 # Example
 
 Every slide layout, once 👀
+<!-- .element: class="align-center" -->
 
 ---
 

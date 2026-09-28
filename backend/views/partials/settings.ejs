@@ -16,5 +16,9 @@
             class="menu-item-code" aria-hidden="true"><%= LANGUAGE === 'de' ? 'en' : 'de' %></span><span><%= t('header.switchLanguage') %></span></button>
     <button type="button" id="theme-toggle" class="menu-item" role="menuitem"><span
             class="menu-item-icon" aria-hidden="true"></span><span class="menu-item-word"></span></button>
+    <!-- Everything that is set once and then forgotten -- it opens the
+         dialog rather than living in this menu (partials/prefs.ejs). -->
+    <button type="button" id="prefs-open" class="menu-item" role="menuitem"><span
+            class="menu-item-icon" aria-hidden="true"></span><%= t('header.prefs') %></button>
   </div>
 </details>
