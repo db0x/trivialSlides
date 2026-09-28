@@ -1,0 +1,20 @@
+<!-- Language and light/dark, behind one button. Two switches that are set
+     once and then never again have no business standing permanently in a
+     header -- and the header is short of room on both pages.
+
+     Both keep the ids they had as buttons: language.js and theme.js find
+     them by id and work on unchanged. The language row wears the code it
+     leads to where the other row wears its icon; the words come from the
+     same table the tooltips used to come from, and theme.js writes its row
+     afresh whenever the choice changes. -->
+<details class="menu head-menu">
+  <summary class="button button-icon head-settings" data-tip="<%= t('header.settings') %>"
+           aria-label="<%= t('header.settings') %>"></summary>
+  <div class="menu-content" role="menu">
+    <button type="button" id="language-toggle" class="menu-item" role="menuitem"
+            data-target="<%= LANGUAGE === 'de' ? 'en' : 'de' %>"><span
+            class="menu-item-code" aria-hidden="true"><%= LANGUAGE === 'de' ? 'en' : 'de' %></span><span><%= t('header.switchLanguage') %></span></button>
+    <button type="button" id="theme-toggle" class="menu-item" role="menuitem"><span
+            class="menu-item-icon" aria-hidden="true"></span><span class="menu-item-word"></span></button>
+  </div>
+</details>

@@ -10,9 +10,37 @@ import { t } from "./base.js";
 // Better an honest fallback than a field that silently eats the user's
 // content.
 
-// reveal.js' syntax for "reveal on click". Sits on a line of its own after
-// the element it refers to.
-var FRAGMENT = '<!-- .element: class="fragment" -->';
+// reveal.js' syntax for "this element gets these classes". A line of its
+// own after the element it refers to, and the ONE line of raw HTML this
+// field puts into the .md -- render.js reads it back and puts the classes
+// on that element, nothing else about it survives.
+//
+// Two things ride on it, and they ride together: "reveal on click" and the
+// alignment of a block. A centred bullet that appears on click is one
+// comment with two classes.
+var ALIGNS = ["left", "center", "right", "fill"];
+var ALIGN_CLASSES = ALIGNS.map(function (a) { return "align-" + a; });
+var MARKER_CLASSES = ["fragment"].concat(ALIGN_CLASSES);
+
+function elementLine(classes) {
+  return '<!-- .element: class="' + classes.join(" ") + '" -->';
+}
+
+var FRAGMENT = elementLine(["fragment"]);
+
+var ELEMENT_LINE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
+
+// The classes of such a line -- or null if the line is not one, or carries
+// a class this field could not put back. A class it does not know would be
+// lost on the way out, and losing something is exactly what source mode is
+// there to prevent (isSimple).
+function markerClasses(line) {
+  var t = ELEMENT_LINE.exec(String(line).trim());
+  if (!t) return null;
+  var classes = t[1].trim().split(/\s+/);
+  var known = classes.every(function (c) { return MARKER_CLASSES.indexOf(c) !== -1; });
+  return known ? classes : null;
+}
 
 // Markdown the buttons cannot express. Anyone who has such a thing in
 // their file should be allowed to keep it.
@@ -31,7 +59,7 @@ function isSimple(md) {
     var z = lines[i];
     if (ZAUN.test(z)) { imCode = !imCode; continue; }
     if (imCode) continue;
-    if (z.trim() === "" || z.trim() === FRAGMENT) continue;
+    if (z.trim() === "" || markerClasses(z)) continue;
     if (/^\s{0,3}(#{1,6}\s|>|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
     if (/<[a-z!/]/i.test(z)) return false;   // raw HTML (other than the fragment above)
     // Inline code. The field cannot show it, and on the way back the
@@ -121,16 +149,31 @@ function mdToHtml(md) {
   function listClose() {
     if (list) { out.push("</" + list + ">"); list = null; }
   }
-  // The fragment refers to the element written last -- so the class is
+  // The comment refers to the element written last -- so its classes are
   // attached to that one after the fact.
-  function fragmentAnhaengen() {
+  function attachMarkers(classes) {
+    var list = classes.join(" ");
     for (var i = out.length - 1; i >= 0; i--) {
       if (/^<div class="code-block/.test(out[i])) {
-        out[i] = out[i].replace('class="code-block', 'class="code-block fragment');
+        out[i] = out[i].replace('class="code-block', 'class="code-block ' + list);
+        return;
+      }
+      // A closed list right before the comment: then the comment belongs to
+      // the LIST, not to its last item. That is the difference a blank line
+      // makes in the .md, and it is the same difference marked makes of it
+      // on the server (render.js walks back over the closing tag).
+      var zu = /^<\/(ul|ol)>$/.exec(out[i]);
+      if (zu) {
+        for (var j = i - 1; j >= 0; j--) {
+          if (out[j] === "<" + zu[1] + ">") {
+            out[j] = "<" + zu[1] + ' class="' + list + '">';
+            return;
+          }
+        }
         return;
       }
       var t = /^<(p|li)>/.exec(out[i]);
-      if (t) { out[i] = "<" + t[1] + ' class="fragment">' + out[i].slice(t[0].length); return; }
+      if (t) { out[i] = "<" + t[1] + ' class="' + list + '">' + out[i].slice(t[0].length); return; }
     }
   }
 
@@ -158,12 +201,13 @@ function mdToHtml(md) {
       codeLines = [];
       return;
     }
-    if (line.trim() === FRAGMENT) {
-      // Close the running paragraph first -- otherwise the class lands on
+    var marks = markerClasses(line);
+    if (marks) {
+      // Close the running paragraph first -- otherwise the classes land on
       // the paragraph BEFORE it. The list, by contrast, stays open: a
-      // fragment may well belong to a single item mid-list.
+      // marker may well belong to a single item mid-list.
       paragraphClose();
-      fragmentAnhaengen();
+      attachMarkers(marks);
       return;
     }
     var ul = /^\s*[-*+]\s+(.*)$/.exec(line);
@@ -216,8 +260,13 @@ var INLINE = /^(a|b|strong|i|em|s|strike|del|code|span|font)$/;
 
 function htmlToMd(wurzel) {
   var blocks = [];
-  function fragment(el) {
-    return el.classList && el.classList.contains("fragment") ? "\n" + FRAGMENT : "";
+  // The comment line for whatever markers a block carries -- both of them
+  // in one line, in the order they are written above, so the .md of the
+  // same slide always reads the same.
+  function marker(el) {
+    if (!el.classList) return "";
+    var found = MARKER_CLASSES.filter(function (c) { return el.classList.contains(c); });
+    return found.length ? "\n" + elementLine(found) : "";
   }
   Array.prototype.forEach.call(wurzel.childNodes, function (k) {
     if (k.nodeType === 3) {
@@ -226,7 +275,7 @@ function htmlToMd(wurzel) {
     }
     if (k.nodeType !== 1) return;
     if (k.classList && k.classList.contains("code-block")) {
-      blocks.push(codeBlockZuMd(k) + fragment(k));
+      blocks.push(codeBlockZuMd(k) + marker(k));
       return;
     }
     var tag = k.tagName.toLowerCase();
@@ -234,9 +283,16 @@ function htmlToMd(wurzel) {
       var lines = [];
       Array.prototype.forEach.call(k.children, function (li, i) {
         var text = inlineZuMd(li).replace(/\n/g, " ").trim();
-        if (text) lines.push((tag === "ul" ? "- " : i + 1 + ". ") + text + fragment(li));
+        if (text) lines.push((tag === "ul" ? "- " : i + 1 + ". ") + text + marker(li));
       });
-      if (lines.length) blocks.push(lines.join("\n"));
+      if (lines.length) {
+        blocks.push(lines.join("\n"));
+        // A line of its own, separated by a blank one: directly under the
+        // last item it would read as part of that item (which is exactly
+        // how an item's own marker gets there).
+        var own = marker(k);
+        if (own) blocks.push(own.slice(1));
+      }
     } else if (tag === "br") {
       // a lone <br> between blocks: the browser keeps an empty line open
       // with it, in Markdown it is nothing
@@ -247,7 +303,7 @@ function htmlToMd(wurzel) {
       // the inline path as a CHILD -- passed as a block, only its contents
       // would be read and the formatting would be dropped on saving.
       var t = (INLINE.test(tag) ? inlineZuMd({ childNodes: [k] }) : inlineZuMd(k)).trim();
-      if (t) blocks.push(t + fragment(k));
+      if (t) blocks.push(t + marker(k));
     }
   });
   return blocks.join("\n\n").trim();
@@ -269,35 +325,98 @@ function befehl(field, name) {
     fragmentToggle(field);
     return;
   }
+  var align = /^align-(left|center|right|fill)$/.exec(name);
+  if (align) {
+    alignToggle(field, align[1]);
+    return;
+  }
   document.execCommand(name, false, null);
 }
 
-// "Reveal one by one" applies to the paragraph or list item the cursor is
-// in.
-function fragmentToggle(field) {
+// Bare text straight in the field: the browser only wraps a line in a
+// paragraph once there is a second one. Without a paragraph there is
+// nothing to hang a class on, so one is made here -- otherwise the buttons
+// would quietly do nothing on a slide someone has just started.
+function forceParagraph(field) {
+  if (!field.firstChild) return null;
+  var paragraph = document.createElement("p");
+  while (field.firstChild) paragraph.appendChild(field.firstChild);
+  field.appendChild(paragraph);
+  // The DOM surgery loses the caret, so it is put back at the end.
   var sel = window.getSelection();
-  if (!sel || !sel.rangeCount) return;
-  var k = sel.getRangeAt(0).startContainer;
-  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
-  if (!k) return;
-  if (k === field) {
-    // Bare text straight in the field: the browser only wraps a line in a
-    // paragraph once there is a second one. Without a paragraph there is
-    // nothing to hang the class on, so one is made here -- otherwise the
-    // button would quietly do nothing on a slide someone has just started.
-    if (!field.firstChild) return;
-    var paragraph = document.createElement("p");
-    while (field.firstChild) paragraph.appendChild(field.firstChild);
-    field.appendChild(paragraph);
-    // The DOM surgery loses the caret, so it is put back at the end.
+  if (sel) {
     var scope = document.createRange();
     scope.selectNodeContents(paragraph);
     scope.collapse(false);
     sel.removeAllRanges();
     sel.addRange(scope);
-    k = paragraph;
   }
-  k.classList.toggle("fragment");
+  return paragraph;
 }
 
-export { isSimple, mdToHtml, htmlToMd, befehl, codeBlockHtml, FRAGMENT };
+// The block the cursor is in: a paragraph, a list item, a code block.
+// Those three are exactly the ones whose classes survive the way out into
+// the .md (htmlToMd), which is why a class goes nowhere else.
+function blockAt(field) {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  var k = sel.getRangeAt(0).startContainer;
+  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
+  if (!k) return null;
+  return k === field ? forceParagraph(field) : k;
+}
+
+// Every block the selection touches -- so aligning a whole text is select
+// all and one press, the way it is in any other editor. A selection inside
+// one block is that block.
+function blocksInSelection(field) {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return [];
+  var range = sel.getRangeAt(0);
+  var found = Array.prototype.filter.call(
+    field.querySelectorAll("p, li, .code-block"),
+    function (el) { return range.intersectsNode(el); }
+  );
+  if (found.length) return found;
+  var one = blockAt(field);
+  return one ? [one] : [];
+}
+
+// "Reveal one by one" applies to the paragraph or list item the cursor is
+// in.
+function fragmentToggle(field) {
+  var k = blockAt(field);
+  if (k) k.classList.toggle("fragment");
+}
+
+// What an alignment applies to. In a list that is the LIST and not the
+// single item: reveal.js lays a list out as wide as its longest line, so
+// centring one bullet inside it does nothing anybody can see -- and
+// "centre this list" is what the button is reached for anyway. A fragment
+// is the opposite case: it belongs to the one item (fragmentToggle).
+function alignTarget(el) {
+  return (el.closest && el.closest("ul, ol")) || el;
+}
+
+// left / center / right / fill on the blocks the selection touches. One at
+// a time: a new alignment replaces the one before it, and pressing the one
+// already in force takes it off again -- back to whatever the slide gives
+// the text by itself. That is also the only way back to "no choice", and a
+// block without a class is what keeps the .md clean.
+function alignToggle(field, align) {
+  var blocks = [];
+  blocksInSelection(field).forEach(function (el) {
+    var target = alignTarget(el);
+    // Several items of one list come out as that one list.
+    if (blocks.indexOf(target) === -1) blocks.push(target);
+  });
+  if (!blocks.length) return;
+  var klasse = "align-" + align;
+  var alreadyAll = blocks.every(function (el) { return el.classList.contains(klasse); });
+  blocks.forEach(function (el) {
+    ALIGN_CLASSES.forEach(function (c) { el.classList.remove(c); });
+    if (!alreadyAll) el.classList.add(klasse);
+  });
+}
+
+export { isSimple, mdToHtml, htmlToMd, befehl, codeBlockHtml, FRAGMENT, ALIGNS };

@@ -4,11 +4,11 @@ theme: white
 transition: convex
 ---
 
-<!-- .slide: data-layout="titel" -->
+<!-- .slide: data-layout="titel" data-background-color="#2b3a55" -->
 
 # Example
 
-Every slide layout, once
+Every slide layout, once 👀
 
 ---
 
@@ -28,30 +28,38 @@ and *italic* text, and a [link](https://revealjs.com).
 - This one only appears on click
 <!-- .element: class="fragment" -->
 
+<!-- .element: class="align-center" -->
+
 Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
-<!-- .element: class="fragment" -->
+<!-- .element: class="fragment align-fill" -->
 
 ----
+
+<!-- .slide: data-title-align="center" -->
 
 ## A vertical slide
 
 Four dashes instead of three attach a slide *below* the previous one
 rather than after it. reveal.js calls that a stack; press the down arrow
 to get here.
+<!-- .element: class="align-center" -->
 
 ---
 
 <!-- .slide: data-layout="video" data-video="4ApMS8qYWo0" data-textseite="rechts" data-textbreite="25" data-background-effect="starfield" data-text-color="#ffffff" -->
 
 Lorem ipsum dolor sit amet,
+<!-- .element: class="align-left" -->
 
 consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat,
+<!-- .element: class="align-left" -->
 
 sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
+<!-- .element: class="align-left" -->
 
 ---
 
-<!-- .slide: data-layout="spalten" -->
+<!-- .slide: data-layout="spalten" data-columns="split" -->
 
 ## Two columns
 
@@ -59,6 +67,9 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 - Venus
 - Earth
 - Mars
+
+<!-- .column -->
+
 - Jupiter
 - Saturn
 - Uranus
@@ -68,19 +79,28 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="spalten-drei" -->
+<!-- .slide: data-layout="spalten-drei" data-columns="split" data-title-align="center" -->
 
 ## Three columns
 
 - C
 - C++
-- Java
-- JavaScript
 - C#
 - Rust
 - Go
-- Pascal
-- COBOL
+
+<!-- .column -->
+
+- Java
+- Kotlin
+- Scala
+- Groovy
+
+<!-- .column -->
+
+- Basic
+- VB
+- JavaScript
 
 ---
 
@@ -93,7 +113,7 @@ order — which column the image lands in is decided by the CSS alone.
 
 ---
 
-<!-- .slide: data-layout="bild-links" data-image="chart.svg" -->
+<!-- .slide: data-layout="bild-links" data-image="chart.svg" data-title-align="right" -->
 
 ## Image on the left
 
@@ -102,11 +122,11 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="1.svg" -->
+<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="left" -->
 
 ## Full-bleed image
 
-The picture covers the whole slide, the text stays readable on top of it.
+⭐The picture covers the whole slide, the text stays readable on top of it.
 
 ---
 
@@ -127,10 +147,11 @@ static final int getFactor() {
     return 1;
 }
 ```
+<!-- .element: class="fragment" -->
 
 ---
 
-<!-- .slide: data-layout="zitat" data-quelle="Antoine de Saint-Exupéry" -->
+<!-- .slide: data-layout="zitat" data-quelle="Antoine de Saint-Exupéry" data-background-gradient="radial-gradient(circle at 50% 30%, #2b3a55 0%, #1b1f23 70%)" data-text-color="#ffffff" -->
 
 ## Quote
 

@@ -9,6 +9,7 @@ import { $, $$, t, schreibHead, verzoegert } from "./base.js";
 import * as rt from "./richtext.js";
 import { createPreview } from "./preview.js";
 import { drawList, dragEnable } from "./slide-list.js";
+import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -51,6 +52,7 @@ var el = {
   imagePreview: $("#image-preview"),
   imageRemove: $("#image-remove"),
   layoutHint: $("#layout-hint"),
+  layoutLocked: $("#layout-locked"),
   state: $("#save-state"),
   customColor: $("#background-custom"),
   customTextColor: $("#text-color-custom"),
@@ -68,10 +70,20 @@ var el = {
   codeOk: $("#code-ok"),
   codeNote: $("#code-note"),
   codeFragment: $("#code-fragment"),
+  titleAlignMenu: $("#title-align-menu"),
+  titleAlignButton: $("#title-align-button"),
+  textLabel: $("#text-label"),
+  columnTabs: $("#column-tabs"),
+  columnsSplit: $("#slide-columns-split"),
+  fieldColumns: $(".field-columns"),
   presentDirect: $(".present-direct"),
   presentMenu: $(".present-menu"),
   presentFromCurrent: $("#present-from-current"),
 };
+
+// Which column the one text field is showing, 0-based. Only ever anything
+// but 0 while the slide keeps its columns apart.
+var activeColumn = 0;
 
 var preview = createPreview($("#preview"), BASE);
 
@@ -131,6 +143,9 @@ window.trivialSlidesSave = function () {
 
 function remember() {
   harvest();
+  // The first word typed locks the layout, the last one deleted frees it
+  // again -- so this belongs on the typing path, not only on a redraw.
+  drawLayoutLock();
   schmutzig = true;
   // Deliberately silent. Saving follows within the second, and a label
   // reading "not saved" after every keystroke would be a complaint about
@@ -166,15 +181,17 @@ function harvest() {
   var slide = deck.slides[active];
   if (!slide) return;
   deck.title = $("#deck-title").value;
-  deck.theme = $("#deck-theme").value;
-  deck.transition = $("#deck-transition").value;
+  // The two header menus keep their value on the button, not in a field
+  // (views/editor.ejs) -- a <summary> has no value of its own.
+  deck.theme = $("#deck-theme").dataset.value;
+  deck.transition = $("#deck-transition").dataset.value;
   // An empty field on a slide that never had a heading leaves it without
   // one; on a slide that has an empty heading it keeps that heading. The
   // one field cannot say which is meant, so what the slide already is
   // decides -- which is what makes a hand-written "##" survive being opened
   // here (deck.js).
   slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
-  slide.content = sourceMode ? el.sourceText.value : rt.htmlToMd(el.content);
+  slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
   // it does so for the live preview too. So a pasted link is a video
@@ -185,6 +202,10 @@ function harvest() {
   // button rather than in a field value.
   slide.textSide = el.textSideButton.dataset.side || "oben";
   slide.textWidth = el.textWidthButton.dataset.width || defaultWidth();
+  // The chooser beside the heading keeps two things apart: what the slide
+  // has CHOSEN (which may be nothing) and what the button SHOWS, which is
+  // never nothing. Only the choice belongs in the model.
+  slide.titleAlign = el.titleAlignButton.dataset.choice || "";
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
@@ -193,14 +214,61 @@ function harvest() {
   if (!gradient || el.gradient.checkValidity()) slide.gradient = gradient;
 }
 
+// --- Columns -----------------------------------------------------------
+// How many text fields the slide's body is written in: one, unless the
+// layout has columns AND the slide keeps them apart. The count belongs to
+// the layout (layouts.js), the arrangement to the slide.
+function splitCount(slide) {
+  if (!slide || slide.columnMode !== SPLIT) return 0;
+  return (layoutsById[slide.layout] || {}).columns || 0;
+}
+
+// The body as the field holds it. Kept apart, the field holds ONE column --
+// so what comes out of it replaces that column and the others stay as they
+// stand in the body, joined by the break line the renderer splits on again
+// (columns.js). The body is the only place the columns live; there is no
+// second copy of them anywhere in the page.
+function harvestText(slide) {
+  var count = splitCount(slide);
+  var text = rt.htmlToMd(el.content);
+  if (!count) return text;
+  var parts = splitColumns(slide.content, count);
+  parts[Math.min(activeColumn, count - 1)] = text;
+  return joinColumns(parts);
+}
+
+// Can the rich-text field show this body, or does it have to be source?
+// Kept apart it is the COLUMNS that land in the fields, so each of them has
+// to be simple on its own -- the break lines between them never reach a
+// field. Which is also why a break in a body that is NOT kept apart makes
+// the slide source: there it would have to stand in the field as text.
+function contentSimple(slide) {
+  var count = splitCount(slide);
+  if (!count) return rt.isSimple(slide.content);
+  return splitColumns(slide.content, count).every(rt.isSimple);
+}
+
+// The moment a slide stops keeping its columns apart -- the box unticked, a
+// layout without columns chosen. The breaks then mean nothing, and leaving
+// them in the body would push the slide into source mode over lines the
+// user never typed. So they go, and what they separated becomes one text:
+// which is exactly the arrangement the slide now has.
+function dropColumnBreaks(slide) {
+  slide.columnMode = "";
+  slide.content = mergeColumns(slide.content);
+}
+
 function showSlide() {
   var slide = deck.slides[active];
   if (!slide) return;
   el.title.value = slide.title || "";   // null and "" both show as empty
+  // A slide is opened on its first column -- the one that was chosen on the
+  // slide before says nothing about this one.
+  activeColumn = 0;
 
   // Rich text or source? Slides with Markdown outside our subset are
   // shown as source rather than damaged on the way back.
-  var einfach = rt.isSimple(slide.content);
+  var einfach = contentSimple(slide);
   sourceMode = !einfach;
   setContentMode(slide);
 
@@ -211,6 +279,7 @@ function showSlide() {
   // A slide that has never been arranged is arranged the way it has always
   // looked, so the button shows the same thing the slide does.
   showTextSide(slide.textSide || "oben");
+  showTitleAlign(slide.titleAlign || "");
   showTextWidth(slide.textWidth || defaultWidth());
   showVideo();
 
@@ -225,6 +294,8 @@ function showSlide() {
   el.fieldVideo.hidden = def.fields.indexOf("video") === -1;
   el.fieldUrl.hidden = def.fields.indexOf("url") === -1;
   el.fieldQrColors.hidden = def.fields.indexOf("qrColor") === -1;
+  el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
+  el.columnsSplit.checked = slide.columnMode === SPLIT;
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
   el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
   // A menu left standing open over a layout that no longer has the button
@@ -254,23 +325,70 @@ function showSlide() {
 }
 
 function setContentMode(slide) {
+  var count = splitCount(slide);
   // The frames carry the visible border, so those are what get hidden --
   // hiding the field alone would leave an empty box behind.
   el.contentFrame.hidden = sourceMode;
   el.sourceFrame.hidden = !sourceMode;
   // The notice only appears when source mode was not chosen freely but
   // forced by the slide.
-  el.sourceNote.hidden = !sourceMode || rt.isSimple(slide.content);
+  el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
-  if (sourceMode) el.sourceText.value = slide.content || "";
-  else el.content.innerHTML = rt.mdToHtml(slide.content);
+  // In source mode the whole body stands in one place, breaks and all --
+  // that is what source mode is for -- so there is no column to choose.
+  var chooser = !!count && !sourceMode;
+  el.columnTabs.hidden = !chooser;
+  // One or the other holds that line: the chooser says which column this
+  // is, which is what the label would otherwise have said.
+  el.textLabel.hidden = chooser;
+  if (sourceMode) {
+    el.sourceText.value = slide.content || "";
+    return;
+  }
+  var parts = count ? splitColumns(slide.content, count) : [slide.content];
+  if (count) activeColumn = Math.min(activeColumn, count - 1);
+  el.content.innerHTML = rt.mdToHtml(parts[count ? activeColumn : 0] || "");
+  if (chooser) drawColumnTabs(parts, count);
+}
+
+// Which columns there are, which one is being written, and which of them
+// hold nothing yet -- with one field that last part is the only thing
+// saying what is in the columns one cannot see.
+function drawColumnTabs(parts, count) {
+  $$(".column-tab", el.columnTabs).forEach(function (tab, i) {
+    tab.hidden = i >= count;
+    var here = i === activeColumn;
+    tab.classList.toggle("is-active", here);
+    tab.classList.toggle("is-empty", !String(parts[i] || "").trim());
+    tab.setAttribute("aria-selected", here ? "true" : "false");
+  });
+}
+
+// --- The layout, once there is text ------------------------------------
+// A slide that already says something keeps its layout. Switching it is
+// what quietly costs a picture, a video, an address or the breaks between
+// columns -- the new layout has no field for them and they are gone with
+// the next save. On an empty slide there is nothing to lose, so there the
+// tiles work as they always have.
+//
+// The tile of the layout in force stays alive: pressing it changes nothing
+// anyway, and a row of tiles with none of them pressable reads like a
+// fault rather than like a decision.
+function drawLayoutLock() {
+  var slide = deck.slides[active] || {};
+  var locked = !!String(slide.content || "").trim();
+  $$(".layout-tile").forEach(function (tile) {
+    tile.disabled = locked && tile.dataset.layout !== slide.layout;
+  });
+  el.layoutLocked.hidden = !locked;
 }
 
 function drawAll() {
   drawList(el.list, deck, active, layoutsById);
   showSlide();
   drawPresentMenu();
+  drawLayoutLock();
 }
 
 // --- Presenting --------------------------------------------------------
@@ -356,8 +474,40 @@ $("#slide-new").addEventListener("click", function () {
 
 // --- Form fields -------------------------------------------------------
 $("#deck-title").addEventListener("input", remember);
-$("#deck-theme").addEventListener("change", function () { harvest(); saveNow().then(function () { preview.newLoad(active); }); });
-$("#deck-transition").addEventListener("change", function () { harvest(); saveNow(); });
+
+// The two menus in the header. Both hold a property of the DECK, so a pick
+// goes through harvest() and is saved at once rather than on the delay --
+// this is a decision, not typing.
+//
+// The button wears the value and keeps it in data-value, because a
+// <summary> has none of its own. `after` is what the one difference
+// between the two is: the look is a stylesheet the preview frame loads, so
+// it has to be loaded again; the transition is a reveal setting the frame
+// reads for itself at the next start.
+function headerMenu(id, after) {
+  var menu = $("#" + id + "-menu");
+  var button = $("#" + id);
+  var rows = $$(".menu-item", menu);
+  rows.forEach(function (row) {
+    row.addEventListener("click", function () {
+      button.dataset.value = row.dataset.value;
+      button.textContent = row.dataset.value;
+      rows.forEach(function (other) {
+        var here = other === row;
+        other.classList.toggle("is-active", here);
+        other.setAttribute("aria-checked", here ? "true" : "false");
+      });
+      menu.open = false;
+      harvest();
+      after();
+    });
+  });
+}
+
+headerMenu("deck-theme", function () {
+  saveNow().then(function () { preview.newLoad(active); });
+});
+headerMenu("deck-transition", function () { saveNow(); });
 
 el.title.addEventListener("input", function () {
   remember();
@@ -369,6 +519,39 @@ el.title.addEventListener("input", function () {
   if (card) $(".card-title", card).textContent = el.title.value || t("card.untitled");
 });
 el.content.addEventListener("input", remember);
+
+// Ctrl+B / Ctrl+I in the body field -- the browser does this by itself,
+// but the model has to hear about it.
+el.content.addEventListener("keyup", function (ev) {
+  if (ev.ctrlKey || ev.metaKey) remember();
+});
+
+// A click on a code block in the field opens it. The block is sealed, so
+// the click cannot land inside it -- it lands on it.
+el.content.addEventListener("click", function (ev) {
+  if (!ev.target.closest) return;
+  var block = ev.target.closest(".code-block");
+  if (!block || !el.content.contains(block)) return;
+  if (ev.target.closest(".code-remove")) {
+    block.remove();
+    remember();
+    return;
+  }
+  codeDialogOeffnen(block);
+});
+
+// Choosing a column. What stands in the field goes into the column it was
+// written for FIRST -- harvest() does that with the column still current --
+// and only then does the field show the next one. Switching is not itself a
+// change to the deck, so nothing is marked unsaved here.
+$$(".column-tab", el.columnTabs).forEach(function (tab) {
+  tab.addEventListener("click", function () {
+    harvest();
+    activeColumn = Number(tab.dataset.column) - 1;
+    setContentMode(deck.slides[active]);
+    el.content.focus();
+  });
+});
 el.sourceText.addEventListener("input", remember);
 el.source.addEventListener("input", remember);
 
@@ -448,6 +631,34 @@ function showTextWidth(width) {
   el.textWidthButton.dataset.tip = name;
 }
 
+// Where the heading stands. The choice may be empty -- then the layout
+// decides (layouts.js) and the button shows what the layout does, because
+// the question this button answers is "where is my heading", not "have I
+// pressed something".
+function showTitleAlign(choice) {
+  var layout = layoutsById[(deck.slides[active] || {}).layout] || {};
+  el.titleAlignButton.dataset.choice = choice;
+  el.titleAlignButton.dataset.align = choice || layout.titleAlign || "left";
+  var chosen = null;
+  $$("#title-align-menu .menu-item").forEach(function (b) {
+    var is = b.dataset.align === choice;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-checked", is ? "true" : "false");
+    if (is) chosen = b;
+  });
+  var name = el.titleAlignMenu.dataset.name + (chosen ? ": " + chosen.textContent.trim() : "");
+  el.titleAlignButton.setAttribute("aria-label", name);
+  el.titleAlignButton.dataset.tip = name;
+}
+
+$$("#title-align-menu .menu-item").forEach(function (button) {
+  button.addEventListener("click", function () {
+    showTitleAlign(button.dataset.align);
+    el.titleAlignMenu.open = false;
+    remember();
+  });
+});
+
 $$("#text-side-menu .menu-item").forEach(function (button) {
   button.addEventListener("click", function () {
     showTextSide(button.dataset.side);
@@ -474,7 +685,7 @@ el.textWidthButton.addEventListener("click", function (ev) {
 // of them, and each closes only when the click was somewhere outside it --
 // so opening one closes the other.
 document.addEventListener("click", function (ev) {
-  [el.textSideMenu, el.textWidthMenu].forEach(function (m) {
+  [el.textSideMenu, el.textWidthMenu, el.titleAlignMenu].forEach(function (m) {
     if (m.open && !m.contains(ev.target)) m.open = false;
   });
 });
@@ -482,10 +693,29 @@ document.addEventListener("click", function (ev) {
 $$(".layout-tile").forEach(function (tile) {
   tile.addEventListener("click", function () {
     harvest();
-    deck.slides[active].layout = tile.dataset.layout;
+    var slide = deck.slides[active];
+    slide.layout = tile.dataset.layout;
+    // A layout without columns cannot keep any apart, so the breaks in the
+    // body go with the layout that had them.
+    if (!splitCount(slide)) dropColumnBreaks(slide);
     drawAll();
     remember();
   });
+});
+
+// One text per column, or one text through all of them. Read BEFORE the
+// switch is flipped and written back after it -- otherwise the fields as
+// they stand now would be read with the new arrangement's rule.
+el.columnsSplit.addEventListener("change", function () {
+  harvest();
+  var slide = deck.slides[active];
+  if (el.columnsSplit.checked) slide.columnMode = SPLIT;
+  else dropColumnBreaks(slide);
+  // The body has to go back into the fields: one text becomes two or three,
+  // or the other way round.
+  sourceMode = !contentSimple(slide);
+  setContentMode(slide);
+  remember();
 });
 
 $$(".toolbar button[data-command]").forEach(function (b) {
@@ -493,7 +723,7 @@ $$(".toolbar button[data-command]").forEach(function (b) {
   // and with it the selection the command is meant to act on.
   b.addEventListener("mousedown", function (ev) {
     ev.preventDefault();
-    rt.befehl(el.content, b.dataset.befehl);
+    rt.befehl(el.content, b.dataset.command);
     remember();
   });
 });
@@ -501,18 +731,17 @@ $$(".toolbar button[data-command]").forEach(function (b) {
 el.sourceButton.addEventListener("click", function () {
   harvest();
   var slide = deck.slides[active];
-  if (sourceMode && !rt.isSimple(slide.content)) {
+  // contentSimple and not isSimple: on a slide whose columns are kept
+  // apart, the body carries the break lines between them -- and those are
+  // exactly what never reaches a field, because each column goes into the
+  // field on its own. Asking the whole body would refuse the way back from
+  // source mode on every one of those slides.
+  if (sourceMode && !contentSimple(slide)) {
     note(t("message.staysSource"));
     return;
   }
   sourceMode = !sourceMode;
   setContentMode(slide);
-});
-
-// Ctrl+B / Ctrl+I in the body field -- the browser does this by itself,
-// but the model has to hear about it.
-el.content.addEventListener("keyup", function (ev) {
-  if (ev.ctrlKey || ev.metaKey) remember();
 });
 
 // --- Video ---------------------------------------------------------------
@@ -586,19 +815,95 @@ function codeDialogOeffnen(block) {
 
 el.codeButton.addEventListener("click", function () { codeDialogOeffnen(null); });
 
-// A click on a block in the field opens it. The block is sealed, so the
-// click cannot land inside it -- it lands on it.
-el.content.addEventListener("click", function (ev) {
-  if (!ev.target.closest) return;
-  var block = ev.target.closest(".code-block");
-  if (!block || !el.content.contains(block)) return;
-  if (ev.target.closest(".code-remove")) {
-    block.remove();
-    remember();
-    return;
-  }
-  codeDialogOeffnen(block);
+// --- Emoji -------------------------------------------------------------
+// An emoji is a character, not a formatting: it goes in where the cursor
+// is and into the .md as itself -- no attribute, no class, nothing for the
+// renderer to know about.
+var emojiMenu = $("#emoji-menu");
+
+// The panel is built once, from the table the page carries (emoji.js).
+// Groups with their word above them, so 450 characters can be scanned
+// instead of searched.
+(function buildEmojiPanel() {
+  var grid = $("#emoji-grid");
+  var groups = [];
+  try { groups = JSON.parse($("#data-emoji").textContent); } catch (e) { /* no panel then */ }
+  groups.forEach(function (group) {
+    var head = document.createElement("span");
+    head.className = "emoji-group";
+    head.textContent = group.name;
+    grid.appendChild(head);
+    group.emoji.forEach(function (character) {
+      var key = document.createElement("button");
+      key.type = "button";
+      key.className = "emoji-key";
+      key.setAttribute("role", "menuitem");
+      // No label: a screen reader announces an emoji by its own Unicode
+      // name, in more languages than this project could keep up to date.
+      key.textContent = character;
+      grid.appendChild(key);
+    });
+  });
+})();
+
+// mousedown with preventDefault throughout, on the summary as well as on
+// the keys: that keeps the focus -- and with it the place the character is
+// meant to go -- in the text field. A <summary> still opens its menu on
+// the click that follows, so the menu loses nothing by it.
+$("#emoji-menu > summary").addEventListener("mousedown", function (ev) {
+  ev.preventDefault();
 });
+
+// One listener for all of them, on the panel: 450 buttons with a listener
+// each would be 450 listeners for the same three lines.
+$(".emoji-panel").addEventListener("mousedown", function (ev) {
+  var key = ev.target.closest(".emoji-key");
+  if (!key) return;
+  ev.preventDefault();
+  insertEmoji(key.textContent);
+});
+
+// Under the button, and inside the column. Those two pull against each
+// other: the panel is ten keys wide, and the bar wraps at narrow widths so
+// the button stands anywhere in it. Hung from the button alone the panel
+// would reach out of the column.
+//
+// So it hangs from the BAR -- which spans the column and can therefore
+// always hold it -- and is placed under the button: from its left edge
+// where there is room to the right, from its RIGHT edge where there is
+// not (which is what every menu does), and flush left if even that does
+// not fit.
+emojiMenu.addEventListener("toggle", function () {
+  if (!emojiMenu.open) return;
+  var panel = $(".emoji-panel");
+  var bar = emojiMenu.closest(".toolbar");
+  var button = $("#emoji-menu > summary");
+  var barBox = bar.getBoundingClientRect();
+  var buttonBox = button.getBoundingClientRect();
+  var width = panel.offsetWidth;
+  var room = bar.clientWidth - width;
+  var left = buttonBox.left - barBox.left;
+  if (left > room) left = buttonBox.right - barBox.left - width;
+  panel.style.left = Math.max(0, Math.min(left, room)) + "px";
+});
+
+function insertEmoji(character) {
+  if (sourceMode) {
+    // The same place the code button writes to when a slide is source.
+    var field = el.sourceText;
+    var start = field.selectionStart;
+    var end = field.selectionEnd;
+    field.value = field.value.slice(0, start) + character + field.value.slice(end);
+    field.selectionStart = field.selectionEnd = start + character.length;
+    field.focus();
+  } else {
+    el.content.focus();
+    // insertText and not innerHTML: it lands at the cursor, and the
+    // browser's own undo knows about it.
+    document.execCommand("insertText", false, character);
+  }
+  remember();
+}
 
 // In a code field Tab is indentation, not "on to the next control". Shift
 // and Escape quiet get out, so the field is not a trap.

@@ -6,11 +6,7 @@
 <body class="page-overview">
   <header class="head">
     <a class="brand" href="<%= BASE %>/"><img src="<%= BASE %>/static/trivialSlides.svg" alt="" width="32" height="32"><span class="brand-word">trivialSlides<small class="brand-version">v<%= VERSION %></small></span></a>
-    <button id="language-toggle" class="button button-quiet language" type="button"
-            data-target="<%= LANGUAGE === 'de' ? 'en' : 'de' %>"
-            data-tip="<%= t('header.switchLanguage') %>"
-            aria-label="<%= t('header.switchLanguage') %>"><%= LANGUAGE === 'de' ? 'en' : 'de' %></button>
-    <button id="theme-toggle" class="button button-quiet button-icon" type="button"></button>
+    <%- include("partials/settings") %>
   </header>
 
   <main class="content">

@@ -18,15 +18,20 @@
 //            (data-textseite, see video.js)
 //   textWidth - how wide the text may get beside the picture or the
 //            player (data-textbreite, see WIDTHS below)
+//   columnMode - whether the columns are filled one by one or the text
+//            flows through them (data-columns, see COLUMNS below)
 // Every layout has a title and a body, so those are not in the list.
 const LAYOUTS = [
   {
     id: "titel",
     fields: [],
+    // Centred by design, and so is its heading -- see TITLE_ALIGNS below.
+    titleAlign: "center",
   },
   {
     id: "abschnitt",
     fields: [],
+    titleAlign: "center",
   },
   {
     id: "text",
@@ -34,11 +39,13 @@ const LAYOUTS = [
   },
   {
     id: "spalten",
-    fields: [],
+    fields: ["columnMode"],
+    columns: 2,
   },
   {
     id: "spalten-drei",
-    fields: [],
+    fields: ["columnMode"],
+    columns: 3,
   },
   {
     id: "bild-rechts",
@@ -130,6 +137,98 @@ function onlyWidth(value, layoutId) {
   return WIDTHS.includes(s) ? s : defaultWidth(layoutId);
 }
 
+// --- The heading's place -----------------------------------------------
+// Where the heading stands on the slide. Every layout has a heading, so
+// this is not in any layout's `fields` -- it belongs to the slide the way
+// its colours do.
+//
+// The default is the LAYOUT's own: a title slide and a section divider
+// centre everything they carry, everything else reads from the left. A
+// slide that has never been asked therefore looks exactly as it always
+// did, and nothing is written into the file for it. `titleAlign` on a
+// layout above says so; a layout that names none reads from the left.
+//
+// The arrangement itself is in slides.css. What is decided here is which
+// names a file may carry -- and what the editor's button shows while the
+// slide has made no choice of its own.
+const TITLE_ALIGNS = ["left", "center", "right"];
+const TITLE_ALIGN_DEFAULT = "left";
+
+function defaultTitleAlign(id) {
+  return get(id).titleAlign || TITLE_ALIGN_DEFAULT;
+}
+
+// "" means "no choice of its own" -- which is a value in its own right
+// here, not a missing one: it is what leaves the layout in charge.
+function onlyTitleAlign(value) {
+  const s = String(value == null ? "" : value).trim();
+  return TITLE_ALIGNS.includes(s) ? s : "";
+}
+
+// --- Columns -----------------------------------------------------------
+// A column layout fills its columns in one of two ways.
+//
+//   flowing (the default, and what these layouts have always done): the
+//     slide has ONE body and the browser distributes it over the columns.
+//     Nothing in the text says where a column ends -- the same words can be
+//     read in two columns or three by changing the layout alone.
+//
+//   split (data-columns="split"): each column has a text of its own. That
+//     cannot be expressed by an attribute alone -- the body has to say
+//     where one column ends and the next begins, which is what COLUMN_BREAK
+//     does. It is a comment in reveal.js' own family (<!-- .slide: -->,
+//     <!-- .element: -->), so any other renderer leaves it out and shows
+//     the slide as one running text: exactly the flowing arrangement, which
+//     is the honest fallback for a file read elsewhere.
+//
+// The switch lives in an attribute and the breaks live in the text, so a
+// slide keeps its columns' texts when it is switched back and forth -- the
+// breaks simply stop being read.
+const COLUMN_SPLIT = "split";
+const COLUMN_BREAK = "<!-- .column -->";
+
+// Tolerant of spacing the way the other two comment lines are (deck.js'
+// ATTR_LINE, render.js' FRAGMENT_RE): a break is a line that holds nothing
+// but the comment.
+const COLUMN_BREAK_LINE = /^[ \t]*<!--[ \t]*\.column[ \t]*-->[ \t]*$/m;
+
+// How many columns a layout has; 0 for every layout that has none.
+function columnCount(id) {
+  return get(id).columns || 0;
+}
+
+function onlyColumnMode(value) {
+  return String(value == null ? "" : value).trim() === COLUMN_SPLIT ? COLUMN_SPLIT : "";
+}
+
+// The body -> one text per column, always exactly `count` of them.
+//
+// More breaks than the layout has columns (a three-column slide turned into
+// a two-column one) put the surplus into the LAST column rather than
+// dropping it: fewer columns must not cost the user a paragraph. Fewer
+// breaks than columns leave the columns at the end empty.
+//
+// The editor does the same walk on its side (js/editor/index.js) -- it has
+// to, it is a browser and this is a module on the server. Both halves are
+// named after each other so the pair stays findable.
+function splitColumns(text, count) {
+  const parts = String(text == null ? "" : text)
+    .split(new RegExp(COLUMN_BREAK_LINE.source, "m"))
+    .map((t) => t.trim());
+  const out = parts.slice(0, Math.max(count, 1) - 1);
+  out.push(parts.slice(Math.max(count, 1) - 1).filter(Boolean).join("\n\n"));
+  while (out.length < count) out.push("");
+  return out;
+}
+
+// The columns' texts -> one body. All empty means an empty body: a slide
+// nobody has written anything on should not carry breaks in the file.
+function joinColumns(parts) {
+  const texts = (parts || []).map((t) => String(t == null ? "" : t).trim());
+  if (!texts.some(Boolean)) return "";
+  return texts.join(`\n\n${COLUMN_BREAK}\n\n`);
+}
+
 const DEFAULT_LAYOUT = "text";
 
 const byId = new Map(LAYOUTS.map((l) => [l.id, l]));
@@ -146,4 +245,6 @@ function hasField(id, field) {
 
 module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
-  WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth };
+  WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
+  COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,
+  TITLE_ALIGNS, TITLE_ALIGN_DEFAULT, defaultTitleAlign, onlyTitleAlign };

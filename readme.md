@@ -78,15 +78,15 @@ unnoticed.
 
 | Layout | What for |
 |---|---|
-| Title slide (`titel`) | Large title centred, subtitle or speaker below |
-| Section (`abschnitt`) | Divider between two topics, often with a coloured background |
-| Text (`text`) | Heading and body — the common case |
-| Two columns (`spalten`) | Like text, but the body runs in two columns |
-| Three columns (`spalten-drei`) | The same in three, at a smaller type size — for short points |
-| Image right / left (`bild-rechts`, `bild-links`) | Text and image side by side |
-| Full-bleed image (`bild-voll`) | Image across the whole slide, text readable on top |
-| Video (`video`) | A heading with a YouTube player below it |
-| Quote (`zitat`) | Large quotation with an attribution |
+| Title slide | Large title centred, subtitle or speaker below |
+| Section | Divider between two topics, often with a coloured background |
+| Text | Heading and body — the common case |
+| Two columns | Like text, but the body runs in two columns |
+| Three columns | The same in three, at a smaller type size — for short points |
+| Image right / left | Text and image side by side |
+| Full-bleed image | Image across the whole slide, text readable on top |
+| Video  | A heading with a YouTube player below it |
+| Quote  | Large quotation with an attribution |
 
 ## The storage format
 

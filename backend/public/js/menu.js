@@ -13,7 +13,12 @@
     // Beside it: everything closes. Inside it: choosing an entry closes it
     // too, the summary is left to the browser.
     if (!inner) return close(null);
-    if (ev.target.closest(".menu-content")) return close(null);
+    // Inside it: choosing something closes it too -- unless it is a panel
+    // one picks several things from in a row and says so. Then everything
+    // else closes and it stays.
+    if (ev.target.closest(".menu-content")) {
+      return close(ev.target.closest("details.menu[data-keep-open]"));
+    }
     close(inner);
   });
 

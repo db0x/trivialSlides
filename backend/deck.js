@@ -125,6 +125,12 @@ function parseAttrs(line) {
     qrBackground: ifField("qrBackground", qr.onlyBackground(attrs["data-qr-background"])),
     qrTextColor: ifField("qrTextColor", qr.onlyTextColor(attrs["data-qr-text-color"])),
     textWidth: ifField("textWidth", layouts.onlyWidth(attrs["data-textbreite"], layout)),
+    // Whether each column has a text of its own. The breaks between them
+    // are in the body, not here -- see layouts.js.
+    columnMode: ifField("columnMode", layouts.onlyColumnMode(attrs["data-columns"])),
+    // Where the heading stands. No ifField: every layout has a heading, so
+    // this belongs to the slide like its colours do.
+    titleAlign: layouts.onlyTitleAlign(attrs["data-title-align"]),
     background: onlyColor(attrs["data-background-color"]),
     textColor: onlyColor(attrs["data-text-color"]),
     // A gradient someone wrote by hand passes through as it stands, as
@@ -168,6 +174,13 @@ function serializeAttrs(slide, immer) {
       && slide.textSide !== layouts.defaultSide(slide.layout)) parts.push(`data-textseite="${slide.textSide}"`);
   if (layouts.hasField(slide.layout, "textWidth") && slide.textWidth
       && slide.textWidth !== layouts.defaultWidth(slide.layout)) parts.push(`data-textbreite="${slide.textWidth}"`);
+  // Only the split arrangement is written: an absent attribute means the
+  // columns flow, which is what these layouts have always done.
+  if (layouts.hasField(slide.layout, "columnMode")
+      && slide.columnMode === layouts.COLUMN_SPLIT) parts.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+  // Nothing is written while the layout is left in charge -- which is what
+  // keeps a deck that has never been asked looking untouched in the file.
+  if (slide.titleAlign) parts.push(`data-title-align="${slide.titleAlign}"`);
   if (slide.background) parts.push(`data-background-color="${slide.background}"`);
   if (slide.gradient) parts.push(`data-background-gradient="${slide.gradient}"`);
   if (slide.effect) parts.push(`data-background-effect="${slide.effect}"`);
@@ -204,7 +217,7 @@ function splitTitle(text) {
 
 function parseSlide(text, vertical) {
   const lines = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), background: "", textColor: "", gradient: "", effect: "" };
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), columnMode: "", titleAlign: "", background: "", textColor: "", gradient: "", effect: "" };
   let i = 0;
   while (i < lines.length && lines[i].trim() === "") i++;
   if (i < lines.length && ATTR_LINE.test(lines[i])) {
@@ -295,6 +308,8 @@ function newSlide(layout) {
     qrBackground: qr.BACKGROUND_DEFAULT,
     qrTextColor: "",
     textWidth: layouts.defaultWidth(layout),
+    columnMode: "",
+    titleAlign: "",
     background: "",
     textColor: "",
     gradient: "",
@@ -338,6 +353,8 @@ function normalize(raw) {
         qrBackground: layouts.hasField(layout, "qrBackground") ? qr.onlyBackground(f ? f.qrBackground : undefined) : "",
         qrTextColor: layouts.hasField(layout, "qrTextColor") ? qr.onlyTextColor(f && f.qrTextColor) : "",
         textWidth: layouts.hasField(layout, "textWidth") ? layouts.onlyWidth(f && f.textWidth, layout) : "",
+        columnMode: layouts.hasField(layout, "columnMode") ? layouts.onlyColumnMode(f && f.columnMode) : "",
+        titleAlign: layouts.onlyTitleAlign(f && f.titleAlign),
         background: onlyColor(f && f.background),
         textColor: onlyColor(f && f.textColor),
         // Not truncated but dropped when it does not fit: half a gradient

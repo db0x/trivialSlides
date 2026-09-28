@@ -11,12 +11,25 @@
 // you, not to the talk.
 (function () {
   var KEY = "trivialslides:preview-format";
-  var select = document.getElementById("preview-format");
-  if (!select) return;
+  var menu = document.getElementById("preview-format-menu");
+  if (!menu) return;
+  var word = document.getElementById("preview-format-word");
+  var rows = Array.prototype.slice.call(menu.querySelectorAll(".format-row"));
+
+  // The button starts out wearing the default the server rendered into it,
+  // so that is also what an unreadable or unknown stored value falls back
+  // to -- one default, named in one place (routes/decks.js).
+  var fallback = word.textContent.trim();
 
   function apply(format) {
     // The menu says "16:9", CSS wants "16 / 9".
     document.documentElement.style.setProperty("--preview-ratio", format.replace(":", " / "));
+    word.textContent = format;
+    rows.forEach(function (row) {
+      var here = row.dataset.format === format;
+      row.classList.toggle("is-active", here);
+      row.setAttribute("aria-checked", here ? "true" : "false");
+    });
   }
 
   function stored() {
@@ -27,12 +40,14 @@
   // list -- or edited by hand -- would otherwise land in the stylesheet,
   // where a wrong one takes the frame with it.
   var saved = stored();
-  var known = [].some.call(select.options, function (o) { return o.value === saved; });
-  if (known) select.value = saved;
-  apply(select.value);
+  var known = rows.some(function (row) { return row.dataset.format === saved; });
+  apply(known ? saved : fallback);
 
-  select.addEventListener("change", function () {
-    apply(select.value);
-    try { localStorage.setItem(KEY, select.value); } catch (e) { /* private window */ }
+  rows.forEach(function (row) {
+    row.addEventListener("click", function () {
+      apply(row.dataset.format);
+      menu.open = false;
+      try { localStorage.setItem(KEY, row.dataset.format); } catch (e) { /* private window */ }
+    });
   });
 })();

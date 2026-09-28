@@ -13,6 +13,7 @@ const render = require("../render");
 const gradients = require("../gradients");
 const effects = require("../effects");
 const code = require("../code");
+const emoji = require("../emoji");
 const video = require("../video");
 const storage = require("../storage");
 const i18n = require("../i18n");
@@ -109,8 +110,15 @@ router.post("/new", (req, res) => {
 // lays every slide out at 960x700 and fits that into whatever it is given,
 // so this list only says what the editor's preview is fitted into -- which
 // is the one way to see beforehand what a 4:3 projector will make of a
-// slide. The first entry is what a browser shows without a choice stored.
-const PREVIEW_FORMATS = ["16:9", "16:10", "3:2", "4:3", "21:9"];
+// slide.
+//
+// Sorted by shape, from the widest to the nearly square: that is the one
+// order in which a list of five ratios says anything, and the numbers
+// alone suggest no other. Which of them a browser starts with is said
+// separately -- tying the default to a position in the list would make
+// reordering the list change the default.
+const PREVIEW_FORMATS = ["21:9", "16:9", "16:10", "3:2", "4:3"];
+const PREVIEW_DEFAULT = "16:9";
 
 router.get("/d/:slug", loadDeck, (req, res) => {
   res.render("editor", {
@@ -123,6 +131,7 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
     codeLanguages: code.LANGUAGES,
+    emoji: i18n.emojiTranslated(emoji.GROUPS, req.language),
     codeStyles: code.STYLES,
     // The grammar travels with the page and becomes the input's pattern --
     // so the browser refuses a broken gradient with the same rule the
@@ -132,6 +141,10 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     themes: deck.THEMES,
     transitions: deck.TRANSITIONS,
     previewFormats: PREVIEW_FORMATS,
+    previewDefault: PREVIEW_DEFAULT,
+    // What the page needs to take a column slide's body apart the same way
+    // the renderer does (layouts.js, js/editor/columns.js).
+    columns: { break: layouts.COLUMN_BREAK, split: layouts.COLUMN_SPLIT },
     images: storage.images(req.slug),
   });
 });

@@ -15,21 +15,42 @@
 
   <input id="deck-title" class="deck-title-field" value="<%= deck.title %>" maxlength="120" aria-label="<%= t('header.titleField') %>">
 
-  <label class="header-field"><%= t('header.theme') %>
-    <select id="deck-theme">
-      <% themes.forEach(function (t) { %>
-        <option value="<%= t %>" <%= t === deck.theme ? "selected" : "" %>><%= t %></option>
-      <% }); %>
-    </select>
-  </label>
+  <!-- The deck's look and its transition. Menus of this app's own rather
+       than <select>s, for the same reason as the preview's format further
+       down: a native one brings the operating system's dropdown with it,
+       which is the only thing on the page that does not look like the
+       page. The word stays beside the button, the button wears the value,
+       and the value the model reads sits in data-value on it
+       (js/editor/index.js). -->
+  <span class="header-field">
+    <%= t('header.theme') %>
+    <details id="deck-theme-menu" class="menu header-menu">
+      <summary id="deck-theme" class="button header-value" data-value="<%= deck.theme %>"
+               aria-label="<%= t('header.theme') %>"><%= deck.theme %></summary>
+      <div class="menu-content menu-scroll" role="menu">
+        <% themes.forEach(function (name) { %>
+          <button type="button" role="menuitemradio" data-value="<%= name %>"
+                  aria-checked="<%= name === deck.theme ? 'true' : 'false' %>"
+                  class="menu-item<%= name === deck.theme ? ' is-active' : '' %>"><%= name %></button>
+        <% }); %>
+      </div>
+    </details>
+  </span>
 
-  <label class="header-field"><%= t('header.transition') %>
-    <select id="deck-transition">
-      <% transitions.forEach(function (t) { %>
-        <option value="<%= t %>" <%= t === deck.transition ? "selected" : "" %>><%= t %></option>
-      <% }); %>
-    </select>
-  </label>
+  <span class="header-field">
+    <%= t('header.transition') %>
+    <details id="deck-transition-menu" class="menu header-menu">
+      <summary id="deck-transition" class="button header-value" data-value="<%= deck.transition %>"
+               aria-label="<%= t('header.transition') %>"><%= deck.transition %></summary>
+      <div class="menu-content" role="menu">
+        <% transitions.forEach(function (name) { %>
+          <button type="button" role="menuitemradio" data-value="<%= name %>"
+                  aria-checked="<%= name === deck.transition ? 'true' : 'false' %>"
+                  class="menu-item<%= name === deck.transition ? ' is-active' : '' %>"><%= name %></button>
+        <% }); %>
+      </div>
+    </details>
+  </span>
 
   <span id="save-state" class="save-state" role="status"></span>
 
@@ -62,11 +83,7 @@
       <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
     </div>
   </details>
-  <button id="language-toggle" class="button button-quiet language" type="button"
-      data-target="<%= LANGUAGE === 'de' ? 'en' : 'de' %>"
-      data-tip="<%= t('header.switchLanguage') %>"
-      aria-label="<%= t('header.switchLanguage') %>"><%= LANGUAGE === 'de' ? 'en' : 'de' %></button>
-  <button id="theme-toggle" class="button button-quiet button-icon" type="button"></button>
+  <%- include("partials/settings") %>
 </header>
 
 <main class="editor">
@@ -92,18 +109,73 @@
         <% }); %>
       </div>
       <p id="layout-hint" class="hint"></p>
+      <!-- Why the tiles are dead on a slide that already says something.
+           A disabled button has no tooltip to explain itself with, so the
+           reason stands here (js/editor/index.js). -->
+      <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
+      <!-- Only the two column layouts have this, and it belongs here rather
+           than in the text bar: it decides how many text fields there are
+           below, which is a question about the structure of the slide, not
+           about its wording. Off (and that is how every deck written so far
+           reads) the slide has one text and the browser distributes it. -->
+      <label class="field field-columns" hidden
+             data-tip="<%= t('editor.columnsSplitHint') %>">
+        <input type="checkbox" id="slide-columns-split">
+        <span><%= t('editor.columnsSplit') %></span>
+      </label>
     </fieldset>
 
     <fieldset class="fieldset">
       <legend><%= t('editor.content') %></legend>
 
-      <label class="field">
-        <span class="field-label"><%= t('editor.heading') %></span>
-        <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
-      </label>
+      <!-- No longer a <label> around the whole thing: a click on the
+           chooser beside the field would otherwise land in the field,
+           which is what a label does. The word keeps its "for" instead. -->
+      <div class="field">
+        <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
+        <div class="field-row">
+          <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
+          <!-- Where the heading stands on the slide. It sits INSIDE the
+               field's box (the row carries the border and the focus ring,
+               app.css), so the two read as one control. The button wears
+               the icon of the alignment in force -- also while the slide
+               has made no choice and the layout decides, because what one
+               wants to see here is where the heading IS. Which of the four
+               is chosen is marked in the menu (js/editor/index.js). -->
+          <details id="title-align-menu" class="menu title-align"
+                   data-name="<%= t('editor.titleAlign') %>">
+            <summary id="title-align-button" class="button-icon tool-align"
+                     data-align="left" data-choice=""
+                     aria-label="<%= t('editor.titleAlign') %>"></summary>
+            <div class="menu-content" role="menu">
+              <button type="button" class="menu-item tool-align" role="menuitemradio"
+                      aria-checked="false" data-align=""><span
+                      class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.default') %></button>
+              <% ["left", "center", "right"].forEach(function (a) { %>
+                <button type="button" class="menu-item tool-align" role="menuitemradio"
+                        aria-checked="false" data-align="<%= a %>"><span
+                        class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.' + a) %></button>
+              <% }); %>
+            </div>
+          </details>
+        </div>
+      </div>
 
       <div class="field">
-        <span class="field-label"><%= t('editor.text') %></span>
+        <span class="field-label" id="text-label"><%= t('editor.text') %></span>
+        <!-- Which column the field below shows. They stand where the label
+             stands and take its place, because "Text" and "Column 2" are
+             the same line of the form -- and one field with a chooser over
+             it keeps the bar, the code dialog and the whole field height
+             for whichever column is being written (js/editor/index.js).
+             Three is the most any layout has; which of them are shown
+             follows the layout. -->
+        <div class="column-tabs" id="column-tabs" role="tablist" hidden>
+          <% [1, 2, 3].forEach(function (n) { %>
+            <button type="button" class="column-tab" role="tab" data-column="<%= n %>"
+                    aria-selected="false"><%= t('editor.column', { n: n }) %></button>
+          <% }); %>
+        </div>
         <div class="toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
           <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
           <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
@@ -112,11 +184,40 @@
           <button type="button" class="tool-icon" data-command="insertOrderedList" data-tip="<%= t('tool.numberedList') %>" aria-label="<%= t('tool.numberedList') %>"></button>
           <button type="button" class="tool-icon" data-command="link" data-tip="<%= t('tool.link') %>" aria-label="<%= t('tool.link') %>"></button>
           <span class="toolbar-divider"></span>
+          <!-- Where the text stands. Unlike the two menus further along
+               this bar, these are NOT slide-wide: they mark the paragraph
+               the cursor is in, or every one the selection touches. The
+               mark travels in the .md as the class of an .element comment
+               -- the same line the fragment above rides on, so a centred
+               bullet that appears on click is one comment with two
+               classes (js/editor/richtext.js). -->
+          <% [["left", "alignLeft"], ["center", "alignCenter"], ["right", "alignRight"], ["fill", "alignFill"]].forEach(function (a) { %>
+            <button type="button" class="tool-icon" data-command="align-<%= a[0] %>"
+                    data-tip="<%= t('tool.' + a[1]) %> — <%= t('tool.alignTip') %>"
+                    aria-label="<%= t('tool.' + a[1]) %>"></button>
+          <% }); %>
+          <span class="toolbar-divider"></span>
           <button type="button" class="tool-icon" data-command="fragment" data-tip="<%= t('tool.fragmentTip') %>" aria-label="<%= t('tool.fragment') %>"></button>
           <!-- Code is the one thing in this bar that the rich-text field
                cannot hold, so it does not run through execCommand and it
                stays usable in source mode -- that is where it lands. -->
           <button type="button" id="code-insert" class="tool-icon" data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
+          <!-- Emoji. Like the code button this is not a formatting command
+               but something inserted, so it keeps working in source mode --
+               there the character goes into the textarea at the cursor.
+               A handful and not all of Unicode (emoji.js); the system's own
+               picker is still there for the rest and still works in the
+               field. -->
+          <details id="emoji-menu" class="menu menu-tool" data-keep-open>
+            <summary class="tool-icon tool-emoji" data-tip="<%= t('tool.emojiTip') %>"
+                     aria-label="<%= t('tool.emoji') %>"></summary>
+            <!-- Filled by the page from the table at the end of this file:
+                 450 buttons written out here would be 30 kB of markup for
+                 something most of which is never looked at. -->
+            <div class="menu-content emoji-panel" role="menu">
+              <div id="emoji-grid" class="emoji-grid"></div>
+            </div>
+          </details>
           <span class="toolbar-divider"></span>
           <!-- Where the text sits in relation to the player, on a video
                slide. In the bar it is the icon of the side in force and
@@ -316,18 +417,28 @@
          will make of a slide. The deck is untouched by it -- see
          preview-format.js.
 
-         Icon and menu in one <label>, so the picture is not a dead
-         decoration: a click on it opens the menu. The tooltip hangs on the
-         label for the same reason. -->
-    <label class="preview-format-field" data-tip="<%= t('editor.previewFormat') %>">
-      <span class="preview-screen" aria-hidden="true"></span>
-      <select id="preview-format" class="preview-format"
-              aria-label="<%= t('editor.previewFormat') %>">
+         A menu of this app's own and not a <select>: a native one brings
+         the operating system's dropdown with it, which is the only thing on
+         this page that does not look like this page. The button wears the
+         screen and the ratio in force, the rows wear the shape they stand
+         for -- in a list of ratios that picture IS the information.
+
+         It opens upwards: the control sits at the bottom end of the
+         column, and downwards there is nothing left to open into. -->
+    <details id="preview-format-menu" class="menu preview-format"
+             data-tip="<%= t('editor.previewFormat') %>">
+      <summary id="preview-format-button" class="button preview-format-value"
+               aria-label="<%= t('editor.previewFormat') %>"><span
+               class="preview-screen" aria-hidden="true"></span><span
+               id="preview-format-word"><%= previewDefault %></span></summary>
+      <div class="menu-content" role="menu">
         <% previewFormats.forEach(function (f) { %>
-          <option value="<%= f %>"><%= f %></option>
+          <button type="button" class="menu-item format-row" role="menuitemradio"
+                  aria-checked="false" data-format="<%= f %>"><span
+                  class="format-shape" aria-hidden="true"></span><%= f %></button>
         <% }); %>
-      </select>
-    </label>
+      </div>
+    </details>
   </aside>
 </main>
 
@@ -411,7 +522,14 @@
 <script type="application/json" id="data-deck"><%- JSON.stringify(deck) %></script>
 <script type="application/json" id="data-layouts"><%- JSON.stringify(layouts) %></script>
 <script type="application/json" id="data-images"><%- JSON.stringify(images) %></script>
-<script>window.SLIDES_BASE = <%- JSON.stringify(BASE + "/d/" + slug) %>;</script>
+<script type="application/json" id="data-emoji"><%- JSON.stringify(emoji) %></script>
+<script>
+  window.SLIDES_BASE = <%- JSON.stringify(BASE + "/d/" + slug) %>;
+  // The break line between two columns' texts and the name of that
+  // arrangement. Both are defined on the server (layouts.js) and handed
+  // over rather than written a second time (js/editor/columns.js).
+  window.SLIDES_COLUMNS = <%- JSON.stringify(columns) %>;
+</script>
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
 </body>
 </html>

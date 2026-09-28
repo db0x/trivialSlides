@@ -33,8 +33,12 @@
     label();
   }
 
-  // The button shows where the click leads, so its label has to say the
-  // same -- an icon alone tells a screen reader nothing.
+  // The row says where the click leads, and it is the only thing that can:
+  // its icon changes with the choice, and an icon alone tells a screen
+  // reader nothing. Since the switch moved into the settings menu
+  // (views/partials/settings.ejs) that same sentence is the row's visible
+  // word as well -- in a menu there is room for it, in the header there
+  // was not.
   function label() {
     var button = document.getElementById("theme-toggle");
     if (!button) return;
@@ -42,6 +46,8 @@
     var text = t(target === "dark" ? "theme.tooDark" : "theme.tooLight");
     button.dataset.tip = text;
     button.setAttribute("aria-label", text);
+    var word = button.querySelector(".menu-item-word");
+    if (word) word.textContent = text;
   }
 
   document.addEventListener("click", function (ev) {

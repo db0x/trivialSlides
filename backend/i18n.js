@@ -88,6 +88,14 @@ function textSidesTranslated(sides, language) {
   return sides.map((id) => ({ id, name: translate(language, "textSide." + id) }));
 }
 
+// The emoji groups (emoji.js): characters there, the word for the group
+// here. It travels to the page as JSON and the panel is built from it
+// (js/editor/index.js) -- 450 buttons in the markup would be 30 kB of
+// page for something most of which is never looked at.
+function emojiTranslated(groups, language) {
+  return groups.map((g) => ({ id: g.id, name: translate(language, "emoji." + g.id), emoji: g.emoji }));
+}
+
 // And the effects, which carry nothing but an id either (effects.js).
 function effectsTranslated(effects, language) {
   return effects.map((e) => Object.assign({}, e, {
@@ -108,4 +116,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, COOKIE, DEFAULT };
+module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, emojiTranslated, COOKIE, DEFAULT };

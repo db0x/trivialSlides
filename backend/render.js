@@ -182,6 +182,19 @@ function slideHtml(slide, imageBase) {
   if (layouts.hasField(layout, "textWidth")) {
     attrs.push(`data-textbreite="${esc(layouts.onlyWidth(slide.textWidth, layout))}"`);
   }
+  // Columns filled one by one rather than by the browser. On the <section>
+  // because the arrangement -- grid instead of column-count, and the text
+  // at the top of the slide -- is the stylesheet's business (slides.css),
+  // as with every other layout decision here.
+  // Where the heading stands, if the slide says so at all. Without the
+  // attribute the layout decides, which it does through its own text-align
+  // (slides.css) -- so there is nothing to write here for it.
+  if (slide.titleAlign) attrs.push(`data-title-align="${esc(layouts.onlyTitleAlign(slide.titleAlign))}"`);
+
+  const split = layouts.hasField(layout, "columnMode")
+    && slide.columnMode === layouts.COLUMN_SPLIT;
+  if (split) attrs.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+
   // A full-bleed image is a slide background in reveal.js -- that way
   // reveal handles the scaling and the transition.
   if (layout === "bild-voll" && slide.image) {
@@ -193,9 +206,13 @@ function slideHtml(slide, imageBase) {
   // a slide that asked for it (deck.js) gets the element even with nothing
   // in it. Only a slide with no heading at all gets none.
   const level = layout === "titel" || layout === "abschnitt" ? 1 : 2;
+  // The class is the hook the heading's alignment hangs on (slides.css). It
+  // has to be the element itself and not "the first h2 in the slide": a
+  // hand-written body may carry a second heading of the same level, and
+  // that one is part of the text, not the slide's name.
   const heading = slide.title === null || slide.title === undefined
     ? ""
-    : `<h${level}>${esc(slide.title)}</h${level}>`;
+    : `<h${level} class="slide-title">${esc(slide.title)}</h${level}>`;
 
   let inner;
   if (layout === "zitat") {
@@ -215,6 +232,20 @@ function slideHtml(slide, imageBase) {
     // room from the picture for nothing.
     const body = md(slide.content, imageBase);
     inner = heading + (body ? `<div class="slide-text">${body}</div>` : "");
+  } else if (split) {
+    // One box per column, each holding its own text (layouts.js splits the
+    // body). The heading stays a single element and runs across all of them
+    // -- that is the grid's job, not the renderer's, so the markup keeps
+    // the same reading order it has everywhere else: heading, then text.
+    //
+    // A column with nothing in it still gets its box. It holds the column
+    // open, so two texts beside an empty middle column stay where the
+    // writer put them instead of sliding over.
+    inner = `<div class="slide-text">${heading}` +
+      layouts.splitColumns(slide.content, layouts.columnCount(layout))
+        .map((part) => `<div class="slide-column">${md(part, imageBase)}</div>`)
+        .join("") +
+      `</div>`;
   } else {
     inner = `<div class="slide-text">${heading}${md(slide.content, imageBase)}</div>`;
   }

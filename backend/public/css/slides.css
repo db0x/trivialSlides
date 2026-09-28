@@ -20,6 +20,47 @@
 .reveal .slide-text > :first-child { margin-top: 0; }
 .reveal .slide-text > :last-child { margin-bottom: 0; }
 
+/* Where a single block of text stands. The class comes from the .md as the
+   class of an .element comment (render.js puts it on the element), so this
+   is per paragraph, per list item, per code block -- not per slide. Without
+   one, the block follows the slide, which is what it has always done.
+   "fill" is justified: the word on the button, because "justify" is not
+   what anybody calls it when choosing it. */
+.reveal .align-left { text-align: left; }
+.reveal .align-center { text-align: center; }
+.reveal .align-right { text-align: right; }
+.reveal .align-fill { text-align: justify; }
+/* A list carries its alignment for the whole list (richtext.js), and for
+   that it has to span the slide first: reveal.js lays lists out as
+   inline-block, a box as wide as the longest line -- aligning the text
+   inside THAT box would move nothing. The same fix the column layouts
+   make further down, here for the one list that was given an alignment. */
+.reveal :is(ul, ol):is(.align-left, .align-center, .align-right, .align-fill) {
+  display: block;
+  width: 100%;
+}
+/* And the markers have to travel with the text. A bullet sits OUTSIDE its
+   item by default, at the item's left edge -- which is where it would stay
+   while the words move to the middle, leaving a column of bullets behind
+   and the text somewhere else. Inside the flow it walks along. The indent
+   goes with it: it is the room the outside marker needed. */
+.reveal :is(ul, ol):is(.align-center, .align-right, .align-fill) {
+  list-style-position: inside;
+  padding-left: 0;
+}
+
+/* Where the heading stands. Only a slide that has made a choice of its own
+   carries the attribute (deck.js) -- without it the heading follows the
+   slide, which is the layout's text-align further down, and that is what
+   every deck written so far looks like.
+   The rule reaches the heading element itself rather than the box around
+   it: the rest of the slide keeps standing where the layout puts it, so a
+   title slide can read its name from the left and keep its subtitle in the
+   middle. */
+.reveal .slides section[data-title-align="left"] .slide-title { text-align: left; }
+.reveal .slides section[data-title-align="center"] .slide-title { text-align: center; }
+.reveal .slides section[data-title-align="right"] .slide-title { text-align: right; }
+
 .reveal .slide-image img {
   display: block;
   width: 100%;
@@ -48,11 +89,17 @@
 .reveal .layout-abschnitt .slide-text > p { font-size: 0.7em; opacity: 0.8; }
 
 /* --- Columns ---------------------------------------------------------- */
-/* The body flows in columns, the heading runs across all of them. No need
-   to split the text -- in the .md the slide body stays a perfectly ordinary
-   list or paragraph, and the same text can be moved between two columns and
-   three by changing the layout alone. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text {
+/* Two arrangements, and the slide says which one it is in: without
+   data-columns the body FLOWS through the columns, with data-columns="split"
+   each column has a text of its own (layouts.js). Flowing is what the
+   layouts have always done and stays the default, so it is the rules below
+   that carry the :not() -- an old deck reads exactly as it did.
+
+   Flowing: one body, the browser distributes it, the heading runs across
+   all of it. No need to split the text -- in the .md the slide body stays a
+   perfectly ordinary list or paragraph, and the same text can be moved
+   between two columns and three by changing the layout alone. */
+.reveal :is(.layout-spalten, .layout-spalten-drei):not([data-columns="split"]) .slide-text {
   column-count: 2;
   column-gap: 1.2em;
 }
@@ -60,21 +107,53 @@
    theme's own size that is a handful of characters per line, so the type
    steps down with the column count -- three columns are for short points,
    which is what the layout's own help text says. */
-.reveal .layout-spalten-drei .slide-text {
+.reveal .layout-spalten-drei:not([data-columns="split"]) .slide-text {
   column-count: 3;
   /* Wider than the two-column gap, not narrower: the bullets of the next
      column would otherwise sit right against the longest line of the one
      before, and three narrow columns need the daylight more than two wide
      ones do. */
   column-gap: 1.6em;
-  font-size: 0.85em;
 }
+/* The step down in type follows the column WIDTH, not the arrangement, so
+   it applies to both of them. */
+.reveal .layout-spalten-drei .slide-text { font-size: 0.85em; }
 /* reveal indents lists by a fixed amount, which in a third of a slide is a
    sizeable part of the column. */
 .reveal .layout-spalten-drei .slide-text :is(ul, ol) { padding-left: 0.8em; }
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text h2 {
+.reveal :is(.layout-spalten, .layout-spalten-drei):not([data-columns="split"]) .slide-text h2 {
   column-span: all;
 }
+
+/* Split: one box per column (render.js), laid out as a grid. A grid and not
+   column-count, because the whole point is that the boxes do NOT spill into
+   one another -- what stands in the second column is what was written for
+   the second column, however long the first one gets. */
+.reveal .slides section[data-columns="split"] .slide-text {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 1.2em;
+  /* The columns start at the same line, however long each of them gets --
+     that is the whole of the top alignment here. The SLIDE itself keeps
+     standing where every other slide stands, in the middle: reveal.js
+     centres it and nothing here argues with that. */
+  align-items: start;
+}
+.reveal .slides section.layout-spalten-drei[data-columns="split"] .slide-text {
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 1.6em;
+}
+/* The heading names the slide, not the first column, so it keeps running
+   across all of them -- column-span is the multi-column way to say this,
+   this is the grid's. */
+.reveal .slides section[data-columns="split"] .slide-text > h2 {
+  grid-column: 1 / -1;
+}
+/* Inside a column the first and last element sit flush, the way they do in
+   .slide-text itself -- otherwise every column would start a line lower
+   than the heading above it suggests. */
+.reveal .slide-column > :first-child { margin-top: 0; }
+.reveal .slide-column > :last-child { margin-bottom: 0; }
 /* Two pitfalls at once:
    1. reveal.js sets lists to display:inline-block. An inline block is an
       indivisible box -- it lands wholly in the first column and the layout

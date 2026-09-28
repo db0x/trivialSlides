@@ -126,6 +126,25 @@ body {
   font-size: 13px;
   color: var(--muted);
 }
+/* The look and the transition are menus of this app's own, not <select>s
+   (views/editor.ejs). The button wears the value at the height the
+   header's other buttons have -- and at a width that holds the longest of
+   them, so it does not dance from "none" to "black-contrast" and back. */
+.header-value {
+  display: flex;
+  align-items: center;
+  height: 2rem;
+  min-width: 7.5rem;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.header-value:hover { border-color: var(--accent); }
+.header-menu[open] > .header-value { border-color: var(--accent); color: var(--accent); }
+/* Hangs from the left edge of its button and is at least as wide as it. */
+.header-menu .menu-content { left: 0; right: auto; min-width: 100%; }
 .deck-title-field {
   flex: 1;
   min-width: 120px;
@@ -198,29 +217,35 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   -webkit-mask: var(--button-icon) center / contain no-repeat;
   mask: var(--button-icon) center / contain no-repeat;
 }
-/* The language switch shows the language it is in, not the one it leads
-   to -- two letters that read as a state, with the tooltip saying where a
-   click goes. Sized like the icon buttons beside it. */
-.language {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2rem;
-  height: 2rem;
-  padding: 0 0.35rem;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.language:hover { color: var(--text); }
-.head > .language { margin-left: auto; }
-.head > .language + .button-icon { margin-left: 0; }
+/* Language and light/dark live in one menu at the right end of the header
+   (partials/settings.ejs) -- two switches that are set once do not need to
+   stand there permanently. It takes the auto margin the language button
+   used to have, so the header's right-hand group ends where it always
+   ended. */
+.head > .head-menu { margin-left: auto; }
+.head-settings { --button-icon: url(../assets/menu.svg); }
+/* Two rows, each a whole sentence: they read as one line or not at all.
+   The menu hangs from the right edge of a header that is wider than they
+   are, so there is room for it. */
+.head-menu .menu-content { white-space: nowrap; }
 
 /* Only in the header does the icon button push itself to the right edge. */
 .head > .button-icon { margin-left: auto; }
+/* The icon of the light/dark row follows the choice: --icon-toggle is the
+   one the click leads TO (see the palette at the top of this file). */
 #theme-toggle { --button-icon: var(--icon-toggle); }
+/* The language row wears the code it leads to where the other row wears an
+   icon: two letters in the same 1rem slot, so the words below line up. */
+.menu-item-code {
+  flex: 0 0 auto;
+  width: 1rem;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
 
 /* The two header actions carry an icon instead of a word. They keep the
    .button border so they quiet read as buttons; only their label moves into
@@ -243,13 +268,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   position: absolute;
   right: 0;
   z-index: 20;
-  min-width: 250px;
   margin-top: 4px;
   padding: 4px;
   background: var(--paper);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  width: max-content;
+  max-width: 290px;
 }
 .menu-content a {
   display: block;
@@ -499,6 +525,51 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .field-label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
 .field > input, .field > textarea { width: 100%; }
 .field-schmal > input { width: auto; }
+/* A field with a control at its end -- the heading and its alignment
+   chooser. The two read as ONE box: the row carries the border, the
+   background and the focus ring, the field inside it is bare and the
+   chooser stands at its right end, as tall as the field is. The same trick
+   .field-frame plays for the body field below. */
+.field-row {
+  display: flex;
+  align-items: stretch;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.field-row:has(> input:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.field-row > input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+/* The ring belongs to the row now, or there would be two of them. */
+.field-row > input:focus { outline: none; }
+/* Nothing but a hairline between the two, and the row decides the height.
+   100% and not auto: the flex item here is the <details>, which the row
+   stretches -- the summary inside it would otherwise be as tall as its
+   icon and sit at the top of the field. */
+.field-row .menu > summary {
+  height: 100%;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  cursor: pointer;
+}
+.field-row .menu > summary:hover { background: var(--surface); color: var(--text); }
+.field-row .menu[open] > summary { background: var(--surface); color: var(--accent); }
+/* The icon follows the alignment in force. One attribute for both places it
+   appears: the button and the rows of its menu. */
+.tool-align[data-align="left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
+.tool-align[data-align="center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
+.tool-align[data-align="right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
+/* The row that leaves the choice to the layout carries no icon. Its space
+   is held all the same, so the words below it line up -- and the paint has
+   to go with the icon, or a mask of nothing would be a solid square. */
+.tool-align[data-align=""] .menu-item-icon { background: none; }
+/* Hangs from the right edge of the field, which is where the button is. */
+.title-align .menu-content { min-width: 0; white-space: nowrap; }
 input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; }
 .hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -516,8 +587,11 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   background: var(--surface);
   cursor: pointer;
 }
-.layout-tile:hover { border-color: var(--accent); }
+.layout-tile:hover:not(:disabled) { border-color: var(--accent); }
 .layout-tile.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+/* Out of reach while the slide already says something (js/editor/index.js).
+   The same 0.35 every other switched-off control in this editor wears. */
+.layout-tile:disabled { opacity: 0.35; cursor: default; }
 .layout-name { font-size: 11px; text-align: center; line-height: 1.2; }
 
 .mini {
@@ -597,6 +671,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 
 /* Text tools */
 .toolbar {
+  /* The containing block for the emoji panel further down -- which hangs
+     from the BAR and not from its own button, see there. */
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -643,7 +720,12 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="strikeThrough"] { --button-icon: url(../assets/toolbar/md-strike.svg); }
 .tool-icon[data-command="link"] { --button-icon: url(../assets/toolbar/md-link.svg); }
 .tool-icon[data-command="fragment"] { --button-icon: url(../assets/toolbar/fragment.svg); }
+.tool-icon[data-command="align-left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
+.tool-icon[data-command="align-center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
+.tool-icon[data-command="align-right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
+.tool-icon[data-command="align-fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
 #source-toggle.tool-icon { --button-icon: url(../assets/toolbar/code.svg); }
+.tool-emoji { --button-icon: url(../assets/toolbar/md-emoji.svg); }
 #code-insert.tool-icon { --button-icon: url(../assets/toolbar/md-code.svg); }
 
 /* --- Where the text sits on a video slide ------------------------------
@@ -671,9 +753,11 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Hangs from the left edge: the bar is read from the left, and the button
    sits nowhere near the right one. */
 .toolbar .menu-tool .menu-content { right: auto; left: 0; min-width: 0; white-space: nowrap; }
-/* Prefixed with .toolbar throughout, because the bar styles every
-   button inside it and would otherwise reach these too. */
-.toolbar .menu-content .menu-item {
+/* The rows of a menu: an icon and a word beside it. Not prefixed with
+   .toolbar any more -- the heading's alignment chooser sits in a field row
+   and wears the same rows. The bar's own button rules would reach into the
+   menu, so what they touch is said again below with .toolbar in front. */
+.menu-content .menu-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -687,8 +771,73 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   text-align: left;
   cursor: pointer;
 }
+/* A menu with more rows than a menu should have -- the fourteen themes.
+   It scrolls rather than reaching past the bottom of the window, with the
+   scrollbar this app uses everywhere (js/scrollbars.js). */
+.menu-scroll { max-height: 46vh; overflow-y: auto; }
+.menu-content .menu-item:hover { background: var(--surface); }
+.menu-content .menu-item.is-active { color: var(--accent); }
+/* Said again with .toolbar in front, exactly as before: the bar's own
+   button:hover would otherwise put a border on a menu row. The active row
+   keeps taking its border and its paper from .toolbar button.is-active --
+   in the bar that is what a chosen row has always looked like. */
 .toolbar .menu-content .menu-item:hover { border-color: transparent; background: var(--surface); }
 .toolbar .menu-content .menu-item.is-active { color: var(--accent); }
+/* The emoji panel: a grid rather than the rows the other menus have -- a
+   few hundred characters as a list would be a column several screens long,
+   and an emoji needs no word beside it. Ten to a row, and the panel itself
+   scrolls: the groups together are taller than any menu should be.
+   The scroll is on the panel and the grid is inside it, because the
+   scrollbar this app uses moves the children of whatever it is attached to
+   into a viewport of its own (js/scrollbars.js) -- a grid attached
+   directly would lose its columns to that. */
+.emoji-panel {
+  max-height: 46vh;
+  overflow-y: auto;
+  max-width: none;
+  white-space: normal;
+}
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+}
+/* The word over each group, across the whole row. */
+.emoji-group {
+  grid-column: 1 / -1;
+  padding: 6px 2px 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.emoji-group:first-child { padding-top: 2px; }
+/* Hangs from the BAR, not from its own button. The bar wraps at narrow
+   widths and the button then stands anywhere in it -- hung from the button
+   the panel reaches out of the column on one side or the other, and eight
+   keys are too wide to get away with it. The bar spans the column, so
+   under its left edge is always inside.
+   Prefixed like the rule it overrides a few lines above; .emoji-panel
+   alone would lose to it. */
+#emoji-menu { position: static; }
+.toolbar .menu-tool .emoji-panel { top: 100%; left: 0; right: auto; }
+.toolbar .emoji-panel .emoji-key {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  /* The emoji themselves, a touch larger than the text around them -- and
+     from the fonts that actually hold them, or a system without the colour
+     font shows a box. */
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toolbar .emoji-panel .emoji-key:hover { border-color: var(--border); background: var(--surface); }
+
 /* The width wears its value instead of an icon: "33 %" says what it is,
    and no picture of a percentage would. Tabular figures so the button does
    not change width as the number changes. */
@@ -822,16 +971,65 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   resize: vertical;
   tab-size: 4;
 }
-.code-fragment-line {
+/* A checkbox with its word beside it on one line. Two places now: the
+   fragment box in the code dialog and the columns box under the layout
+   tiles -- one shape, so a tick box reads the same wherever it stands. */
+.code-fragment-line,
+.field-columns {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   cursor: pointer;
 }
-.code-fragment-line input { width: auto; margin: 0; }
+.code-fragment-line input,
+.field-columns input { width: auto; margin: 0; }
+/* Off the tiles above it, which are a dense block of their own. */
+.field-columns { margin-top: 8px; }
+
+/* --- Choosing a column ------------------------------------------------ */
+/* One text field for all the columns, and this says which of them is in it.
+   Sits in the line the field label otherwise has, so the form does not grow
+   a row for it -- and takes the label's size, because that is what it says
+   now. A column that holds nothing yet is dimmed: with one field that is
+   the only sign of what is in the columns one cannot see. */
+.column-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.column-tab {
+  padding: 1px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+  cursor: pointer;
+}
+.column-tab:hover { border-color: var(--border); background: var(--paper); }
+.column-tab.is-empty { opacity: 0.5; }
+.column-tab.is-active {
+  border-color: var(--accent);
+  background: var(--paper);
+  color: var(--accent);
+  opacity: 1;
+}
 
 .content-field .fragment { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+/* A marked block stands in the field the way it will stand on the slide.
+   That is the whole feedback the alignment buttons need -- no button state
+   could say it as plainly as the text itself does. */
+.content-field .align-left { text-align: left; }
+.content-field .align-center { text-align: center; }
+.content-field .align-right { text-align: right; }
+.content-field .align-fill { text-align: justify; }
+/* Same reason as in slides.css: a list has to span the field before its
+   alignment can be seen. In the field lists are blocks anyway, so this is
+   only about the width. */
+.content-field :is(ul, ol):is(.align-left, .align-center, .align-right, .align-fill) { width: 100%; }
+/* The bullets travel with the text, as they do on the slide (slides.css). */
+.content-field :is(ul, ol):is(.align-center, .align-right, .align-fill) {
+  list-style-position: inside;
+  padding-left: 0;
+}
 .source-field { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; resize: none; }
 
 .image-row { display: flex; align-items: center; gap: 10px; }
@@ -1008,39 +1206,79 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 
 /* --- Preview ---------------------------------------------------------- */
 .preview { display: flex; flex-direction: column; }
-/* The format menu stands under the frame at its left edge, and at the
-   height the buttons elsewhere have (2rem, see .button-icon). max-content
-   keeps the row as narrow as what stands in it: a full-width label would
-   take its click and its tooltip along the whole column. */
-.preview-format-field {
+/* The format menu stands under the frame at its left edge. max-content
+   keeps it as narrow as what stands in it -- as a block it would take its
+   click and its tooltip along the whole column. */
+.preview-format {
+  width: max-content;
+  margin-top: 8px;
+}
+/* The button: the screen, then the ratio in force. At the height the
+   buttons elsewhere have (2rem, see .button-icon). */
+.preview-format-value {
   display: flex;
   align-items: center;
-  width: max-content;
   gap: 6px;
-  margin-top: 8px;
-  cursor: pointer;
-}
-/* The icon file carries a fixed dark grey fill, so it serves as a mask and
-   takes the row's colour -- the same treatment every other icon here gets,
-   and the only one that survives the dark palette. */
-.preview-screen {
-  /* Bigger than the 1rem an icon gets inside a button: there it has the
-     button's border around it, here it stands free beside the menu and
-     would otherwise read as a speck. The drawing keeps a margin of its own
-     inside the file, which eats a good quarter of the box. */
-  width: 1.25rem;
-  height: 1.25rem;
+  height: 2rem;
+  padding: 0 8px;
   color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+.preview-format-value:hover { color: var(--text); border-color: var(--accent); }
+.preview-format[open] > .preview-format-value { border-color: var(--accent); color: var(--accent); }
+/* The icon file carries a fixed dark grey fill, so it serves as a mask and
+   takes the button's colour -- the same treatment every other icon here
+   gets, and the only one that survives the dark palette. */
+.preview-screen {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
   background: currentColor;
   -webkit-mask: url(../assets/screen.svg) center / contain no-repeat;
   mask: url(../assets/screen.svg) center / contain no-repeat;
 }
-.preview-format { height: 2rem; padding: 0 6px; }
+/* Upwards: the control sits at the bottom end of the column, and downwards
+   there is nothing left to open into. */
+.preview-format .menu-content {
+  top: auto;
+  bottom: 100%;
+  left: 0;
+  right: auto;
+  min-width: 0;
+  margin: 0 0 4px;
+  white-space: nowrap;
+}
+/* Each row wears the shape it stands for. In a list of ratios that picture
+   is the information -- the numbers have to be worked out. The slot is
+   fixed and the rectangle centred in it, so the figures below each other
+   still line up. */
+.format-shape {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+}
+.format-shape::before {
+  content: "";
+  height: 0.7rem;
+  aspect-ratio: var(--shape);
+  border: 1px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.75;
+}
+.format-row[data-format="21:9"] { --shape: 21 / 9; }
+.format-row[data-format="16:9"] { --shape: 16 / 9; }
+.format-row[data-format="16:10"] { --shape: 16 / 10; }
+.format-row[data-format="3:2"] { --shape: 3 / 2; }
+.format-row[data-format="4:3"] { --shape: 4 / 3; }
 .preview-frame {
   position: relative;
   width: 100%;
-  /* The chosen shape of the screen (preview-format.js). The fallback is the
-     first entry of the menu, for the moment before the script has run. */
+  /* The chosen shape of the screen (preview-format.js). The fallback is
+     PREVIEW_DEFAULT from routes/decks.js -- it applies for the moment
+     before the script has run, and for a browser with no script at all. */
   aspect-ratio: var(--preview-ratio, 16 / 9);
   border: 1px solid var(--border);
   border-radius: var(--radius);
