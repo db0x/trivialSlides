@@ -22,6 +22,8 @@ around it at any time: open the file in a text editor, put it under version
 control, copy it into an existing reveal.js project. Those who prefer typing
 type. Those who prefer clicking click. Both work on the same file.
 
+![](current.png)
+
 ## Getting started
 
 ```bash
