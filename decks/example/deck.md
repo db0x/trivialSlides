@@ -4,7 +4,7 @@ theme: white
 transition: convex
 ---
 
-<!-- .slide: data-layout="titel" -->
+<!-- .slide: data-layout="titel" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->
 
 # Example
 

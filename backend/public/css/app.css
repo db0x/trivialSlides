@@ -1376,24 +1376,22 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* And the other way for the one dialog that shows a whole file: as much of
    the window as a dialog may take without ceasing to be one. */
 .dialog-wide { width: min(1080px, 94vw); }
-/* Two buttons where the dialogs otherwise have one. */
-.dialog-head-buttons { display: flex; gap: 8px; }
-
 /* --- The deck as Markdown --------------------------------------------- */
-/* A head that stays, a foot that stays, and the file scrolling between
-   them -- a source text that pushed the "Copy" button off the top would be
-   a strange thing to offer. [open] and not the plain id: a <dialog> is
-   hidden by display:none from the browser itself, and a display of ours
-   with an id's weight behind it would leave the dialog standing on the
-   page for good. */
+/* A head that stays and the file scrolling under it -- a source text that
+   pushed the dialog's own title off the top would be a strange thing to
+   offer. [open] and not the plain id: a <dialog> is hidden by display:none
+   from the browser itself, and a display of ours with an id's weight
+   behind it would leave the dialog standing on the page for good. */
 #deck-source-dialog[open] { display: flex; flex-direction: column; max-height: 88vh; }
-/* Dimmed while the file is still on its way -- a "Copy" that would hand
-   over the word "Fetching" is worse than one that cannot be pressed yet.
-   The same 0.35 the disabled buttons in the text bar wear. */
-#deck-source-copy:disabled { opacity: 0.35; cursor: default; }
 .deck-source { flex: 1; min-height: 0; overflow: auto; }
-.deck-source pre {
+/* One row per block of the file: the mark on the left, the lines on the
+   right. The narrow column is the same width in every row, so the rule
+   between the two runs unbroken down the whole file. */
+.source-block { display: grid; grid-template-columns: 5.5rem 1fr; }
+.source-lines {
   margin: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
   line-height: 1.55;
@@ -1403,17 +1401,33 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.deck-source-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0;
-  padding: 8px 14px;
-  border-top: 1px solid var(--border);
+/* Which slide one is looking at. Sticky, so on a long slide the mark stays
+   at the top edge instead of scrolling away with its first line -- which is
+   the one moment the question "which slide is this?" actually comes up.
+   The line-height is the code's, so the word sits on the block's first
+   line and not above it. */
+.source-mark {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  padding-right: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: calc(13px * 1.55);
+  text-align: right;
+  /* Not part of the file: a selection dragged across the source must not
+     pick these up. */
+  user-select: none;
+  -webkit-user-select: none;
 }
-.deck-source-foot .hint { margin: 0; }
-.deck-source-foot .is-error { color: var(--danger); }
+/* The head carries the whole talk, so its mark is the one that is not
+   grey. And a slide attached BELOW its predecessor is indented, the way
+   the slide list indents its card (js/editor/slide-list.js). */
+.source-mark.is-head { color: var(--text); }
+.source-mark.is-vertical { padding-right: 6px; }
+/* What the box may hold instead of the file: the word it is waiting
+   behind, and the one that says the waiting came to nothing. */
+#deck-source-code.is-error { color: var(--danger); }
 
 /* What the colours mean. Ours are the three shapes the file format brings
    along (source.js), the hljs-* ones are what the highlighter makes of the

@@ -61,9 +61,9 @@ const FOR_BROWSER = [
   // are only known once they have been pressed (js/prefs.js).
   "prefs.recording", "prefs.recorded", "prefs.taken", "prefs.reserved",
   "prefs.remove", "prefs.none", "prefs.record",
-  // The source dialog says what it is doing while it waits for the file
-  // and what became of the copy (js/editor/deck-source.js).
-  "source.loading", "source.failed", "source.copied", "source.copyFailed",
+  // The source dialog says what it is waiting for, and if the file never
+  // comes, that too (js/editor/deck-source.js).
+  "source.loading", "source.failed",
 ];
 
 function forBrowser(language) {

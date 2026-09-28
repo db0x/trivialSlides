@@ -260,12 +260,13 @@ router.get("/d/:slug/deck.md", loadDeck, (req, res) => {
 // markup for the dialog in the editor (source.js), without the
 // Content-Disposition that would make a browser offer it as a file.
 //
-// A fragment, not a page: it goes straight into the <pre> the dialog keeps
+// A fragment, not a page: it goes straight into the box the dialog keeps
 // ready. Serialised here rather than in the browser, because the format
 // lives in deck.js -- a second implementation over there could only drift
-// away from this one.
+// away from this one. req.t comes along for the marks beside the blocks:
+// they are the only words in the fragment that are not the file itself.
 router.get("/d/:slug/source.html", loadDeck, (req, res) => {
-  res.type("html").send(source.highlight(deck.serialize(req.deck)));
+  res.type("html").send(source.highlight(deck.serialize(req.deck), req.t));
 });
 
 // A single HTML file that runs without a server and without a network:

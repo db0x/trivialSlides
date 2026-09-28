@@ -519,20 +519,15 @@
 <dialog id="deck-source-dialog" class="dialog dialog-wide">
   <form method="dialog" class="dialog-head">
     <h2><%= t('dialog.sourceTitle') %></h2>
-    <span class="dialog-head-buttons">
-      <button type="button" id="deck-source-copy" class="button"><%= t('dialog.sourceCopy') %></button>
-      <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
-    </span>
+    <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
   </form>
+  <!-- One row per block of the file, each with its mark on the left
+       (source.js). role=status: while the file is on its way, and if it
+       never comes, this box says so itself -- and a screen reader hears it
+       without the focus having to travel there. -->
   <div class="dialog-content deck-source">
-    <pre id="deck-source-code"></pre>
+    <div id="deck-source-code" role="status"></div>
   </div>
-  <p class="deck-source-foot">
-    <span class="hint"><%= t('dialog.sourceNote') %></span>
-    <!-- role=status: what the copy did is heard without the focus having
-         to travel there. -->
-    <span id="deck-source-state" class="hint" role="status"></span>
-  </p>
 </dialog>
 
 <!-- Image picker -->
