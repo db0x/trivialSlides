@@ -88,6 +88,7 @@ unnoticed.
 | Image right / left | Text and image side by side |
 | Full-bleed image | Image across the whole slide, text readable on top |
 | Video  | A heading with a YouTube player below it |
+| QR-code  | slide with QR-code generated from URL and text |
 | Quote  | Large quotation with an attribution |
 
 ## The storage format
