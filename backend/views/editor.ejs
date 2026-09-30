@@ -243,7 +243,13 @@
                slide. In the bar it is the icon of the side in force and
                nothing else; the words are in the menu, where there is room
                for them. Like the code button it is not a rich-text command,
-               so it keeps working in source mode. -->
+               so it keeps working in source mode.
+
+               Two words per entry, for the same reason the width button
+               below carries two names: the thing the text stands beside is
+               a player on a video slide and a code on a QR one. Both
+               travel with the entry and the page puts the fitting one in
+               (js/editor/index.js). -->
           <details id="text-side-menu" class="menu menu-tool"
                    data-name="<%= t('editor.textSide') %>" hidden>
             <summary id="text-side-button" class="tool-icon tool-side" data-side="oben"
@@ -251,8 +257,11 @@
             <div class="menu-content" role="menu">
               <% textSides.forEach(function (s) { %>
                 <button type="button" class="menu-item tool-side" role="menuitemradio"
-                        aria-checked="false" data-side="<%= s.id %>"><span
-                        class="menu-item-icon" aria-hidden="true"></span><%= s.name %></button>
+                        aria-checked="false" data-side="<%= s.id %>"
+                        data-name-video="<%= s.nameVideo %>"
+                        data-name-qr="<%= s.nameQr %>"><span
+                        class="menu-item-icon" aria-hidden="true"></span><span
+                        class="menu-item-text"><%= s.nameVideo %></span></button>
               <% }); %>
             </div>
           </details>

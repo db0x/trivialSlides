@@ -569,6 +569,7 @@ el.source.addEventListener("input", remember);
 // into; nothing has to be translated a second time here.
 function showTextSide(side) {
   el.textSideButton.dataset.side = side;
+  showSideNames();
   var chosen = null;
   $$("#text-side-menu .menu-item").forEach(function (b) {
     var is = b.dataset.side === side;
@@ -582,6 +583,20 @@ function showTextSide(side) {
   // The button next door follows the side: beside the player the width is a
   // choice, above and below it is not one (slides.css).
   toggleTextWidth();
+}
+
+// What the text stands beside differs by layout -- a player on a video
+// slide, a code on a QR one -- and the words in the menu say which. Read
+// off the layout's fields rather than off its name, the same way the width
+// button does: a layout added later gets the right wording by declaring
+// the field it already has to declare (layouts.js).
+function showSideNames() {
+  var slide = deck.slides[active];
+  var def = layoutsById[slide && slide.layout] || { fields: [] };
+  var qr = def.fields.indexOf("url") !== -1;
+  $$("#text-side-menu .menu-item").forEach(function (b) {
+    b.querySelector(".menu-item-text").textContent = qr ? b.dataset.nameQr : b.dataset.nameVideo;
+  });
 }
 
 // --- How wide the text may get beside the picture or the player --------

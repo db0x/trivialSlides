@@ -92,9 +92,16 @@ function gradientsTranslated(gradients, language) {
 }
 
 // The four places the text may sit beside a player or a code
-// (layouts.js) -- ids there, words here.
+// (layouts.js) -- ids there, words here. Two wordings per place, because
+// what the text stands beside differs by layout: the page picks the
+// fitting one when the layout changes (js/editor/index.js), the same way
+// the width button does.
 function textSidesTranslated(sides, language) {
-  return sides.map((id) => ({ id, name: translate(language, "textSide." + id) }));
+  return sides.map((id) => ({
+    id,
+    nameVideo: translate(language, "textSide.video." + id),
+    nameQr: translate(language, "textSide.qr." + id),
+  }));
 }
 
 // The emoji groups (emoji.js): characters there, the word for the group
