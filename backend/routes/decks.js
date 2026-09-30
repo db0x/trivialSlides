@@ -168,6 +168,24 @@ router.post("/d/:slug/slide.html", sameOriginOnly, loadDeck, (req, res) => {
   res.json({ html: render.slideHtml(slide, imageBase(req.slug)) });
 });
 
+// A single slide as a picture standing still -- what a card in the
+// editor's slide list carries behind its words (js/editor/slide-list.js).
+//
+// A page of its own rather than the preview's: the preview is a running
+// presentation, and a list of thirteen slides cannot be thirteen running
+// presentations. This one brings the theme and the layout stylesheet, so
+// the card shows the slide rather than a sketch of it, and brings neither
+// reveal.js nor the highlighter nor a player (views/thumb.ejs).
+router.get("/d/:slug/thumb/:index", loadDeck, (req, res) => {
+  const slide = req.deck.slides[Number(req.params.index)];
+  if (!slide) return res.status(404).end();
+  res.render("thumb", {
+    deck: req.deck,
+    slide: render.slideHtml(slide, imageBase(req.slug)),
+    background: render.backgroundHtml(slide, imageBase(req.slug)),
+  });
+});
+
 // --- Viewing -----------------------------------------------------------
 router.get("/d/:slug/preview", loadDeck, (req, res) => {
   res.render("reveal", {

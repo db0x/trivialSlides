@@ -42,7 +42,7 @@ Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod 
 
 Four dashes instead of three attach a slide *below* the previous one
 rather than after it. reveal.js calls that a stack; press the down arrow
-to get here.
+to get here. 🙃
 <!-- .element: class="align-center" -->
 
 ---
@@ -137,15 +137,15 @@ getAge()
 
 ```java hl=github
 public int getAge() {
-    return this.age;
+    return this.age * getFactor();
 }
 ```
 
 getFactor()
 
 ```java hl=github
-static final int getFactor() {
-    return 1;
+private int getFactor() {
+    return 5;
 }
 ```
 <!-- .element: class="fragment" -->
@@ -165,4 +165,4 @@ static final int getFactor() {
 
 ##
 
-## That was all of them
+## That was all of them 🏁

@@ -402,39 +402,120 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .column { background: var(--surface); overflow-y: auto; padding: 12px; }
 
 /* --- Slide list ------------------------------------------------------- */
+/* A card IS the slide, and nothing but the slide: a picture of it, its
+   number in the corner, and the five buttons while the mouse is on it.
+   The picture is a page of its own inside a frame
+   (js/editor/slide-list.js, views/thumb.ejs) -- the deck's theme, the
+   layout stylesheet, no reveal.js.
+
+   Why a picture and no words: a list of headings says what a talk is
+   about, a list of slides says what it LOOKS like -- which slide is the
+   one with the chart, which one is nearly empty, where the section
+   dividers fall. That is the question one has while writing, and the
+   heading was already there to be read on the picture itself. A second,
+   smaller copy of it underneath answered nothing and cost the card a
+   strip of its own. */
 .slides { list-style: none; margin: 0; padding: 0; }
 .slide-card {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  grid-template-areas: "number text" "buttons buttons";
-  gap: 2px 8px;
-  padding: 8px;
+  /* The shape of the screen the talk is meant for. The picture inside the
+     frame is cut to the same shape, and the two have to agree -- see
+     css/thumb.css, which states it from the inside. */
+  --thumb-shape: 19 / 9;
+  position: relative;
   margin-bottom: 6px;
   background: var(--paper);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
   border-radius: var(--radius);
+  /* The picture has square corners and the card has not. */
+  overflow: hidden;
   cursor: pointer;
 }
-.slide-card.is-active { border-left-color: var(--accent); }
+/* A ring around the whole card rather than a mark along one edge of it.
+   The card is a picture now and nothing else, and a picture in full
+   colour beside twelve others in full colour needs the louder of the two:
+   an edge three pixels wide was enough while the pictures beside it were
+   faded, and is not enough now.
+
+   An outline and not a border: a border would take its width out of the
+   card and move the picture every time the selection changed. Pulled one
+   pixel inwards so it sits ON the card's own edge rather than in the gap
+   to the next one. */
+.slide-card.is-active {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
 .slide-card.is-vertical { margin-left: 18px; }
 .slide-card.wird-gezogen { opacity: 0.4; }
 .slide-card.is-target { border-color: var(--accent); }
-.card-number { grid-area: number; font-size: 12px; color: var(--muted); }
-.card-text { grid-area: text; min-width: 0; }
-.card-title {
+
+.card-thumb {
   display: block;
-  font-size: 14px;
+  aspect-ratio: var(--thumb-shape);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Decoration and nothing else: every click on a card belongs to the
+     card. Without this the frame would swallow them, and the drag that
+     reorders the list would never start. */
+  pointer-events: none;
 }
-.card-art { display: block; font-size: 11px; color: var(--muted); }
+
+.card-thumb iframe {
+  display: block;
+  /* The page inside is 960 wide whatever the card comes to -- that is
+     reveal.js' own layout width, and inside the frame it IS the window
+     (css/thumb.css says why it may not be anything else). Its height
+     follows from the shape, which is the one the page is cut to. */
+  width: 960px;
+  aspect-ratio: var(--thumb-shape);
+  border: 0;
+  transform-origin: 0 0;
+  /* Set by the browser, the only one that knows how wide the card came out
+     (js/editor/slide-list.js). The value standing here is what a card in
+     this column comes to, so a browser without a ResizeObserver shows a
+     picture of about the right size rather than none at all. */
+  transform: scale(var(--thumb-scale, 0.23));
+}
+
+/* The number, in the corner of the picture. It carries its own small
+   ground: what is behind it is a slide, and a slide may be any colour at
+   all -- the same reason the buttons opposite have one. */
+.card-number {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+.slide-card.is-active .card-number { color: var(--accent); }
+
+/* The heading and the layout, for a reader that cannot see the picture
+   (js/editor/slide-list.js). Out of the way of the eye and in the way of
+   nothing else -- not display:none, which would take it from the screen
+   reader as well. */
+.card-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+/* Over the picture rather than under the words: below, they would cost the
+   card a whole row of its own -- a fifth of the slide, held open for five
+   buttons that are not there most of the time. */
 .card-buttons {
-  grid-area: buttons;
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
   gap: 2px;
-  margin-top: 4px;
   opacity: 0;
 }
 .slide-card:hover .card-buttons,

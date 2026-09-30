@@ -167,6 +167,29 @@ function md(text, imageBase) {
   return resolveFragments(html);
 }
 
+// Dark ground or light one? The themes answer it -- each carries a rule
+// for a slide whose colour runs against the theme's own, white type on a
+// dark slide in a light theme and the other way round -- but somebody has
+// to say which it is. reveal.js does it while the talk runs
+// (backgrounds.js), and this is the same sum with the same weighting
+// (util.js, colorBrightness): the eye's, not the average of the three.
+//
+// Only a colour the slide states itself is judged. Without one the theme's
+// own ground is underneath, and the theme has already put its type on the
+// right side of that.
+const DARK_BELOW = 128;
+
+function contrastClass(color) {
+  const hit = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color || "").trim());
+  if (!hit) return "";
+  const h = hit[1].length === 3 ? hit[1].replace(/./g, (c) => c + c) : hit[1];
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness < DARK_BELOW ? "has-dark-background" : "has-light-background";
+}
+
 // --- a single slide ----------------------------------------------------
 // Always the same shape: <section> carries the layout class and the reveal
 // attributes, inside it a .slide-text with title and body and -- depending
@@ -177,7 +200,16 @@ function md(text, imageBase) {
 // can therefore be redesigned without touching the renderer.
 function slideHtml(slide, imageBase) {
   const layout = layouts.get(slide.layout).id;
-  const attrs = [`class="layout-${layout}"`, `data-layout="${layout}"`];
+  // Whether the slide's own colour runs against the theme's, so the theme
+  // can put its type on the right side of it. reveal.js marks the slide
+  // for that while the talk is running (backgrounds.js); the thumbnails in
+  // the editor's slide list show a slide standing still, without reveal.js,
+  // so the mark is made here as well. Where reveal DOES run it puts the
+  // same class on the same slides, so nothing changes there.
+  const classes = [`layout-${layout}`];
+  const contrast = contrastClass(slide.background);
+  if (contrast) classes.push(contrast);
+  const attrs = [`class="${classes.join(" ")}"`, `data-layout="${layout}"`];
   if (slide.background) attrs.push(`data-background-color="${esc(slide.background)}"`);
   // reveal.js lays the gradient over the background colour by itself
   // (backgrounds.js: style.backgroundImage). Keeping the colour underneath
@@ -332,6 +364,42 @@ function slideHtml(slide, imageBase) {
   return `<section ${attrs.join(" ")}>\n${inner}\n</section>`;
 }
 
+// --- the ground a slide stands on --------------------------------------
+// reveal.js builds a background element of its own for every slide and
+// puts the data-background-* attributes into effect on it (backgrounds.js);
+// the animated effects hang on that same element (js/slide-effects.js).
+// The thumbnails in the editor's slide list show a slide WITHOUT reveal.js
+// -- one still picture per card, so that a list of thirteen slides does not
+// start thirteen presentations -- so the element they need is built here,
+// out of the same model.
+//
+// Only what a still picture can show: the colour, the gradient, a
+// full-bleed image, and the ground an effect brings with it. The effect's
+// moving layers stay away. A dozen animations in a sidebar would cost more
+// than they say, and at that size what tells one slide from another is its
+// ground, not its motion.
+function backgroundHtml(slide, imageBase) {
+  const layout = layouts.get(slide.layout).id;
+  const styles = [];
+  // Colour first, gradient over it, a full-bleed picture over both -- the
+  // order reveal lays them in.
+  if (slide.background) styles.push(`background-color: ${slide.background}`);
+  if (slide.gradient) styles.push(`background-image: ${slide.gradient}`);
+  if (layout === "bild-voll" && slide.image) {
+    // Single quotes inside: the whole list becomes one attribute below.
+    styles.push(`background-image: url('${imageUrl(slide.image, imageBase)}')`);
+    styles.push("background-size: cover");
+    styles.push("background-position: 50% 50%");
+  }
+  const effect = slide.effect
+    ? ` data-background-effect="${esc(slide.effect)}"`
+    : "";
+  return `<div class="backgrounds"><div class="slide-background present"${effect}` +
+    (styles.length ? ` style="${esc(styles.join("; "))}"` : "") + ">" +
+    (slide.effect ? `<div class="slide-effect"></div>` : "") +
+    "</div></div>";
+}
+
 // --- all slides --------------------------------------------------------
 // Vertical slides are grouped into a nested <section> in reveal.js
 // (a "stack").
@@ -370,4 +438,4 @@ function indices(slides) {
   return out;
 }
 
-module.exports = { slidesHtml, slideHtml, indices, esc, imageUrl };
+module.exports = { slidesHtml, slideHtml, backgroundHtml, indices, esc, imageUrl };

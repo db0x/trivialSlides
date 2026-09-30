@@ -1,0 +1,164 @@
+/* The picture on a card in the editor's slide list (views/thumb.ejs).
+
+   A slide standing still, without reveal.js. Everything that makes a slide
+   LOOK like itself is already in slides.css and in the theme; what reveal
+   normally adds on top is a handful of positions -- the stage, the slide
+   in the middle of it, the background element behind it -- and those are
+   what this file supplies.
+
+   The page is 960 CSS pixels wide and stays that wide whatever the card
+   comes to. 960 by 700 is the box reveal.js lays every slide out in, and
+   inside this frame that box is the WINDOW: the layouts read the window
+   (slides.css stacks picture and text below 640px) and so do the type
+   sizes. Shrinking the page would therefore not shrink the slide, it would
+   rearrange it. So the page keeps its size and the card scales it down
+   from outside (app.css, .card-thumb).
+
+   Its HEIGHT is the shape of a screen, not the shape of the slide: the
+   same 19:9 the card is cut to (app.css, --thumb-shape -- change the two
+   together). A slide is laid out at 960 by 700 and then fitted into
+   whatever screen it is shown on, with its background running out to the
+   edges -- so a wide card is not a slide with bars beside it, it is the
+   slide on a wide screen, which is what it will be. */
+
+:root {
+  /* reveal.js' own layout size (config.js, width/height). */
+  --stage-width: 960;
+  --stage-height: 700;
+  /* The shape of the page, stated once. */
+  --shape-wide: 19;
+  --shape-high: 9;
+  --page-height: calc(var(--stage-width) / var(--shape-wide) * var(--shape-high));
+  /* How far the stage has to shrink to fit that page, which is the sum
+     reveal.js does in layout(): the smaller of the two fits, less the
+     four per cent of air it leaves around a slide (config.margin). Here
+     the height is always the tighter of the two, the page being wider
+     than the slide. */
+  --fit: calc(var(--page-height) / var(--stage-height) * 0.96);
+}
+
+html, body {
+  width: calc(var(--stage-width) * 1px);
+  height: calc(var(--page-height) * 1px);
+  margin: 0;
+  overflow: hidden;
+}
+
+/* The theme's own ground, for a slide that names no colour of its own.
+   On the presentation this comes from .reveal-viewport, which is the
+   <html> element there and is set by reveal.js. */
+body {
+  background-color: var(--r-background-color);
+}
+
+.reveal {
+  position: relative;
+  width: calc(var(--stage-width) * 1px);
+  height: calc(var(--page-height) * 1px);
+  overflow: hidden;
+}
+
+/* reveal.js sizes, centres and scales the stage from JavaScript; here the
+   same three things are said in CSS, because the sizes are all known in
+   advance. The stage keeps reveal's layout size and is shrunk to fit the
+   page -- so the slide has the same gutters, and the same proportions,
+   that it has on the wall.
+
+   The slide inside it is centred the way reveal centres it, which is not
+   quite the obvious way: it puts the slide in the middle of the stage
+   `Math.max((height - slide height) / 2, 0)` -- and that maximum is the
+   point. A slide with more on it than fits starts at the TOP and runs off
+   the bottom; it is not hung half above the stage and half below, with
+   its first line cut off. That is what `safe` says here: centre it, but
+   not if centring would push it out of sight. */
+.reveal .slides {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  width: calc(var(--stage-width) * 1px);
+  height: calc(var(--stage-height) * 1px);
+  margin: 0;
+  transform: translate(-50%, -50%) scale(var(--fit));
+}
+
+/* reveal hides every slide but the one on show and places it on the stage
+   by hand. There is one slide here and it is the one on show, so all that
+   is left is to put it in the flow and let the stage above do the
+   placing.
+
+   Deliberately no !important and no more weight than reveal's own rule:
+   the layouts in slides.css name a class as well and are therefore heavier
+   than this, which is what lets an image layout keep its grid and a video
+   slide its row. Only `display: none` has to be outweighed, and being the
+   later stylesheet at equal weight is enough for that. */
+.reveal .slides > section {
+  display: block;
+  position: relative;
+  width: 100%;
+  flex: 0 0 auto;
+  transition: none;
+}
+
+/* Everything that is revealed on a click is already revealed here.
+
+   reveal.js holds a fragment back until it is asked for -- opacity zero,
+   or shifted forty pixels aside, or shrunk to a tenth -- and with no
+   reveal.js running nothing ever asks. A slide whose points appear one by
+   one would show as an empty slide on its card, which is the one slide in
+   a deck one most wants to recognise. A card is not a step of the talk,
+   it is the slide: what is on it, not what is on it yet.
+
+   The weight is deliberate. reveal states the hidden state as
+   `.reveal .fragment:not(.custom)` and once more per kind of fragment,
+   each of them worth three classes; naming the stage as well makes this
+   worth three too, and of two rules that weigh the same the later one
+   wins -- this stylesheet is loaded after reveal's. */
+.reveal .slides .fragment {
+  opacity: 1;
+  visibility: inherit;
+  transform: none;
+  transition: none;
+}
+
+/* The background element. reveal builds one per slide and sets the colour,
+   the gradient and a full-bleed picture on it; here it arrives finished
+   from the server (render.js, backgroundHtml) and only has to be put
+   behind the slide. */
+.reveal .backgrounds {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.reveal .backgrounds .slide-background {
+  position: absolute;
+  inset: 0;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  background-repeat: no-repeat;
+}
+
+/* A picture on a slide may take seventy per cent of the height of the
+   WINDOW (slides.css). On any screen a talk is given on that cap is far
+   above the slide and never bites -- measured at 1280x800 and upwards,
+   the picture comes out the same size with it and without it. This page
+   is four hundred pixels tall, where seventy per cent is a real limit and
+   would shrink a picture that is not shrunk on the wall. So the cap is
+   said here in the stage's own pixels instead, where seventy per cent
+   means what it says. */
+.reveal .slide-image img {
+  max-height: calc(var(--stage-height) * 0.7px);
+}
+
+/* Nothing moves in a picture. The effects bring their ground with them
+   (slides.css) and that is what a card shows of them; the layers that
+   would turn and drift are not built at all, so this line is for the
+   ground's own sake -- and for any effect added later that animates
+   itself rather than its layers. */
+.reveal .slide-effect,
+.reveal .slide-effect * {
+  animation: none !important;
+}

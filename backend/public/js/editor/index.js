@@ -8,7 +8,7 @@
 import { $, $$, t, schreibHead, verzoegert } from "./base.js";
 import * as rt from "./richtext.js";
 import { createPreview } from "./preview.js";
-import { drawList, dragEnable } from "./slide-list.js";
+import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
@@ -124,6 +124,14 @@ function saveNow() {
       // editor would show something other than what the file holds.
       deck = d.deck;
       schmutzig = false;
+      // Now the list can show what the file holds -- the card's name, its
+      // layout and its picture. The picture especially: the server draws
+      // it FROM the saved file (views/thumb.ejs), so this is the first
+      // moment it can be right. Both are filled in place, so nothing in
+      // the list moves and only a slide that really looks different is
+      // fetched again (js/editor/slide-list.js).
+      drawList(el.list, deck, active, layoutsById);
+      drawPictures(el.list, deck);
       // Saved is the normal state, and the normal state says nothing.
       // What is worth a word is the wait and the failure.
       stateShow("");
@@ -515,15 +523,7 @@ headerMenu("deck-theme", function () {
 });
 headerMenu("deck-transition", function () { saveNow(); });
 
-el.title.addEventListener("input", function () {
-  remember();
-  // The card in the list carries the heading -- it has to follow along as
-  // you type, otherwise the list looks frozen.
-  var card = el.list.children[active];
-  // The same wording the card uses when it is drawn (slide-list.js), and
-  // out of the table rather than written here in one language.
-  if (card) $(".card-title", card).textContent = el.title.value || t("card.untitled");
-});
+el.title.addEventListener("input", remember);
 el.content.addEventListener("input", remember);
 
 // Ctrl+B / Ctrl+I in the body field -- the browser does this by itself,
@@ -1349,7 +1349,11 @@ function adoptDeck(fresh, wrote) {
   schmutzig = false;
   drawHeader();
   drawAll();
-  // The preview renders from the file, which has just been written.
+  // The file has just been written, so this is a moment at which the
+  // pictures on the cards can be right -- the same reason the preview is
+  // reloaded on the next line: both render from the file, not from the
+  // model here.
+  drawPictures(el.list, deck);
   preview.newLoad(active);
 }
 
