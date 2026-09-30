@@ -268,6 +268,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
 .header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
 .header-download { --button-icon: url(../assets/download.svg); }
+/* The file itself. It sits between downloading and the menu, and it must
+   NOT take an auto margin of its own: the rule below hands one to every
+   icon button in the header, and a second one would split the free space
+   between the two and tear the right-hand group apart. The group's margin
+   belongs to whatever stands at its left end (presenting), not to each of
+   its members. */
+.header-source { --button-icon: url(../assets/toolbar/code.svg); }
+.head > .header-source { margin-left: 0; }
 /* Presenting is either the plain button -- which the rule above already
    pushes to the right edge -- or, where there is a choice, a menu around
    it. Inside the <details> that rule no longer reaches the button, so the
@@ -1730,7 +1738,6 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* While it waits for a key, the button says so by being lit. */
 #prefs-record.is-active { border-color: var(--accent); color: var(--accent); }
 #prefs-open { --button-icon: url(../assets/prefs.svg); }
-#deck-source-open { --button-icon: url(../assets/toolbar/code.svg); }
 /* The last word of the dialog, and the smallest: it applies to everything
    above it. */
 .prefs-scope { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }

@@ -1243,6 +1243,58 @@ $("#image-file").addEventListener("change", function (ev) {
   ev.target.value = "";
 });
 
+// --- F5 starts the talk ------------------------------------------------
+// The key every presentation program has had for thirty years, and the one
+// a presenter stick can usually be taught to send. Deliberately NOT the
+// stick's spare key from the settings: that one is Tab or Enter out of the
+// box, and in the editor both of those already belong to somebody -- Tab
+// to whoever is working with the keyboard, Enter to every field and button
+// it lands on. A key that means three things means none of them.
+//
+// It costs the browser's reload, which F5 otherwise is. That is the trade
+// this key has always been: Ctrl+R still reloads, and in an editor whose
+// whole point is the talk, starting the talk is the better F5.
+//
+// The talk cannot arrive in fullscreen: a freshly opened tab has no user
+// activation of its own, and without one no browser hands over the screen
+// (measured at six moments, for window.open plain, named, with noopener,
+// and for a real click on a target="_blank" link -- hasBeenActive false
+// throughout). So the tab is asked to take the screen at the first touch
+// it gets there, whatever that touch is (views/reveal.ejs).
+//
+// The tab is opened EMPTY, inside the keypress, and sent on its way once
+// what the delayed save still owes has been written -- opening it after
+// the save would leave it to the popup blocker, and opening it with the
+// address straight away would show a file one keystroke old.
+function presentFromStart() {
+  var tab = window.open("", "_blank");
+  if (!tab) return;   // a blocker said no; nothing to be done about it here
+  var los = function () { tab.location = BASE + "/present?vollbild=1"; };
+  Promise.resolve(window.trivialSlidesSave()).then(los, los);
+}
+
+// Which key that is comes from the settings, where it is pressed once and
+// whatever arrives is kept (js/presenter-keys.js). F5 out of the box;
+// removing every key there switches the whole thing off.
+document.addEventListener("keydown", function (ev) {
+  if (ev.repeat) return;
+  // With a modifier held it is somebody's shortcut -- the browser's reload
+  // among them -- and not the talk.
+  if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+  // A dialog on top has the floor: the source may be half written in it.
+  if (document.querySelector("dialog[open]")) return;
+  var keys = window.startKeys ? window.startKeys.read() : [];
+  if (keys.indexOf(ev.key) === -1) return;
+  // A function key means nothing to a field, so it may be taken wherever
+  // the cursor stands -- which is what makes F5 work in the middle of a
+  // sentence. Anything else a field might want to receive is left to it:
+  // somebody who records the letter "b" must still be able to type one.
+  if (!/^F\d{1,2}$/.test(ev.key) && ev.target && ev.target.closest
+      && ev.target.closest("input, textarea, select, [contenteditable]")) return;
+  ev.preventDefault();
+  presentFromStart();
+});
+
 // --- The deck as Markdown ----------------------------------------------
 // Its own file, because it shares little with the rest of the editor: the
 // address of the deck, the promise that everything owed has been saved,

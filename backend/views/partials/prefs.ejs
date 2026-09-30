@@ -27,6 +27,22 @@
       <p id="prefs-state" class="hint" role="status"></p>
       <p class="hint"><%= t('prefs.presenterNote') %></p>
     </div>
+
+    <!-- The other key: the one that starts the talk from the editor. The
+         same three controls, driven by the same code with a drawer of its
+         own (js/prefs.js). Removing every key here switches the whole
+         behaviour off -- which is what an empty list has always meant for
+         the key above it. -->
+    <div class="field">
+      <span class="field-label"><%= t('prefs.start') %></span>
+      <div id="prefs-start-keys" class="key-list"></div>
+      <div class="prefs-row">
+        <button type="button" id="prefs-start-record" class="button"><%= t('prefs.record') %></button>
+        <button type="button" id="prefs-start-reset" class="button button-quiet"><%= t('prefs.reset') %></button>
+      </div>
+      <p id="prefs-start-state" class="hint" role="status"></p>
+      <p class="hint"><%= t('prefs.startNote') %></p>
+    </div>
     <p class="hint prefs-scope"><%= t('prefs.note') %></p>
   </div>
 </dialog>

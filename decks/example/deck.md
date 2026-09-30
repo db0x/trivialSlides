@@ -8,7 +8,7 @@ transition: convex
 
 # Example
 
-Every slide layout, once 👀
+Every <span style="color:#e100ff">slide</span> layout, once 👀
 <!-- .element: class="align-center" -->
 
 ---
@@ -161,7 +161,7 @@ static final int getFactor() {
 
 ----
 
-<!-- .slide: data-layout="qr" data-url="https://github.com/db0x/trivialSlides" data-qr-color="#ffffff" data-qr-background="#ffffff00" data-background-effect="starfield" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="qr" data-url="https://github.com/db0x/trivialSlides" data-qr-color="#ffffff" data-qr-background="#ffffff00" data-text-color="#ffffff" -->
 
 ##
 

@@ -60,11 +60,11 @@
        the way -- a choice between one thing is a click for nothing.
        index.js swaps the two as the slide changes and writes the address of
        the current slide into the second entry. -->
-  <a class="button button-icon header-present present-direct" data-tip="<%= t('header.present') %>"
+  <a class="button button-icon header-present present-direct" data-tip="<%= t('header.presentKey') %>"
      aria-label="<%= t('header.present') %>"
      href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"></a>
   <details class="menu present-menu" hidden>
-    <summary class="button button-icon header-present" data-tip="<%= t('header.present') %>"
+    <summary class="button button-icon header-present" data-tip="<%= t('header.presentKey') %>"
              aria-label="<%= t('header.present') %>"></summary>
     <div class="menu-content" role="menu">
       <a class="menu-item present-from-start" role="menuitem"
@@ -83,7 +83,14 @@
       <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
     </div>
   </details>
-  <%- include("partials/settings", { deckSource: true }) %>
+  <!-- The file itself, to be read and written. It stood in the menu while
+       it could only be looked at; now that it can be edited it is one of
+       the things one reaches for while working, and that belongs in the
+       header beside presenting and downloading rather than two clicks
+       away (js/editor/deck-source.js). -->
+  <button type="button" id="deck-source-open" class="button button-icon header-source"
+          data-tip="<%= t('header.deckSource') %>" aria-label="<%= t('header.deckSource') %>"></button>
+  <%- include("partials/settings") %>
 </header>
 
 <main class="editor">
