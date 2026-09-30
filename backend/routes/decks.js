@@ -14,6 +14,7 @@ const gradients = require("../gradients");
 const effects = require("../effects");
 const code = require("../code");
 const source = require("../source");
+const check = require("../check");
 const emoji = require("../emoji");
 const video = require("../video");
 const storage = require("../storage");
@@ -267,6 +268,52 @@ router.get("/d/:slug/deck.md", loadDeck, (req, res) => {
 // they are the only words in the fragment that are not the file itself.
 router.get("/d/:slug/source.html", loadDeck, (req, res) => {
   res.type("html").send(source.highlight(deck.serialize(req.deck), req.t));
+});
+
+// The way back: a file edited by hand in that dialog.
+//
+// Checking and saving are one call rather than two, because they are one
+// question -- "may this be saved, and if so, do it". The check runs either
+// way and its findings come back either way; only `apply` decides whether
+// a clean text is also written. That leaves no window in which a text
+// could be judged clean and saved as something else.
+//
+// Nothing is saved while anything was found. deck.js repairs in silence
+// (see check.js), so a save past a finding is exactly the moment a line
+// would disappear without anybody being told.
+//
+// What comes back on success is the SAVED file, freshly coloured, not the
+// text that was sent: saving rewrites the attribute order and the blank
+// lines, and the dialog should show what is on disk rather than what was
+// typed at it.
+router.post("/d/:slug/source", sameOriginOnly, loadDeck, (req, res) => {
+  const text = String((req.body && req.body.text) || "");
+  const findings = check.check(text, storage.images(req.slug))
+    .map((f) => ({ line: f.line, text: req.t(f.key, f.values) }));
+  // The colours travel back with the findings, and so does the deck the
+  // text would become. The page is being typed in and has neither a
+  // highlighter nor a reader of its own; this is the same round trip it
+  // already makes for the check, so both come free of a second one. The
+  // deck is what lets the preview behind the dialog show the slide being
+  // written in -- unsaved, exactly as the form does while typing.
+  //
+  // Of the blocks only their lines go back, never the blocks around them:
+  // one of them is under the field the caret sits in (see source.parts).
+  if (findings.length || !(req.body && req.body.apply)) {
+    return res.json({
+      findings,
+      blocks: source.parts(text).map((b) => ({ html: b.html, slide: b.slide })),
+      deck: deck.normalize(deck.parse(text)),
+    });
+  }
+
+  const model = deck.normalize(deck.parse(text));
+  storage.save(req.slug, model);
+  res.json({
+    findings: [],
+    deck: model,
+    html: source.highlight(deck.serialize(model), req.t),
+  });
 });
 
 // A single HTML file that runs without a server and without a network:

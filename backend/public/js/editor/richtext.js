@@ -50,6 +50,38 @@ function markerClasses(line) {
 // object with its own dialog (see below), and it travels back into the .md
 // exactly as it came. Everything between the fences is skipped here --
 // inside a code block a hash or a backtick is code, not Markdown.
+// --- Text in a colour of its own ---------------------------------------
+// The one piece of formatting with no Markdown of its own. The file says
+// it in reveal.js' own currency -- inline HTML -- so any other renderer
+// shows it the same way, and our own renderer lets exactly this shape
+// through and nothing else (render.js holds the other end of this pair,
+// COLOR_OPEN_RE; what the one writes the other has to read back).
+//
+// Twice here, because the text passes through this file in two states: raw
+// on the way in from the file, and escaped once inlineZuHtml has been at
+// it.
+var FARBE_ROH = /<span style="color:(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)">/g;
+var FARBE_AUF = /&lt;span style="color:(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)"&gt;/g;
+var FARBE_ZU = /&lt;\/span&gt;/g;
+
+// The colour an element carries, as the file writes it -- or "" for an
+// element that carries none of ours. The browser writes rgb() after
+// execCommand and "currentcolor" after it has been cleared again; only a
+// real colour becomes a span in the file, which is what makes clearing
+// work without anything having to be unwrapped by hand.
+function farbeVon(el) {
+  var raw = String((el.style && el.style.color)
+    || (el.tagName.toLowerCase() === "font" && el.getAttribute("color")) || "").trim();
+  var hex = /^#([0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)$/.exec(raw);
+  if (hex) return "#" + hex[1].toLowerCase();
+  var rgb = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)\s*(?:[,/]\s*([\d.]+)\s*)?\)$/.exec(raw);
+  if (!rgb) return "";
+  var zwei = function (n) { return ("0" + Math.round(n).toString(16)).slice(-2); };
+  var out = "#" + zwei(rgb[1]) + zwei(rgb[2]) + zwei(rgb[3]);
+  var a = rgb[4] === undefined ? 1 : parseFloat(rgb[4]);
+  return a >= 1 ? out : out + zwei(a * 255);
+}
+
 function isSimple(md) {
   var text = String(md || "");
   if (!text.trim()) return true;
@@ -61,7 +93,11 @@ function isSimple(md) {
     if (imCode) continue;
     if (z.trim() === "" || markerClasses(z)) continue;
     if (/^\s{0,3}(#{1,6}\s|>|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
-    if (/<[a-z!/]/i.test(z)) return false;   // raw HTML (other than the fragment above)
+    // Raw HTML, other than the fragment line above and the colour spans
+    // this field writes itself. Those are taken out of the line first --
+    // what is left has to be free of tags, so a <div> or a <span> of any
+    // other shape still sends the slide to source mode.
+    if (/<[a-z!/]/i.test(z.replace(FARBE_ROH, "").replace(/<\/span>/g, ""))) return false;
     // Inline code. The field cannot show it, and on the way back the
     // backticks would be escaped into literal characters -- turning
     // `code` into visible backticks. Source mode keeps it intact.
@@ -126,6 +162,22 @@ function escHtml(s) {
 // --- Markdown -> HTML --------------------------------------------------
 function inlineZuHtml(text) {
   var s = escHtml(text);
+  // The colour spans back into elements. Counted, and no more closing tags
+  // let back than there were opening ones -- a lone </span> in a file is
+  // text, not markup, and turning it into a tag would tear the field's own
+  // structure. The same counting the renderer does (render.js).
+  var offen = 0;
+  s = s.replace(FARBE_AUF, function (_, hex) {
+    offen++;
+    return '<span style="color:' + hex + '">';
+  });
+  if (offen) {
+    s = s.replace(FARBE_ZU, function (whole) {
+      if (offen <= 0) return whole;
+      offen--;
+      return "</span>";
+    });
+  }
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, t, url) {
     return '<a href="' + url.replace(/"/g, "%22") + '">' + t + "</a>";
   });
@@ -250,7 +302,18 @@ function inlineZuMd(knoten) {
     // three mean the same thing and meet here.
     else if (tag === "s" || tag === "strike" || tag === "del") out += "~~" + inlineZuMd(k) + "~~";
     else if (tag === "a") out += "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
-    else out += inlineZuMd(k); // span, font and friends, which the browser creates on paste
+    else {
+      // span, font and friends -- which the browser creates on paste, and
+      // which the colour button creates on purpose. Only a colour of ours
+      // is written out; everything else about such an element is dropped,
+      // exactly as it was before there was a colour button. That is also
+      // what makes clearing a colour work: the browser leaves the span
+      // standing with "currentcolor" in it, and a span with no colour of
+      // ours is not written at all.
+      var farbe = farbeVon(k);
+      var inner = inlineZuMd(k);
+      out += farbe ? '<span style="color:' + farbe + '">' + inner + "</span>" : inner;
+    }
   });
   return out;
 }
@@ -419,4 +482,19 @@ function alignToggle(field, align) {
   });
 }
 
-export { isSimple, mdToHtml, htmlToMd, befehl, codeBlockHtml, FRAGMENT, ALIGNS };
+// Paints the selection, or takes the paint off it again.
+//
+// styleWithCSS, because without it the browser reaches for <font color>,
+// which is older than this project and would have to be translated twice.
+// An empty colour is not an unwrapping: the browser is asked for
+// "currentColor" instead, which leaves the span standing but makes it
+// inherit -- and a span with no colour of ours never reaches the file
+// (inlineZuMd). So clearing needs no DOM surgery, and the browser keeps
+// doing the hard part of splitting a selection that crosses elements.
+function farbe(field, value) {
+  field.focus();
+  try { document.execCommand("styleWithCSS", false, true); } catch (e) { /* older browsers */ }
+  document.execCommand("foreColor", false, value || "currentColor");
+}
+
+export { isSimple, mdToHtml, htmlToMd, befehl, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };

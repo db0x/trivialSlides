@@ -16,6 +16,21 @@ const qr = require("./qr");
 // second attribute in through the quotes.
 const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
 
+// The second, and only other, thing let through: a run of text in a colour
+// of its own. It is the one piece of formatting that has no Markdown of its
+// own, so the file says it in reveal.js' own currency -- inline HTML, which
+// any other renderer shows the same way.
+//
+// Strict for the same reason the fragment line above is strict: nothing but
+// six or eight hex digits fits through, so the quotes cannot be closed
+// early and a second attribute cannot follow. Everything that is not
+// exactly this shape stays dropped, <script> included.
+//
+// The browser end of the same pair is FARBE_AUF in js/editor/richtext.js;
+// what the one writes the other has to read back.
+const COLOR_OPEN_RE = /^<span\s+style="color:\s*(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)\s*;?"\s*>$/;
+const COLOR_CLOSE_RE = /^<\/span>$/;
+
 // Placeholder for the stretch between rendering and post-processing. Control
 // characters, because they cannot occur in a slide's text.
 const MARK_OPEN = "\u0001";
@@ -78,9 +93,25 @@ function resolveFragments(html) {
 // uses reveal.js directly; the .md stays readable either way.
 function markdownRenderer(imageBase) {
   const r = new marked.Renderer();
+  // How many colour spans are open. marked hands the opening tag and the
+  // closing one over as two separate pieces, so the pair has to be counted
+  // here -- otherwise a lone </span> in a file would close an element this
+  // renderer never opened and tear the markup around it.
+  let colored = 0;
   r.html = (raw) => {
-    const t = FRAGMENT_RE.exec(String(raw).trim());
-    return t ? brand(t[1]) : "";
+    const text = String(raw).trim();
+    const t = FRAGMENT_RE.exec(text);
+    if (t) return brand(t[1]);
+    const color = COLOR_OPEN_RE.exec(text);
+    if (color) {
+      colored++;
+      return `<span style="color:${color[1]}">`;
+    }
+    if (COLOR_CLOSE_RE.test(text) && colored > 0) {
+      colored--;
+      return "</span>";
+    }
+    return "";
   };
   // Inside a list item the marker ends up in the item's own text, where it
   // is easier to catch here than to dig out of the finished markup.

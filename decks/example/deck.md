@@ -29,7 +29,7 @@ and *italic* text, and a [link](https://revealjs.com).
 - This one only appears on click
 <!-- .element: class="fragment" -->
 
-<!-- .element: class="align-center" -->
+<!-- .element: class="align-left" -->
 
 Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
 <!-- .element: class="fragment align-fill" -->
@@ -127,7 +127,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ## Full-bleed image
 
-⭐The picture covers the whole slide, the text stays readable on top of it.
+⭐ The picture covers the whole slide, the text stays readable on top of it.
 
 ---
 

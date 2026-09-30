@@ -62,8 +62,10 @@ const FOR_BROWSER = [
   "prefs.recording", "prefs.recorded", "prefs.taken", "prefs.reserved",
   "prefs.remove", "prefs.none", "prefs.record",
   // The source dialog says what it is waiting for, and if the file never
-  // comes, that too (js/editor/deck-source.js).
-  "source.loading", "source.failed",
+  // comes, that too. The findings themselves arrive already worded from
+  // the server -- only the line in front of each one is built here
+  // (js/editor/deck-source.js).
+  "source.loading", "source.failed", "source.applyFailed", "source.line",
 ];
 
 function forBrowser(language) {

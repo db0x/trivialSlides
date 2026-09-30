@@ -75,6 +75,18 @@ function blocksOf(lines) {
     current.lines.push(line);
   }
   blocks.push(current);
+
+  // Which slide of the model each block is. deck.js throws away a block
+  // that holds nothing but its separator, so such a block belongs to no
+  // slide and the count does not move on for it. Said once, here, because
+  // three places ask it: the check, to point at the right slide; the view,
+  // to tell the preview which slide is being written in; and nothing else
+  // may answer it differently.
+  let number = 0;
+  blocks.forEach((block) => {
+    const empty = !block.lines.some((l) => l.trim() !== "" && !SEPARATOR.test(l.trim()));
+    block.slide = block.head || empty ? null : number++;
+  });
   return blocks;
 }
 
@@ -136,24 +148,49 @@ function slideHtml(lines) {
 // The whole file: one row per block, a mark on the left and the lines on
 // the right. t translates the marks; without it they fall back to English,
 // so the module stays usable on its own.
+// The coloured lines of every block, in file order, and nothing around
+// them. This is what goes back to a page that is being typed in: it
+// already has the blocks, it only wants their colours again -- and the
+// markup of the block itself must not come along, or it would be swapped
+// out from under the field the caret sits in.
+//
+// The closing newline is not decoration. A block's last line is usually
+// the empty one before the next separator, and an unterminated empty line
+// draws no line box at all -- without this every block would lose exactly
+// the blank line that separates it from the next, and the file would read
+// denser than it is. It is also the one character by which the coloured
+// lines are LONGER than the text of the field beside them; the page knows
+// that and takes it off again (js/editor/deck-source.js).
+function parts(md) {
+  const lines = String(md == null ? "" : md).replace(/\r\n/g, "\n").split("\n");
+  return blocksOf(lines).map((block) => Object.assign({}, block, {
+    html: (block.head ? headHtml(block.lines) : slideHtml(block.lines)) + "\n",
+  }));
+}
+
 function highlight(md, t) {
   const say = t || ((key, values) => (key === "source.head" ? "Header" : "Slide " + values.n));
-  const lines = String(md == null ? "" : md).replace(/\r\n/g, "\n").split("\n");
   let number = 0;
-  return blocksOf(lines).map((block) => {
+  return parts(md).map((block) => {
     const mark = block.head ? say("source.head") : say("source.slide", { n: ++number });
-    // Attached below rather than after: the mark is indented for it, the
-    // way the slide list indents the card (js/editor/slide-list.js).
+    // Attached below rather than after: the mark is indented for it and
+    // wears an arrow, the way the slide list indents the card
+    // (js/editor/slide-list.js).
     const kind = block.head ? " is-head" : (block.vertical ? " is-vertical" : "");
-    const lines = block.head ? headHtml(block.lines) : slideHtml(block.lines);
-    // The closing newline is not decoration. A block's last line is
-    // usually the empty one before the next separator, and an unterminated
-    // empty line draws no line box at all -- without this every block
-    // would lose exactly the blank line that separates it from the next,
-    // and the file would read denser here than it is.
-    return `<div class="source-block"><span class="source-mark${kind}">${escape(mark)}</span>`
-      + `<pre class="source-lines">${lines}\n</pre></div>`;
+    // The cell around the lines is what the field lies on while the block
+    // is being written in: it carries the rule and the indent, so both
+    // layers sit in the same box and no character moves on the way in or
+    // out of editing (js/editor/deck-source.js).
+    // Which slide this block is goes along on the element: the page tells
+    // the preview behind the dialog which slide is being written in, and
+    // it has no reader of its own to work that out.
+    const slide = block.slide == null ? "" : ` data-slide="${block.slide}"`;
+    return `<div class="source-block"${slide}><span class="source-mark${kind}">${escape(mark)}</span>`
+      + `<div class="source-cell"><pre class="source-lines">${block.html}</pre></div></div>`;
   }).join("");
 }
 
-module.exports = { highlight };
+// blocks() goes out as well: the check points at lines and needs the same
+// cut of the file that the view shows, or a finding would name a line the
+// reader cannot find (check.js).
+module.exports = { highlight, parts, blocks: blocksOf };

@@ -57,6 +57,7 @@ var el = {
   state: $("#save-state"),
   customColor: $("#background-custom"),
   customTextColor: $("#text-color-custom"),
+  textColorTool: $("#text-color-tool"),
   gradient: $("#slide-gradient"),
   gradientHint: $("#gradient-hint"),
   gradientVorlagen: $("#gradient-presets"),
@@ -336,6 +337,10 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // The colour is not a button but a field, so it is shut separately --
+  // it acts on a selection in the rich-text field, and in source mode
+  // there is none.
+  el.textColorTool.disabled = sourceMode;
   // In source mode the whole body stands in one place, breaks and all --
   // that is what source mode is for -- so there is no column to choose.
   var chooser = !!count && !sourceMode;
@@ -728,6 +733,62 @@ $$(".toolbar button[data-command]").forEach(function (b) {
     remember();
   });
 });
+
+// --- Colour for a few words --------------------------------------------
+// The other tools in the bar can refuse the focus (mousedown, prevented)
+// and act on the selection that is still standing. This one cannot: the
+// picker is a field, it MUST take the focus, and the selection in the
+// rich-text field goes with it. So the selection is written down before
+// the focus leaves, and put back before the colour is applied.
+var markedRange = null;
+
+function rememberRange() {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  var range = sel.getRangeAt(0);
+  if (el.content.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
+}
+
+// While the picker is open the field is not focused, so nothing else moves
+// the selection -- writing it down on the way in is enough.
+el.textColorTool.addEventListener("mousedown", rememberRange);
+el.content.addEventListener("keyup", rememberRange);
+el.content.addEventListener("mouseup", rememberRange);
+
+// coloris:pick comes with every change while the picker is open, so the
+// colour is seen on the words as it is chosen rather than after the fact.
+document.addEventListener("coloris:pick", function (ev) {
+  if (!ev.detail || ev.detail.currentEl !== el.textColorTool) return;
+  if (sourceMode || !markedRange) return;
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(markedRange);
+  rt.farbe(el.content, ev.detail.color);
+  // The command leaves a selection of its own over the same words; it is
+  // the one the next change has to act on.
+  if (sel.rangeCount) markedRange = sel.getRangeAt(0).cloneRange();
+  remember();
+});
+
+// The button wears the colour of the text the caret is in, the way the
+// heading's chooser wears the alignment in force. Text in no colour of its
+// own reads as the field's own colour -- which is what an empty field
+// means here, so the drop goes back to grey rather than to near-black.
+function drawTextColor() {
+  if (document.activeElement !== el.content) return;
+  var here = "";
+  try { here = String(document.queryCommandValue("foreColor") || ""); } catch (e) { /* not asked */ }
+  var own = window.getComputedStyle(el.content).color;
+  var value = !here || here === own ? "" : rt.farbeVon({ style: { color: here }, tagName: "span" });
+  if (value === el.textColorTool.value) return;
+  el.textColorTool.value = value;
+  // quiet: this follows the caret, it is not somebody choosing a colour.
+  el.textColorTool.dataset.quiet = "1";
+  el.textColorTool.dispatchEvent(new Event("input", { bubbles: true }));
+  delete el.textColorTool.dataset.quiet;
+}
+
+document.addEventListener("selectionchange", drawTextColor);
 
 el.sourceButton.addEventListener("click", function () {
   harvest();
@@ -1183,10 +1244,59 @@ $("#image-file").addEventListener("change", function (ev) {
 });
 
 // --- The deck as Markdown ----------------------------------------------
-// Its own file, because it shares nothing with the rest of the editor but
-// the address of the deck and the one promise that everything owed has been
-// saved (js/editor/deck-source.js).
-setupDeckSource(BASE, window.trivialSlidesSave);
+// Its own file, because it shares little with the rest of the editor: the
+// address of the deck, the promise that everything owed has been saved,
+// and the way back in below (js/editor/deck-source.js).
+
+// The three header fields are not part of drawAll(): nothing in the editor
+// has ever changed them behind the user's back. A source that was edited
+// by hand can, so they are written here.
+function drawHeader() {
+  $("#deck-title").value = deck.title;
+  [["deck-theme", deck.theme], ["deck-transition", deck.transition]].forEach(function (pair) {
+    var button = $("#" + pair[0]);
+    button.dataset.value = pair[1];
+    button.textContent = pair[1];
+    $$(".menu-item", $("#" + pair[0] + "-menu")).forEach(function (row) {
+      var here = row.dataset.value === pair[1];
+      row.classList.toggle("is-active", here);
+      row.setAttribute("aria-checked", here ? "true" : "false");
+    });
+  });
+}
+
+// A file written from the source dialog leaves the editor holding a model
+// that is one version behind -- and its next keystroke would save that old
+// model over the new file. So the new one is taken on here, and everything
+// showing it is drawn again.
+//
+// `wrote` is the slide that was being written in over there, and the
+// editor comes back standing on it: having applied a change to slide
+// seven, seven is the slide one wants in front of one. Without it -- and
+// where the slide it names is gone -- the nearest one that still exists
+// takes its place.
+function adoptDeck(fresh, wrote) {
+  deck = fresh;
+  active = Math.max(0, Math.min(wrote == null ? active : wrote, deck.slides.length - 1));
+  activeColumn = 0;
+  schmutzig = false;
+  drawHeader();
+  drawAll();
+  // The preview renders from the file, which has just been written.
+  preview.newLoad(active);
+}
+
+setupDeckSource({
+  base: BASE,
+  flush: window.trivialSlidesSave,
+  adopt: adoptDeck,
+  // The frame behind the dialog: while a slide is written in over there,
+  // it is the one the preview shows.
+  preview: preview,
+  // And the box it stands in, which the dialog's veil is kept off -- a
+  // slide seen through a veil is a slide judged wrongly.
+  frame: $(".preview-frame"),
+});
 
 // --- Startup -----------------------------------------------------------
 // Paragraphs rather than <div> on line break: only then does the field

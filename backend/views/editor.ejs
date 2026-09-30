@@ -197,6 +197,19 @@
                     aria-label="<%= t('tool.' + a[1]) %>"></button>
           <% }); %>
           <span class="toolbar-divider"></span>
+          <!-- Colour for a few words. Not a button but a field, because the
+               picker is the one the colour choices further down use and it
+               hangs itself on a field (js/editor/index.js). Coloris wraps
+               it, paints its wrapper in the chosen colour, and that is what
+               tints the drop on the button -- the icon wears the colour it
+               would apply, without anyone having to write it there.
+               The field carries the value; the drop and the invisible input
+               over it are drawn by app.css. -->
+          <span class="tool-color" data-tip="<%= t('tool.colorTip') %>">
+            <input id="text-color-tool" class="color-field" type="text" value=""
+                   aria-label="<%= t('tool.color') %>">
+          </span>
+          <span class="toolbar-divider"></span>
           <button type="button" class="tool-icon" data-command="fragment" data-tip="<%= t('tool.fragmentTip') %>" aria-label="<%= t('tool.fragment') %>"></button>
           <!-- Code is the one thing in this bar that the rich-text field
                cannot hold, so it does not run through execCommand and it
@@ -519,14 +532,31 @@
 <dialog id="deck-source-dialog" class="dialog dialog-wide">
   <form method="dialog" class="dialog-head">
     <h2><%= t('dialog.sourceTitle') %></h2>
-    <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+    <!-- Three buttons, never more than two at a time: while nothing is
+         changed there is only the way out, and once something is, the way
+         out is called what it does (js/editor/deck-source.js). Applying is
+         a submit of nothing -- it must not close the dialog, so it is a
+         plain button like the other one. -->
+    <span class="dialog-head-buttons">
+      <button type="button" id="deck-source-discard" class="button" hidden><%= t('dialog.sourceDiscard') %></button>
+      <button type="button" id="deck-source-apply" class="button button-haupt" hidden><%= t('dialog.sourceApply') %></button>
+      <button id="deck-source-close" class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+    </span>
   </form>
   <!-- One row per block of the file, each with its mark on the left
-       (source.js). role=status: while the file is on its way, and if it
+       (source.js). A click turns one block into a field; the rest keep
+       their colours. role=status: while the file is on its way, and if it
        never comes, this box says so itself -- and a screen reader hears it
        without the focus having to travel there. -->
   <div class="dialog-content deck-source">
     <div id="deck-source-code" role="status"></div>
+  </div>
+  <!-- What the file would cost if it were saved as it stands (check.js).
+       Only there when there is something to say; each row leads to its
+       line. -->
+  <div id="deck-source-findings" class="deck-source-findings" hidden>
+    <p class="hint"><%= t('source.findings') %></p>
+    <ul></ul>
   </div>
 </dialog>
 

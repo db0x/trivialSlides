@@ -1,0 +1,258 @@
+// What a hand-written source would COST when it is saved.
+//
+// The editor lets the file be edited in the source dialog, and deck.js is
+// forgiving by design: an attribute it does not know, a colour that is not
+// a colour, a slide block with nothing in it -- none of that is refused, it
+// is quietly left out. That is the right behaviour for a file arriving from
+// somewhere else, and exactly the wrong one for a file somebody is editing
+// in front of us: they would press "apply" and watch a line disappear.
+//
+// So this module answers one question: which lines does deck.js not carry
+// over, and why. It does NOT hold a second set of rules -- it parses the
+// text with deck.js itself and compares what came back against what the
+// file says. A value that went missing on the way was dropped, and the
+// attribute it belonged to says what to call the loss. That way the check
+// cannot drift away from the reader: there is only one set of rules, and
+// this asks it rather than repeating it.
+//
+// A finding is { line, key, values } -- a line number (1-based), a text key
+// and what to put in it. The words are the caller's business (i18n.js), so
+// that a finding reads in the language the editor is in.
+const deck = require("./deck");
+const source = require("./source");
+const layouts = require("./layouts");
+const effects = require("./effects");
+const qr = require("./qr");
+
+const ATTR_LINE = /^\s*<!--\s*\.slide:\s*(.*?)\s*-->\s*$/;
+// Anything that merely LOOKS like the line above. What matches this but not
+// ATTR_LINE is a slide comment somebody meant and mistyped -- the one case
+// where silence would be cruel, because the slide keeps every attribute's
+// effect in the editor until the next save and then loses all of them at
+// once.
+const ATTR_LIKE = /<!--[^>]*\.slide\b/;
+const PAIR = /([a-z-]+)\s*=\s*"([^"]*)"/g;
+const HEAD_KEYS = ["titel", "theme", "transition"];
+// What deck.js cuts to length in normalize(): the deck's title, a slide's
+// heading, and the two one-line fields an attribute may carry.
+const TITLE_MAX = 120;
+const HEADING_MAX = 200;
+const FIELD_MAX = 200;
+const CONTENT_MAX = 20000;
+
+// Every attribute deck.js reads, and the field of the model it lands in.
+// The order is the one serialize() writes them in, so a reader comparing
+// the two files has them in the same order.
+//
+// `layout: true` marks the ten that hang on the LAYOUT -- the ones
+// parseAttrs passes through its ifField. What they carry comes back empty
+// on a layout that has no such field, however well it is written. The rest
+// belong to the slide the way its colours do (deck.js says so in as many
+// words) and are read whatever the layout is.
+const ATTRIBUTES = [
+  { name: "data-layout", field: "layout", key: "check.layout", allowed: () => layouts.LAYOUTS.map((l) => l.id) },
+  { name: "data-image", field: "image", key: "check.tooLong", values: { max: FIELD_MAX }, layout: true },
+  { name: "data-video", field: "video", key: "check.video", layout: true },
+  { name: "data-url", field: "url", key: "check.url", layout: true },
+  { name: "data-qr-color", field: "qrColor", key: "check.color", layout: true },
+  { name: "data-qr-background", field: "qrBackground", key: "check.qrBackground", layout: true },
+  { name: "data-qr-text-color", field: "qrTextColor", key: "check.color", layout: true },
+  { name: "data-quelle", field: "source", key: "check.tooLong", values: { max: FIELD_MAX }, layout: true },
+  { name: "data-textseite", field: "textSide", key: "check.side", allowed: () => layouts.SIDES, layout: true },
+  { name: "data-textbreite", field: "textWidth", key: "check.width", allowed: () => layouts.WIDTHS, layout: true },
+  { name: "data-columns", field: "columnMode", key: "check.columns", allowed: () => [layouts.COLUMN_SPLIT], layout: true },
+  { name: "data-title-align", field: "titleAlign", key: "check.titleAlign", allowed: () => layouts.TITLE_ALIGNS },
+  { name: "data-background-color", field: "background", key: "check.color" },
+  { name: "data-background-gradient", field: "gradient", key: "check.gradient" },
+  { name: "data-background-effect", field: "effect", key: "check.effect", allowed: () => effects.EFFECTS.map((e) => e.id) },
+  { name: "data-text-color", field: "textColor", key: "check.color" },
+];
+const byName = new Map(ATTRIBUTES.map((a) => [a.name, a]));
+
+function pairs(inner) {
+  const out = [];
+  PAIR.lastIndex = 0;
+  let hit;
+  while ((hit = PAIR.exec(inner)) !== null) out.push({ name: hit[1], value: hit[2] });
+  return out;
+}
+
+// --- The head ----------------------------------------------------------
+function checkHead(block, model, add) {
+  if (!block) return add(1, "check.headMissing");
+  block.lines.forEach((line, i) => {
+    const at = i + 1;
+    if (line.trim() === "---" || line.trim() === "") return;
+    const hit = /^([A-Za-z_-]+)\s*:\s*(.*)$/.exec(line);
+    // Not "key: value", so parseHead walks past it and the line is gone.
+    if (!hit) return add(at, "check.headLine");
+    const key = hit[1].toLowerCase();
+    const value = hit[2].trim();
+    if (!HEAD_KEYS.includes(key)) return add(at, "check.headKey", { key: hit[1] });
+    // What the file says against what came out of it. Only these three
+    // fields, and each one differs for exactly one reason.
+    if (key === "theme" && model.theme !== value) {
+      return add(at, "check.theme", { value, allowed: deck.THEMES.join(", ") });
+    }
+    if (key === "transition" && model.transition !== value) {
+      return add(at, "check.transition", { value, allowed: deck.TRANSITIONS.join(", ") });
+    }
+    if (key === "titel" && model.title !== value) {
+      return add(at, "check.tooLong", { max: TITLE_MAX });
+    }
+  });
+  // A key left out is not an error in a file from elsewhere -- but saving
+  // writes all three, so the missing one would arrive with a value nobody
+  // chose.
+  const written = new Set(block.lines
+    .map((l) => (/^([A-Za-z_-]+)\s*:/.exec(l) || [])[1])
+    .filter(Boolean).map((k) => k.toLowerCase()));
+  HEAD_KEYS.filter((k) => !written.has(k))
+    .forEach((k) => add(1, "check.headKeyMissing", { key: k }));
+}
+
+// --- One slide ---------------------------------------------------------
+function checkSlide(block, slide, isFirstSlide, images, add) {
+  const at = (i) => block.start + i + 1;
+  const body = block.lines.filter((l) => l.trim() !== "");
+
+  // A separator, and then nothing. parse() drops the block, and with it
+  // every line that stood in it.
+  if (!body.length || (body.length === 1 && /^-{3,4}$/.test(body[0].trim()))) {
+    return add(at(0), "check.slideEmpty");
+  }
+  if (isFirstSlide && block.vertical) add(at(0), "check.verticalFirst");
+
+  // The attribute line has to be the FIRST line of the slide; anywhere
+  // else parseSlide walks past it and every attribute on it is lost. And
+  // the first line is the only place the values are worth reading: a line
+  // further down has already lost all of them, so going through them one
+  // by one would say the same thing a second time.
+  const first = block.lines.findIndex((l) => l.trim() !== "" && !/^-{3,4}$/.test(l.trim()));
+  block.lines.forEach((line, i) => {
+    if (!ATTR_LIKE.test(line)) return;
+    if (i !== first) return add(at(i), "check.attrPlace");
+    if (!ATTR_LINE.test(line)) return add(at(i), "check.attrBroken");
+    checkAttrs(line, at(i), slide, images, add);
+  });
+
+  // The heading and the body, both of which deck.js cuts to length.
+  const heading = /^#{1,6}(?:\s+(.*))?$/.exec((body.find((l) => /^#{1,6}(\s|$)/.test(l)) || "").trim());
+  if (heading && slide.title !== null && (heading[1] || "").trim() !== slide.title) {
+    add(at(block.lines.indexOf(body.find((l) => /^#{1,6}(\s|$)/.test(l)))), "check.tooLong", { max: HEADING_MAX });
+  }
+  if (slide.content.length >= CONTENT_MAX) add(at(0), "check.tooLong", { max: CONTENT_MAX });
+}
+
+function checkAttrs(line, at, slide, images, add) {
+  const inner = ATTR_LINE.exec(line)[1];
+  const written = pairs(inner);
+
+  // Everything in the comment that is not name="value". The reader's
+  // pattern simply does not see it, so it says nothing -- and a
+  // data-layout=titel without quotation marks would take the slide's whole
+  // arrangement with it in silence.
+  const rest = written.reduce((text, p) => text.replace(`${p.name}="${p.value}"`, ""), inner)
+    .replace(/^\.slide:/, "").trim();
+  if (rest) add(at, "check.attrJunk", { rest: rest.slice(0, 40) });
+
+  const seen = new Set();
+  written.forEach((p) => {
+    const rule = byName.get(p.name);
+    if (!rule) return add(at, "check.attrUnknown", { name: p.name });
+    if (seen.has(p.name)) return add(at, "check.attrTwice", { name: p.name });
+    seen.add(p.name);
+    // The layout decides which of those ten a slide may carry at all.
+    if (rule.layout && !layouts.hasField(slide.layout, rule.field)) {
+      return add(at, "check.attrField", { name: p.name, layout: slide.layout });
+    }
+    // The one value deck.js does not judge at all: it names a file, and
+    // whether that file is in the folder is not a question the reader can
+    // answer. Asked here, where the answer is at hand -- otherwise the
+    // slide would come out empty and nobody would know why.
+    if (rule.field === "image" && images && slide.image === p.value.trim()
+        && !images.includes(slide.image)) {
+      return add(at, "check.image", { value: slide.image });
+    }
+    // What the file says against what deck.js made of it. Equal means the
+    // value survived; anything else was dropped, repaired or cut.
+    if (String(slide[rule.field]) === p.value.trim()) return;
+    if (rule.field === "url" && slide.url === "https://" + p.value.trim()) {
+      return add(at, "check.urlScheme", { value: p.value });
+    }
+    if (rule.field === "qrBackground" && p.value.trim() === qr.TRANSPARENT && slide.qrBackground === "") return;
+    add(at, rule.key, Object.assign({ name: p.name, value: p.value },
+      rule.values || {}, rule.allowed ? { allowed: rule.allowed().join(", ") } : {}));
+  });
+}
+
+// --- The net under the rules -------------------------------------------
+// Whatever the rules above missed. Every line that carries something is
+// looked for in the file deck.js would write back; a line that is not
+// there any more was lost, whatever the reason. Blank lines and the order
+// are left out of it on purpose -- saving rearranges both without costing
+// anybody a word, and a check that complained about that could never be
+// satisfied.
+function canonical(line) {
+  const hit = ATTR_LINE.exec(line);
+  if (!hit) return line.replace(/\s+$/, "");
+  // An attribute line is compared by what it SAYS, not by the order it
+  // says it in: serialize writes the pairs in its own order.
+  return "<!-- .slide: " + pairs(hit[1])
+    .map((p) => `${p.name}="${p.value}"`).sort().join(" ") + " -->";
+}
+
+function lost(lines, written, add) {
+  const left = new Map();
+  written.split("\n").map(canonical).filter((l) => l.trim() !== "")
+    .forEach((l) => left.set(l, (left.get(l) || 0) + 1));
+  lines.forEach((line, i) => {
+    const key = canonical(line);
+    if (key.trim() === "") return;
+    const n = left.get(key) || 0;
+    if (n > 0) return left.set(key, n - 1);
+    add(i + 1, "check.lost");
+  });
+}
+
+// --- The whole file ----------------------------------------------------
+// images: the names in the deck's folder, so that a picture named in the
+// file but not on disk is found here rather than on the slide.
+function check(text, images) {
+  const findings = [];
+  const add = (line, key, values) => findings.push({ line, key, values: values || {} });
+  const md = String(text == null ? "" : text).replace(/\r\n/g, "\n");
+  const lines = md.split("\n");
+  // Normalised, not merely parsed: the length limits live in normalize(),
+  // and normalize() is what the saved file goes through. Comparing against
+  // the raw parse would let a title of 130 characters pass here and cut it
+  // on saving anyway -- which is the one thing this module is for.
+  const model = deck.normalize(deck.parse(md));
+
+  // The same cut of the file the dialog shows, so a line number here and a
+  // line in the view are the same line.
+  let at = 0;
+  const blocks = source.blocks(lines).map((b) => {
+    const start = at;
+    at += b.lines.length;
+    return Object.assign({ start }, b);
+  });
+
+  const head = blocks[0] && blocks[0].head ? blocks[0] : null;
+  checkHead(head, model, add);
+
+  // parse() throws empty blocks away, so the slides of the model line up
+  // with the blocks that hold something -- and only with those. Which
+  // block is which slide is counted in source.js, once, for everyone.
+  blocks.filter((b) => !b.head).forEach((block, i) => {
+    if (block.slide == null) return add(block.start + 1, "check.slideEmpty");
+    checkSlide(block, model.slides[block.slide], i === 0,
+      Array.isArray(images) ? images : null, add);
+  });
+
+  if (!findings.length) lost(lines, deck.serialize(model), add);
+
+  return findings.sort((a, b) => a.line - b.line);
+}
+
+module.exports = { check };
