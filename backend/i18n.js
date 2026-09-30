@@ -61,6 +61,11 @@ const FOR_BROWSER = [
   // are only known once they have been pressed (js/prefs.js).
   "prefs.recording", "prefs.recorded", "prefs.taken", "prefs.reserved",
   "prefs.remove", "prefs.none", "prefs.record",
+  // The source dialog says what it is waiting for, and if the file never
+  // comes, that too. The findings themselves arrive already worded from
+  // the server -- only the line in front of each one is built here
+  // (js/editor/deck-source.js).
+  "source.loading", "source.failed", "source.applyFailed", "source.line",
 ];
 
 function forBrowser(language) {
@@ -87,9 +92,16 @@ function gradientsTranslated(gradients, language) {
 }
 
 // The four places the text may sit beside a player or a code
-// (layouts.js) -- ids there, words here.
+// (layouts.js) -- ids there, words here. Two wordings per place, because
+// what the text stands beside differs by layout: the page picks the
+// fitting one when the layout changes (js/editor/index.js), the same way
+// the width button does.
 function textSidesTranslated(sides, language) {
-  return sides.map((id) => ({ id, name: translate(language, "textSide." + id) }));
+  return sides.map((id) => ({
+    id,
+    nameVideo: translate(language, "textSide.video." + id),
+    nameQr: translate(language, "textSide.qr." + id),
+  }));
 }
 
 // The emoji groups (emoji.js): characters there, the word for the group

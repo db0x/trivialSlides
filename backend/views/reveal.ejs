@@ -150,6 +150,58 @@
     });
   }
 
+  // --- Opened from the editor, and meant for the whole screen ----------
+  // The presenter's key in the editor opens this tab (js/editor/index.js).
+  // It cannot arrive in fullscreen: a freshly opened tab has no user
+  // activation of its own, and without one no browser hands over the
+  // screen -- measured, at six moments and for four ways of opening, and
+  // refused every time. There is no trick left to try; the rule is the
+  // point of the rule.
+  //
+  // So the screen is taken at the first touch this tab gets, whatever it
+  // is: the next press of the stick, an arrow key, a click anywhere. One
+  // press opens the talk, the next one fills the screen with it -- and
+  // whoever reaches for the mouse instead gets the same.
+  //
+  // The touch keeps doing its own job as well; only a press of the
+  // presenter's own key is swallowed, because the handler above would
+  // otherwise read it as the toggle it normally is and give the screen
+  // straight back.
+  if (!isPreview && /(?:^|[?&])vollbild=1(?:&|$)/.test(location.search)) {
+    // Out of the address at once, so a reload later on does not lie in
+    // wait for a touch that was never meant for it.
+    try {
+      history.replaceState(null, "", location.pathname + location.hash);
+    } catch (e) { /* not worth a word */ }
+
+    var einmal = function (ev) {
+      document.removeEventListener("keydown", einmal, true);
+      document.removeEventListener("pointerdown", einmal, true);
+      if (ev && ev.type === "keydown" && VOLLBILD_TASTEN.indexOf(ev.key) !== -1) {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+      }
+      vollbildUmschalten();
+    };
+    document.addEventListener("keydown", einmal, true);
+    document.addEventListener("pointerdown", einmal, true);
+
+    // And asked for straight away as well, in case this browser is willing
+    // to hand the screen over unasked. Chrome has a setting for exactly
+    // that -- "Automatic full screen", granted per site -- and where it is
+    // granted this succeeds and the talk is on the screen with nothing
+    // pressed at all. Where it is not, the refusal costs nothing: the
+    // listeners above are still standing and the first touch does it.
+    var sofort = document.documentElement.requestFullscreen
+      && document.documentElement.requestFullscreen();
+    if (sofort && sofort.then) {
+      sofort.then(function () {
+        document.removeEventListener("keydown", einmal, true);
+        document.removeEventListener("pointerdown", einmal, true);
+      }, function () { /* then the touch it is */ });
+    }
+  }
+
   function vollbildUmschalten() {
     var element = document.documentElement;
     var drin = document.fullscreenElement || document.webkitFullscreenElement;

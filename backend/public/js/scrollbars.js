@@ -33,7 +33,8 @@ function anhaengen(el) {
 }
 
 // The page itself, the three editor columns, the two input frames, the
-// image gallery in the dialog and the emoji panel in the text bar.
+// image gallery and the deck's source in their dialogs, and the emoji
+// panel in the text bar.
 // Selectors rather than ids, because the same file serves the overview and
 // the editor.
 // The editor fills the window and has no page scroll of its own -- only
@@ -43,7 +44,7 @@ var sideScrolls = !document.body.classList.contains("side-editor");
 
 [
   sideScrolls ? document.body : null,
-  ...document.querySelectorAll(".column, .field-frame, .image-gallery, .emoji-panel, .menu-scroll"),
+  ...document.querySelectorAll(".column, .field-frame, .image-gallery, .deck-source, .emoji-panel, .menu-scroll"),
 ].forEach(anhaengen);
 
 // The theme switch has to reach the scrollbars too, otherwise a dark

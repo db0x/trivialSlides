@@ -15,7 +15,7 @@ by people who do not want to write Markdown — and it still stores nothing
 but Markdown.
 
 The name is the promise: no database, no build step, no accounts. One folder
-per talk, one Markdown file inside it, done.
+per deck, one Markdown file inside it + assets, done.
 
 The editor is a **view** onto a `.md` file, not its owner. You can work
 around it at any time: open the file in a text editor, put it under version

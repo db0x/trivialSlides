@@ -34,6 +34,16 @@
 
   /* The button shows where the click leads, not where we are. */
   --icon-toggle: url(../assets/dark.svg);
+
+  /* The deck's source in its dialog. Two hues the surface palette does not
+     have: the page is deliberately grey, but a source text that is grey
+     throughout is one nobody reads twice. Structure (headings, separators)
+     takes the accent, an attribute comment takes the muted grey, and these
+     two carry what is left -- the markup characters and the values. */
+  --source-mark: #9a5b2c;
+  --source-value: #2f7350;
+  --d-source-mark: #d9a273;
+  --d-source-value: #85c7a2;
 }
 
 /* No explicit choice: follow the system. The :not() is what lets a manual
@@ -48,6 +58,8 @@
     --accent: var(--d-accent);
     --accent-text: var(--d-accent-text);
     --danger: var(--d-danger);
+    --source-mark: var(--d-source-mark);
+    --source-value: var(--d-source-value);
     --icon-toggle: url(../assets/light.svg);
   }
 }
@@ -62,6 +74,8 @@
   --accent: var(--d-accent);
   --accent-text: var(--d-accent-text);
   --danger: var(--d-danger);
+  --source-mark: var(--d-source-mark);
+  --source-value: var(--d-source-value);
   --icon-toggle: url(../assets/light.svg);
   color-scheme: dark;
 }
@@ -254,6 +268,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
 .header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
 .header-download { --button-icon: url(../assets/download.svg); }
+/* The file itself. It sits between downloading and the menu, and it must
+   NOT take an auto margin of its own: the rule below hands one to every
+   icon button in the header, and a second one would split the free space
+   between the two and tear the right-hand group apart. The group's margin
+   belongs to whatever stands at its left end (presenting), not to each of
+   its members. */
+.header-source { --button-icon: url(../assets/toolbar/code.svg); }
+.head > .header-source { margin-left: 0; }
 /* Presenting is either the plain button -- which the rule above already
    pushes to the right edge -- or, where there is a choice, a menu around
    it. Inside the <details> that rule no longer reaches the button, so the
@@ -873,6 +895,50 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   mask: var(--button-icon) center / contain no-repeat;
 }
 
+/* The colour for a few words. It has to look like the other icons in this
+   bar, but underneath it is one of the colour fields from further down the
+   form -- the same picker, the same machinery (app.css above, .clr-field).
+   Coloris paints the wrapper in the chosen colour, so the drop is masked
+   out of currentColor and is tinted by that alone: the icon wears what it
+   would apply, and nothing has to write the colour onto it.
+   Without a colour chosen the drop is the quiet grey of every other icon
+   in the bar, which is also what "no colour" looks like. */
+.tool-color { display: inline-flex; align-items: center; }
+.tool-color .clr-field { display: flex; width: auto; height: auto; color: var(--muted); }
+/* The button is the drop. It has pointer-events: none of its own -- the
+   picker opens from the input under it (see .clr-field further up).
+   Taken out of the flow the picker's own stylesheet puts it in: there it
+   is an inline box hung half its height above a baseline, which in a row
+   of icons would leave it floating over the bar and make the bar taller
+   than every other row of buttons in it. */
+.tool-color .clr-field button {
+  position: static;
+  display: block;
+  transform: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 4px;
+  background: currentColor;
+  -webkit-mask: url(../assets/toolbar/color.svg) center / 1.125rem no-repeat;
+  mask: url(../assets/toolbar/color.svg) center / 1.125rem no-repeat;
+}
+.tool-color .clr-field.is-empty button { display: block; }
+/* The input lies over the drop, invisible, and is what the picker hangs
+   on. Its own round border from the colour rows below has no business in
+   a toolbar. */
+.tool-color .clr-field input.color-field {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+}
+.tool-color .clr-field.is-empty input.color-field { background: none; }
+.tool-color:hover .clr-field button { background: var(--accent); }
+.tool-color:hover .clr-field:not(.is-empty) button { background: currentColor; }
+.tool-color .clr-field input.color-field:disabled { cursor: default; }
+.tool-color:has(input:disabled) { opacity: 0.35; }
+
 .toolbar button:hover:not(:disabled) { border-color: var(--border); background: var(--paper); }
 .toolbar button:disabled { opacity: 0.35; cursor: default; }
 .toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
@@ -1359,6 +1425,275 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
+/* And the other way for the one dialog that shows a whole file: as much of
+   the window as a dialog may take without ceasing to be one. */
+.dialog-wide { width: min(1080px, 94vw); }
+/* --- The deck as Markdown --------------------------------------------- */
+/* A head that stays and the file scrolling under it -- a source text that
+   pushed the dialog's own title off the top would be a strange thing to
+   offer. [open] and not the plain id: a <dialog> is hidden by display:none
+   from the browser itself, and a display of ours with an id's weight
+   behind it would leave the dialog standing on the page for good. */
+#deck-source-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  /* Pullable at the corner by the browser's own resizer, which needs the
+     overflow to be anything but visible. Both halves inside scroll on
+     their own, so there is nothing here for it to cut off. The floor keeps
+     a pull from leaving a window too small to hold a line of the file. */
+  resize: both;
+  overflow: hidden;
+  min-width: 340px;
+  min-height: 220px;
+  /* It is dragged around now, so it should look like something lying on
+     the page rather than set into it. */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
+}
+/* Moved aside, this dialog is meant to be worked in WHILE the preview
+   behind it is watched -- and the usual veil would leave that preview
+   under 45% of black. Light enough to see the page through, dark enough to
+   say that everything under it is out of reach for now. The page stays
+   inert either way; the form and the file must not be written at once.
+
+   And over the preview there is no veil at all. What one watches while
+   writing is what the slide LOOKS like, and any percentage of black over
+   it is that percentage of a lie -- a colour judged through a veil is
+   judged wrongly. So the rectangle the preview stands in is cut out of
+   the veil: two mask layers, everything minus that one rectangle, and
+   what is excluded is not painted. Where the rectangle is can only be
+   known while the page is running, so it arrives as four custom
+   properties on the dialog; a backdrop inherits from the element it
+   belongs to (js/editor/deck-source.js). Zero by default, which cuts
+   nothing -- so a browser that never runs the script gets the whole veil
+   rather than none of it. */
+#deck-source-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.12);
+  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%, var(--clear-w, 0) var(--clear-h, 0);
+  mask-size: 100% 100%, var(--clear-w, 0) var(--clear-h, 0);
+  -webkit-mask-position: 0 0, var(--clear-x, 0) var(--clear-y, 0);
+  mask-position: 0 0, var(--clear-x, 0) var(--clear-y, 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+/* The head is the handle. Its buttons keep the arrow -- a drag that began
+   on "Apply" would be a press that never arrives. */
+#deck-source-dialog .dialog-head { cursor: move; user-select: none; }
+#deck-source-dialog .dialog-head button { cursor: pointer; }
+/* The source lies on the quieter surface rather than on the dialog's own
+   paper -- which leaves the paper free to mean something: the one block
+   the mouse is over. Both tokens turn over with the palette, so in the
+   dark the reading is the other way round and says the same thing.
+   The padding moves from here into the blocks, so that a lit block runs
+   the full width instead of stopping 14px short of both edges; the rounded
+   corners are the dialog's, one pixel in for its border. */
+.deck-source {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 0;
+  background: var(--surface);
+  border-radius: 0 0 9px 9px;
+}
+/* One row per block of the file: the mark on the left, the lines on the
+   right. The narrow column is the same width in every row, so the rule
+   between the two runs unbroken down the whole file.
+   The caret is the whole invitation: a click turns the block into a field,
+   and nothing else says so. */
+.source-block { display: grid; grid-template-columns: 5.5rem 1fr; padding: 0 14px; cursor: text; }
+.source-block:hover { background: var(--paper); }
+
+/* The cell that holds a block's lines, and -- while it is being written in
+   -- the field as well. The two lie ON TOP OF EACH OTHER: the coloured
+   lines below, a see-through field above. That is what lets the text keep
+   its colours while it is typed; the field contributes the caret, the
+   selection and the typing, the lines underneath contribute everything one
+   can see of the text itself.
+   The rule and the indent belong to the cell rather than to either layer,
+   so both sit in exactly the same box. The lines alone decide how tall the
+   cell is; the field is stretched over whatever that comes to. */
+/* The cell carries the rule and nothing else. The indent is NOT put here:
+   a field positioned into this box is laid out against its padding box,
+   padding and all, so an indent on the cell would push the lines in and
+   leave the field twelve pixels to their left. Both layers carry it
+   themselves instead, and then they cannot drift apart. */
+.source-cell {
+  position: relative;
+  border-left: 1px solid var(--border);
+}
+.source-block.is-editing .source-cell { border-left-color: var(--accent); }
+
+/* Not the .source-field the slide form uses for the same job -- that one
+   is a field in a frame with its own borders and its own height, and the
+   two would style each other sideways.
+   Every measure here has to be the one the lines underneath have. Where
+   the two disagree by a pixel, the caret stands beside the letter it is
+   in front of, so font, size, line height, wrapping and the box itself are
+   all taken from the same place as .source-lines below. */
+.source-input {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding-left: 12px;
+  padding-top: 0;
+  padding-right: 0;
+  padding-bottom: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  /* The text of the field is not shown -- the coloured copy beneath it is.
+     Only the caret stays visible, and the selection, which a browser draws
+     over the invisible letters all the same. */
+  color: transparent;
+  caret-color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+  resize: none;
+}
+/* The selection is drawn by the field, which lies OVER the colours -- so
+   it has to be see-through, or it would paint a solid block over the very
+   text it is selecting. The letters stay transparent: what shows through
+   is the coloured copy underneath. */
+.source-input::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: transparent;
+}
+/* The rule beside an open block is the accent already; a focus ring around
+   it as well would box in a block that is meant to read as part of the
+   file. */
+.source-input:focus { outline: none; }
+/* The rule has moved to the cell around this; the indent stays here and is
+   repeated on the field, for the reason given up there. */
+.source-lines {
+  margin: 0;
+  padding-left: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  /* Wrapped rather than scrolled sideways: one of these lines is a whole
+     paragraph, and a horizontal scrollbar for it would hide the structure
+     the view is opened for. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* Which slide one is looking at. Sticky, so on a long slide the mark stays
+   at the top edge instead of scrolling away with its first line -- which is
+   the one moment the question "which slide is this?" actually comes up.
+   The line-height is the code's, so the word sits on the block's first
+   line and not above it. */
+.source-mark {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  padding-right: 18px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: calc(13px * 1.55);
+  text-align: right;
+  /* Not part of the file: a selection dragged across the source must not
+     pick these up. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* The head carries the whole talk, so its mark is the one that is not
+   grey. And a slide attached BELOW its predecessor is indented, the way
+   the slide list indents its card (js/editor/slide-list.js). */
+.source-mark.is-head { color: var(--text); }
+/* An indent alone is too quiet for this -- it is the one thing about a
+   slide that cannot be read off its text, and twelve pixels are easy to
+   look past. So the mark says it as well: an arrow turning down and to the
+   right, the way the file says it with a fourth dash. The arrow sits in
+   the indent rather than beside the word, so the numbers underneath each
+   other still line up. */
+.source-mark.is-vertical { padding-right: 6px; }
+.source-mark.is-vertical::before {
+  content: "\21B3";
+  margin-right: 3px;
+  /* A shade larger than the word beside it -- at the mark's eleven pixels
+     an arrow is a speck. The line height goes to nought with it, or this
+     one inline box would set the row a pixel taller than every other and
+     the marks would no longer sit level with their first lines. */
+  font-size: 13px;
+  line-height: 0;
+  color: var(--accent);
+}
+/* What the box may hold instead of the file: the word it is waiting
+   behind, and the one that says the waiting came to nothing. */
+#deck-source-code.is-error { color: var(--danger); }
+
+/* What the file would cost if it were saved as it stands. Under the
+   source rather than over it, because it is the answer to what stands
+   above -- and it only appears when there is an answer. It may grow
+   longer than the dialog has room for, so it scrolls on its own; the
+   source above keeps its own height either way. */
+.deck-source-findings {
+  flex: 0 0 auto;
+  max-height: 28vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+  border-radius: 0 0 9px 9px;
+}
+/* Shut while anything was found. What it is waiting for stands right
+   underneath, so the button itself needs to say nothing -- only to look
+   like what it is. The same 0.35 the disabled buttons in the text bar
+   wear. */
+#deck-source-apply:disabled { opacity: 0.35; cursor: default; }
+#deck-source-apply:disabled:hover { border-color: transparent; background: var(--accent); }
+.deck-source-findings .hint { margin: 0 0 6px; }
+.deck-source-findings ul { list-style: none; margin: 0; padding: 0; }
+/* A finding is a way to its line, so it is a button -- and one that looks
+   like the sentence it is rather than like a control. */
+.finding {
+  display: block;
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.finding:hover { background: var(--surface); }
+/* The line number leads each row and keeps its own column, so a list of
+   findings reads down the numbers first. */
+.finding-line {
+  display: inline-block;
+  min-width: 5rem;
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+
+/* What the colours mean. Ours are the three shapes the file format brings
+   along (source.js), the hljs-* ones are what the highlighter makes of the
+   Markdown in between. Everything not named here stays body text -- which
+   is what most of a slide is. */
+.deck-source .md-rule { color: var(--accent); font-weight: 600; }
+.deck-source .md-attribute { color: var(--muted); }
+.deck-source .md-key { color: var(--source-mark); }
+.deck-source .md-value { color: var(--source-value); }
+.deck-source .hljs-section { color: var(--accent); font-weight: 600; }
+.deck-source .hljs-bullet, .deck-source .hljs-quote { color: var(--source-mark); }
+.deck-source .hljs-strong { font-weight: 700; }
+.deck-source .hljs-emphasis { font-style: italic; }
+.deck-source .hljs-code { color: var(--source-mark); }
+.deck-source .hljs-string { color: var(--text); }
+.deck-source .hljs-link { color: var(--source-value); }
 
 /* --- Settings dialog -------------------------------------------------- */
 /* The recorded keys, each with its own way out. A <kbd> because that is

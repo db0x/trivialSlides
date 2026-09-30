@@ -10,6 +10,7 @@ import * as rt from "./richtext.js";
 import { createPreview } from "./preview.js";
 import { drawList, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
+import { setupDeckSource } from "./deck-source.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -56,6 +57,7 @@ var el = {
   state: $("#save-state"),
   customColor: $("#background-custom"),
   customTextColor: $("#text-color-custom"),
+  textColorTool: $("#text-color-tool"),
   gradient: $("#slide-gradient"),
   gradientHint: $("#gradient-hint"),
   gradientVorlagen: $("#gradient-presets"),
@@ -335,6 +337,10 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // The colour is not a button but a field, so it is shut separately --
+  // it acts on a selection in the rich-text field, and in source mode
+  // there is none.
+  el.textColorTool.disabled = sourceMode;
   // In source mode the whole body stands in one place, breaks and all --
   // that is what source mode is for -- so there is no column to choose.
   var chooser = !!count && !sourceMode;
@@ -563,6 +569,7 @@ el.source.addEventListener("input", remember);
 // into; nothing has to be translated a second time here.
 function showTextSide(side) {
   el.textSideButton.dataset.side = side;
+  showSideNames();
   var chosen = null;
   $$("#text-side-menu .menu-item").forEach(function (b) {
     var is = b.dataset.side === side;
@@ -576,6 +583,20 @@ function showTextSide(side) {
   // The button next door follows the side: beside the player the width is a
   // choice, above and below it is not one (slides.css).
   toggleTextWidth();
+}
+
+// What the text stands beside differs by layout -- a player on a video
+// slide, a code on a QR one -- and the words in the menu say which. Read
+// off the layout's fields rather than off its name, the same way the width
+// button does: a layout added later gets the right wording by declaring
+// the field it already has to declare (layouts.js).
+function showSideNames() {
+  var slide = deck.slides[active];
+  var def = layoutsById[slide && slide.layout] || { fields: [] };
+  var qr = def.fields.indexOf("url") !== -1;
+  $$("#text-side-menu .menu-item").forEach(function (b) {
+    b.querySelector(".menu-item-text").textContent = qr ? b.dataset.nameQr : b.dataset.nameVideo;
+  });
 }
 
 // --- How wide the text may get beside the picture or the player --------
@@ -727,6 +748,62 @@ $$(".toolbar button[data-command]").forEach(function (b) {
     remember();
   });
 });
+
+// --- Colour for a few words --------------------------------------------
+// The other tools in the bar can refuse the focus (mousedown, prevented)
+// and act on the selection that is still standing. This one cannot: the
+// picker is a field, it MUST take the focus, and the selection in the
+// rich-text field goes with it. So the selection is written down before
+// the focus leaves, and put back before the colour is applied.
+var markedRange = null;
+
+function rememberRange() {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  var range = sel.getRangeAt(0);
+  if (el.content.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
+}
+
+// While the picker is open the field is not focused, so nothing else moves
+// the selection -- writing it down on the way in is enough.
+el.textColorTool.addEventListener("mousedown", rememberRange);
+el.content.addEventListener("keyup", rememberRange);
+el.content.addEventListener("mouseup", rememberRange);
+
+// coloris:pick comes with every change while the picker is open, so the
+// colour is seen on the words as it is chosen rather than after the fact.
+document.addEventListener("coloris:pick", function (ev) {
+  if (!ev.detail || ev.detail.currentEl !== el.textColorTool) return;
+  if (sourceMode || !markedRange) return;
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(markedRange);
+  rt.farbe(el.content, ev.detail.color);
+  // The command leaves a selection of its own over the same words; it is
+  // the one the next change has to act on.
+  if (sel.rangeCount) markedRange = sel.getRangeAt(0).cloneRange();
+  remember();
+});
+
+// The button wears the colour of the text the caret is in, the way the
+// heading's chooser wears the alignment in force. Text in no colour of its
+// own reads as the field's own colour -- which is what an empty field
+// means here, so the drop goes back to grey rather than to near-black.
+function drawTextColor() {
+  if (document.activeElement !== el.content) return;
+  var here = "";
+  try { here = String(document.queryCommandValue("foreColor") || ""); } catch (e) { /* not asked */ }
+  var own = window.getComputedStyle(el.content).color;
+  var value = !here || here === own ? "" : rt.farbeVon({ style: { color: here }, tagName: "span" });
+  if (value === el.textColorTool.value) return;
+  el.textColorTool.value = value;
+  // quiet: this follows the caret, it is not somebody choosing a colour.
+  el.textColorTool.dataset.quiet = "1";
+  el.textColorTool.dispatchEvent(new Event("input", { bubbles: true }));
+  delete el.textColorTool.dataset.quiet;
+}
+
+document.addEventListener("selectionchange", drawTextColor);
 
 el.sourceButton.addEventListener("click", function () {
   harvest();
@@ -1179,6 +1256,113 @@ $("#image-file").addEventListener("change", function (ev) {
     })
     .catch(function (e) { console.error(e); note(t("message.imageError")); });
   ev.target.value = "";
+});
+
+// --- F5 starts the talk ------------------------------------------------
+// The key every presentation program has had for thirty years, and the one
+// a presenter stick can usually be taught to send. Deliberately NOT the
+// stick's spare key from the settings: that one is Tab or Enter out of the
+// box, and in the editor both of those already belong to somebody -- Tab
+// to whoever is working with the keyboard, Enter to every field and button
+// it lands on. A key that means three things means none of them.
+//
+// It costs the browser's reload, which F5 otherwise is. That is the trade
+// this key has always been: Ctrl+R still reloads, and in an editor whose
+// whole point is the talk, starting the talk is the better F5.
+//
+// The talk cannot arrive in fullscreen: a freshly opened tab has no user
+// activation of its own, and without one no browser hands over the screen
+// (measured at six moments, for window.open plain, named, with noopener,
+// and for a real click on a target="_blank" link -- hasBeenActive false
+// throughout). So the tab is asked to take the screen at the first touch
+// it gets there, whatever that touch is (views/reveal.ejs).
+//
+// The tab is opened EMPTY, inside the keypress, and sent on its way once
+// what the delayed save still owes has been written -- opening it after
+// the save would leave it to the popup blocker, and opening it with the
+// address straight away would show a file one keystroke old.
+function presentFromStart() {
+  var tab = window.open("", "_blank");
+  if (!tab) return;   // a blocker said no; nothing to be done about it here
+  var los = function () { tab.location = BASE + "/present?vollbild=1"; };
+  Promise.resolve(window.trivialSlidesSave()).then(los, los);
+}
+
+// Which key that is comes from the settings, where it is pressed once and
+// whatever arrives is kept (js/presenter-keys.js). F5 out of the box;
+// removing every key there switches the whole thing off.
+document.addEventListener("keydown", function (ev) {
+  if (ev.repeat) return;
+  // With a modifier held it is somebody's shortcut -- the browser's reload
+  // among them -- and not the talk.
+  if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.shiftKey) return;
+  // A dialog on top has the floor: the source may be half written in it.
+  if (document.querySelector("dialog[open]")) return;
+  var keys = window.startKeys ? window.startKeys.read() : [];
+  if (keys.indexOf(ev.key) === -1) return;
+  // A function key means nothing to a field, so it may be taken wherever
+  // the cursor stands -- which is what makes F5 work in the middle of a
+  // sentence. Anything else a field might want to receive is left to it:
+  // somebody who records the letter "b" must still be able to type one.
+  if (!/^F\d{1,2}$/.test(ev.key) && ev.target && ev.target.closest
+      && ev.target.closest("input, textarea, select, [contenteditable]")) return;
+  ev.preventDefault();
+  presentFromStart();
+});
+
+// --- The deck as Markdown ----------------------------------------------
+// Its own file, because it shares little with the rest of the editor: the
+// address of the deck, the promise that everything owed has been saved,
+// and the way back in below (js/editor/deck-source.js).
+
+// The three header fields are not part of drawAll(): nothing in the editor
+// has ever changed them behind the user's back. A source that was edited
+// by hand can, so they are written here.
+function drawHeader() {
+  $("#deck-title").value = deck.title;
+  [["deck-theme", deck.theme], ["deck-transition", deck.transition]].forEach(function (pair) {
+    var button = $("#" + pair[0]);
+    button.dataset.value = pair[1];
+    button.textContent = pair[1];
+    $$(".menu-item", $("#" + pair[0] + "-menu")).forEach(function (row) {
+      var here = row.dataset.value === pair[1];
+      row.classList.toggle("is-active", here);
+      row.setAttribute("aria-checked", here ? "true" : "false");
+    });
+  });
+}
+
+// A file written from the source dialog leaves the editor holding a model
+// that is one version behind -- and its next keystroke would save that old
+// model over the new file. So the new one is taken on here, and everything
+// showing it is drawn again.
+//
+// `wrote` is the slide that was being written in over there, and the
+// editor comes back standing on it: having applied a change to slide
+// seven, seven is the slide one wants in front of one. Without it -- and
+// where the slide it names is gone -- the nearest one that still exists
+// takes its place.
+function adoptDeck(fresh, wrote) {
+  deck = fresh;
+  active = Math.max(0, Math.min(wrote == null ? active : wrote, deck.slides.length - 1));
+  activeColumn = 0;
+  schmutzig = false;
+  drawHeader();
+  drawAll();
+  // The preview renders from the file, which has just been written.
+  preview.newLoad(active);
+}
+
+setupDeckSource({
+  base: BASE,
+  flush: window.trivialSlidesSave,
+  adopt: adoptDeck,
+  // The frame behind the dialog: while a slide is written in over there,
+  // it is the one the preview shows.
+  preview: preview,
+  // And the box it stands in, which the dialog's veil is kept off -- a
+  // slide seen through a veil is a slide judged wrongly.
+  frame: $(".preview-frame"),
 });
 
 // --- Startup -----------------------------------------------------------
