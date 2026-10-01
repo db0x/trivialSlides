@@ -1,6 +1,6 @@
 ---
 titel: Example
-theme: white
+theme: simple
 transition: convex
 ---
 
@@ -42,7 +42,7 @@ Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod 
 
 Four dashes instead of three attach a slide *below* the previous one
 rather than after it. reveal.js calls that a stack; press the down arrow
-to get here.
+to get here. 🙃
 <!-- .element: class="align-center" -->
 
 ---
@@ -123,11 +123,12 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="left" -->
+<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="center" -->
 
 ## Full-bleed image
 
 ⭐ The picture covers the whole slide, the text stays readable on top of it.
+<!-- .element: class="align-center" -->
 
 ---
 
@@ -137,15 +138,15 @@ getAge()
 
 ```java hl=github
 public int getAge() {
-    return this.age;
+    return this.age * getFactor();
 }
 ```
 
 getFactor()
 
 ```java hl=github
-static final int getFactor() {
-    return 1;
+private int getFactor() {
+    return 5;
 }
 ```
 <!-- .element: class="fragment" -->
@@ -165,4 +166,4 @@ static final int getFactor() {
 
 ##
 
-## That was all of them
+## That was all of them 🏁

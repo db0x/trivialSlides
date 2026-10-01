@@ -61,7 +61,7 @@ const LAYOUTS = [
   },
   {
     id: "bild-voll",
-    fields: ["image"],
+    fields: ["image", "textPlace"],
   },
   {
     id: "video",
@@ -123,6 +123,27 @@ function defaultSide(id) {
 function onlySide(value, layoutId) {
   const s = String(value == null ? "" : value).trim();
   return SIDES.includes(s) ? s : defaultSide(layoutId);
+}
+
+// Where the text box stands ON a full-bleed picture. Nine places, because
+// a picture is a rectangle and the free corner of it is wherever the motif
+// is not -- four sides would leave out exactly the corners one reaches for
+// most. The arrangement itself is in slides.css; what is settled here is
+// which names a file may carry.
+//
+// The middle is the default and not a corner: a box in the middle is
+// readable on every picture, and a picture whose middle is busy is the
+// case one then goes and moves it for.
+const PLACES = [
+  "top-left", "top", "top-right",
+  "left", "center", "right",
+  "bottom-left", "bottom", "bottom-right",
+];
+const PLACE_DEFAULT = "center";
+
+function onlyPlace(value) {
+  const s = String(value == null ? "" : value).trim();
+  return PLACES.includes(s) ? s : PLACE_DEFAULT;
 }
 
 const WIDTHS = ["25", "33", "50"];
@@ -247,4 +268,5 @@ module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
   WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
   COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,
-  TITLE_ALIGNS, TITLE_ALIGN_DEFAULT, defaultTitleAlign, onlyTitleAlign };
+  TITLE_ALIGNS, TITLE_ALIGN_DEFAULT, defaultTitleAlign, onlyTitleAlign,
+  PLACES, PLACE_DEFAULT, onlyPlace };

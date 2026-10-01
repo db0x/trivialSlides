@@ -43,6 +43,19 @@
       <p id="prefs-start-state" class="hint" role="status"></p>
       <p class="hint"><%= t('prefs.startNote') %></p>
     </div>
+    <!-- Whether the editor writes the file by itself. Here and not in the
+         header, like everything else in this dialog: it is decided once
+         and then worked under, and switching it costs a deck nothing --
+         nothing of it is written into a .md (js/autosave.js). -->
+    <div class="field">
+      <span class="field-label"><%= t('prefs.autosave') %></span>
+      <label class="switch-line">
+        <input type="checkbox" id="prefs-autosave" class="switch">
+        <span><%= t('prefs.autosaveOn') %></span>
+      </label>
+      <p class="hint"><%= t('prefs.autosaveNote') %></p>
+    </div>
+
     <p class="hint prefs-scope"><%= t('prefs.note') %></p>
   </div>
 </dialog>

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="<%= LANGUAGE %>">
+<head>
+<meta charset="utf-8">
+<title><%= deck.title %></title>
+<!-- One slide, standing still. The same stylesheets the presentation uses
+     and in the same order, so the picture on the card IS the slide -- what
+     it does without is reveal.js, the highlighter and the player, because
+     a list of slides must not start a dozen presentations to show itself.
+     thumb.css takes over the little reveal.js would have done for the
+     layout. -->
+<link rel="stylesheet" href="<%= BASE %>/reveal/reset.css">
+<link rel="stylesheet" href="<%= BASE %>/reveal/reveal.css">
+<link rel="stylesheet" href="<%= BASE %>/reveal/theme/<%= deck.theme %>.css">
+<link rel="stylesheet" href="<%= BASE %>/reveal-plugin/highlight/monokai.css">
+<link rel="stylesheet" href="<%= BASE %>/code-styles.css">
+<link rel="stylesheet" href="<%= BASE %>/static/css/slides.css">
+<link rel="stylesheet" href="<%= BASE %>/static/css/thumb.css">
+</head>
+<body class="is-thumb">
+<!-- "center" is not a decision made here, it is reveal.js' own: it puts
+     that class on this element whenever its `center` setting is on, which
+     is how it ships and what this project leaves it at. It carries a rule
+     of its own (min-height: 0 on every slide), and a slide that says
+     min-height in the layout stylesheet -- bild-voll does -- comes out a
+     different height without it. So it is written here rather than
+     discovered as a puzzle later. -->
+<div class="reveal center">
+<%- background %>
+<div class="slides">
+<%- slide %>
+</div>
+</div>
+<!-- The two that a still picture does want. slide-video.js puts the video's
+     own still image where the player would be (a card has no room for a
+     player and no business starting one), slide-fit.js steps the type down
+     on a slide that holds more than fits -- which is exactly the slide one
+     wants to spot in the list. -->
+<script src="<%= BASE %>/static/js/slide-video.js"></script>
+<script src="<%= BASE %>/static/js/slide-fit.js"></script>
+</body>
+</html>

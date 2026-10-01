@@ -57,8 +57,16 @@
   // place: the quiet image, a play mark, and a click that opens the video on
   // youtube.com -- where it plays. The served pages have an origin and never
   // come through here.
+  //
+  // A thumbnail in the editor's slide list is the other place with no
+  // player: it is a still picture of a slide, a dozen of them side by side
+  // (views/thumb.ejs), and a dozen players started to fill a sidebar would
+  // be the one thing that made the list cost more than the editor. It gets
+  // the same treatment, which is also the better picture -- a video's own
+  // still says what is on the slide, an empty player says nothing.
   function canPlay() {
-    return location.protocol !== "file:";
+    return location.protocol !== "file:"
+      && !document.body.classList.contains("is-thumb");
   }
 
   function stateIn() {

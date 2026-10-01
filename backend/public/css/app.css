@@ -11,6 +11,13 @@
 :root {
   --paper: #ffffff;
   --surface: #f4f5f7;
+  /* The tab in front, against the strip its neighbours stand on
+     (.tab-row). Its own token because the two palettes do not agree on
+     which direction "set apart" goes: in the light one it is the white of
+     the paper below, in the dark one it is DARKER than everything around
+     it -- a lighter tab there would read as the lit one rather than the
+     open one. */
+  --tab-front: #ffffff;
   --border: #d8dbe0;
   --text: #1c1f23;
   --muted: #666c75;
@@ -22,6 +29,7 @@
   /* The dark palette, not in use until one of the blocks below points at it. */
   --d-paper: #1b1e22;
   --d-surface: #15171a;
+  --d-tab-front: #101216;
   --d-border: #343a41;
   --d-text: #e7e9ec;
   --d-muted: #9aa1aa;
@@ -52,6 +60,7 @@
   :root:not([data-theme="light"]) {
     --paper: var(--d-paper);
     --surface: var(--d-surface);
+    --tab-front: var(--d-tab-front);
     --border: var(--d-border);
     --text: var(--d-text);
     --muted: var(--d-muted);
@@ -68,6 +77,7 @@
 :root[data-theme="dark"] {
   --paper: var(--d-paper);
   --surface: var(--d-surface);
+  --tab-front: var(--d-tab-front);
   --border: var(--d-border);
   --text: var(--d-text);
   --muted: var(--d-muted);
@@ -268,6 +278,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
 .header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
 .header-download { --button-icon: url(../assets/download.svg); }
+.header-save { --button-icon: url(../assets/save.svg); }
+/* While something is owed it is the one button in the header that asks to
+   be pressed, so it says so -- the accent, as the present button does. */
+.header-save.is-owed { color: var(--accent); }
 /* The file itself. It sits between downloading and the menu, and it must
    NOT take an auto margin of its own: the rule below hands one to every
    icon button in the header, and a second one would split the free space
@@ -402,39 +416,120 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .column { background: var(--surface); overflow-y: auto; padding: 12px; }
 
 /* --- Slide list ------------------------------------------------------- */
+/* A card IS the slide, and nothing but the slide: a picture of it, its
+   number in the corner, and the five buttons while the mouse is on it.
+   The picture is a page of its own inside a frame
+   (js/editor/slide-list.js, views/thumb.ejs) -- the deck's theme, the
+   layout stylesheet, no reveal.js.
+
+   Why a picture and no words: a list of headings says what a talk is
+   about, a list of slides says what it LOOKS like -- which slide is the
+   one with the chart, which one is nearly empty, where the section
+   dividers fall. That is the question one has while writing, and the
+   heading was already there to be read on the picture itself. A second,
+   smaller copy of it underneath answered nothing and cost the card a
+   strip of its own. */
 .slides { list-style: none; margin: 0; padding: 0; }
 .slide-card {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  grid-template-areas: "number text" "buttons buttons";
-  gap: 2px 8px;
-  padding: 8px;
+  /* The shape of the screen the talk is meant for. The picture inside the
+     frame is cut to the same shape, and the two have to agree -- see
+     css/thumb.css, which states it from the inside. */
+  --thumb-shape: 19 / 9;
+  position: relative;
   margin-bottom: 6px;
   background: var(--paper);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
   border-radius: var(--radius);
+  /* The picture has square corners and the card has not. */
+  overflow: hidden;
   cursor: pointer;
 }
-.slide-card.is-active { border-left-color: var(--accent); }
+/* A ring around the whole card rather than a mark along one edge of it.
+   The card is a picture now and nothing else, and a picture in full
+   colour beside twelve others in full colour needs the louder of the two:
+   an edge three pixels wide was enough while the pictures beside it were
+   faded, and is not enough now.
+
+   An outline and not a border: a border would take its width out of the
+   card and move the picture every time the selection changed. Pulled one
+   pixel inwards so it sits ON the card's own edge rather than in the gap
+   to the next one. */
+.slide-card.is-active {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
 .slide-card.is-vertical { margin-left: 18px; }
 .slide-card.wird-gezogen { opacity: 0.4; }
 .slide-card.is-target { border-color: var(--accent); }
-.card-number { grid-area: number; font-size: 12px; color: var(--muted); }
-.card-text { grid-area: text; min-width: 0; }
-.card-title {
+
+.card-thumb {
   display: block;
-  font-size: 14px;
+  aspect-ratio: var(--thumb-shape);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Decoration and nothing else: every click on a card belongs to the
+     card. Without this the frame would swallow them, and the drag that
+     reorders the list would never start. */
+  pointer-events: none;
 }
-.card-art { display: block; font-size: 11px; color: var(--muted); }
+
+.card-thumb iframe {
+  display: block;
+  /* The page inside is 960 wide whatever the card comes to -- that is
+     reveal.js' own layout width, and inside the frame it IS the window
+     (css/thumb.css says why it may not be anything else). Its height
+     follows from the shape, which is the one the page is cut to. */
+  width: 960px;
+  aspect-ratio: var(--thumb-shape);
+  border: 0;
+  transform-origin: 0 0;
+  /* Set by the browser, the only one that knows how wide the card came out
+     (js/editor/slide-list.js). The value standing here is what a card in
+     this column comes to, so a browser without a ResizeObserver shows a
+     picture of about the right size rather than none at all. */
+  transform: scale(var(--thumb-scale, 0.23));
+}
+
+/* The number, in the corner of the picture. It carries its own small
+   ground: what is behind it is a slide, and a slide may be any colour at
+   all -- the same reason the buttons opposite have one. */
+.card-number {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: center;
+}
+.slide-card.is-active .card-number { color: var(--accent); }
+
+/* The heading and the layout, for a reader that cannot see the picture
+   (js/editor/slide-list.js). Out of the way of the eye and in the way of
+   nothing else -- not display:none, which would take it from the screen
+   reader as well. */
+.card-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+/* Over the picture rather than under the words: below, they would cost the
+   card a whole row of its own -- a fifth of the slide, held open for five
+   buttons that are not there most of the time. */
 .card-buttons {
-  grid-area: buttons;
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
   gap: 2px;
-  margin-top: 4px;
   opacity: 0;
 }
 .slide-card:hover .card-buttons,
@@ -508,39 +603,110 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   margin-bottom: 4px;
   line-height: 17px;
 }
-/* The one group that folds away. Its label cannot sit above the box the way
-   the others do: it has to be clickable and it has to stay when the box is
-   closed, so it lives inside as the summary -- which then IS the whole box
-   while folded. The browser's own marker does the rest. */
-/* Folded, the summary IS the box -- so the box contributes no padding of
-   its own and the row sits evenly between the borders. Open, the bottom
-   padding comes back for the content below. */
-.fieldset-fold { padding-top: 0; padding-bottom: 0; }
-.fieldset-fold[open] { padding-bottom: 12px; }
-.fieldset-fold > summary {
-  padding: 7px 0;
-  line-height: 17px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+/* --- Where the text box stands on a picture ---------------------------- */
+/* A map of the slide rather than a list of nine words (views/editor.ejs).
+   Both the menu and the button that opens it draw the same thing: a frame
+   in the shape of a slide with one place marked. No icon file, because a
+   position is not a picture one can draw once -- it is nine, and they are
+   three rules of CSS. */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+/* Named twice over on purpose: the bar clears the ground and the border of
+   every button in it (.toolbar button above), and these nine ARE the
+   picture -- a cell one cannot see is a cell nobody can aim at. */
+.menu-grid .place-cell {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.menu-grid .place-cell:hover { border-color: var(--accent); background: var(--paper); }
+.menu-grid .place-cell[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* The button in the bar wears an icon like every other one here; which of
+   the nine places is in force is a question the open menu answers, not the
+   bar. */
+.tool-place { --button-icon: url(../assets/toolbar/position.svg); }
+
+/* --- The slide's two tabs ---------------------------------------------- */
+/* One box, two halves: what the slide says, and what it looks like
+   (views/editor.ejs).
+
+   The chooser is a strip along the top of the box, and it is deliberately
+   the loudest thing in this column. Every other label here -- small grey
+   capitals floating above a border -- is made to be read once and then
+   ignored, which is right for a label and wrong for a switch: half the
+   form is behind this one, and something that can be overlooked will be.
+   So it gets the height of a control, type at reading size, a ground of
+   its own against the box below, and a bar in the accent colour under the
+   half in front. */
+.tabbed {
+  margin: 21px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  /* Deliberately NOT overflow: hidden, however much the rounded corners
+     would like it -- the menus in the text bar below open out of their
+     box, and the emoji panel is taller than the form. The strip rounds its
+     own top corners instead, minus the border it sits inside. */
+}
+.tab-row {
+  display: flex;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  background: var(--surface);
+}
+.tab {
+  position: relative;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  /* A button brings its own typeface; `font` takes it back in one word.
+     It takes the line height with it, so the two that this strip's height
+     rests on are said again after it, not before. */
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
   color: var(--muted);
   cursor: pointer;
 }
-.fieldset-fold > summary:hover { color: var(--text); }
-.fieldset-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* Folded, the group hides what the slide carries -- so it says THAT it
-   carries something. Without this the dot would be decoration; with it, it
-   is the only way to tell a plain slide from one with a gradient. */
-.fold-mark { display: none; }
-.has-own > summary > .fold-mark {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-left: 2px;
-  border-radius: 50%;
-  background: var(--accent);
-  vertical-align: 0.05em;
+/* The bar sits ON the line that divides the strip from the box, which is
+   what ties the half in front to what is under it. Its own element rather
+   than a border, so that switching tabs moves no text by a pixel. */
+.tab::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
 }
+.tab:hover { color: var(--text); }
+/* Set apart twice over: by its ground and by the bar under it. The bar
+   alone was too quiet a thing to carry half a form. */
+.tab[aria-selected="true"] {
+  background: var(--tab-front);
+  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+  color: var(--text);
+  cursor: default;
+}
+.tab[aria-selected="true"]::after { background: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+/* The box is the wrapper now, so the panel is nothing but padding. */
+.tab-panel { padding: 10px 12px 12px; }
 
 .field { display: block; margin-bottom: 10px; }
 .field:last-child { margin-bottom: 0; }
@@ -741,7 +907,29 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="insertOrderedList"] { --button-icon: url(../assets/toolbar/md-ol.svg); }
 .tool-icon[data-command="strikeThrough"] { --button-icon: url(../assets/toolbar/md-strike.svg); }
 .tool-icon[data-command="link"] { --button-icon: url(../assets/toolbar/md-link.svg); }
-.tool-icon[data-command="fragment"] { --button-icon: url(../assets/toolbar/fragment.svg); }
+/* The icon is on the summary that opens the menu now, not on a button of
+   its own -- the thing it stands for comes in two kinds (views/editor.ejs). */
+.tool-fragment { --button-icon: url(../assets/toolbar/fragment.svg); }
+/* Its two rows are checkmarks, not one choice out of several: a slide may
+   have both. So the slot the other menus fill with an icon carries a tick
+   here, and nothing when the row is off. Drawn rather than brought in as a
+   file -- it is two lines, and the project keeps no icon it does not
+   need. */
+#fragment-menu .menu-item-icon {
+  position: relative;
+  background: none;
+}
+#fragment-menu .menu-item[aria-checked="true"] .menu-item-icon::after {
+  content: "";
+  position: absolute;
+  top: 0.05rem;
+  left: 0.3rem;
+  width: 0.3rem;
+  height: 0.6rem;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 .tool-icon[data-command="align-left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
 .tool-icon[data-command="align-center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
 .tool-icon[data-command="align-right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
@@ -1037,9 +1225,66 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   resize: vertical;
   tab-size: 4;
 }
-/* A checkbox with its word beside it on one line. Two places now: the
-   fragment box in the code dialog and the columns box under the layout
-   tiles -- one shape, so a tick box reads the same wherever it stands. */
+/* --- The switch -------------------------------------------------------- */
+/* Everywhere this app asks a yes-or-no question it asks it with one of
+   these rather than with a tick box. The two are not quite the same
+   question: a tick box says "this is a property of the thing", a switch
+   says "this is on or off", and all three here -- autosave, a column slide
+   filling its columns one by one, a code block waiting for a click -- are
+   the second kind.
+
+   Still a real <input type="checkbox">: the label, the keyboard, the space
+   bar and what a screen reader announces all come with it. What
+   `appearance: none` gives up is the drawing and nothing else. */
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+/* The knob. A pseudo-element OF the input, which a checkbox only draws
+   once it has given up its own appearance -- hence the line above. */
+.switch::after {
+  content: "";
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.15s, background-color 0.15s;
+}
+.switch:hover:not(:disabled) { border-color: var(--accent); }
+.switch:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.switch:checked::after {
+  /* 36 across, less two borders, less the knob and its two margins. */
+  transform: translateX(16px);
+  background: var(--accent-text);
+}
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch:disabled { cursor: default; opacity: 0.5; }
+/* The form gives every input standing in a field the whole width of it
+   (.field > input, far above). A switch is not that kind of input: it is
+   as wide as it is, and stretched across the row it reads as a progress
+   bar with a dot at one end. */
+.field > .switch { width: 36px; }
+
+/* A switch with its word beside it on one line. Three places: the fragment
+   box in the code dialog, the columns box under the layout tiles, and
+   autosave in the settings -- one shape, so the question reads the same
+   wherever it is asked. */
+.switch-line,
 .code-fragment-line,
 .field-columns {
   display: flex;
@@ -1048,8 +1293,6 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   font-size: 13px;
   cursor: pointer;
 }
-.code-fragment-line input,
-.field-columns input { width: auto; margin: 0; }
 /* Off the tiles above it, which are a dense block of their own. */
 .field-columns { margin-top: 8px; }
 
@@ -1114,13 +1357,76 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Both dots on one line, each with its word beside it -- a fieldset per
    dot left two large boxes almost empty. */
 .color-row { display: flex; flex-wrap: wrap; gap: 20px; }
+/* The word above the swatch, the way the gradient and the effect wear
+   theirs -- the same .field-label, so a column of choices lines up on one
+   left edge instead of one word standing beside its tile and the next two
+   above theirs. */
 .color-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
+  display: inline-block;
   cursor: pointer;
+}
+
+/* --- Colours and effects, in two groups -------------------------------- */
+/* What the writing takes, and what the ground takes (views/editor.ejs).
+   The heading is the ordinary field label with a line under it: enough to
+   gather three fields into one answer, not so much that the panel grows a
+   second kind of box inside the box it already is. */
+.color-group + .color-group { margin-top: 16px; }
+.group-label {
+  display: block;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+}
+/* On its own line, like the gradient and the effect under it. */
+.color-group > .color-choice { display: block; margin-bottom: 10px; }
+/* And wearing the same tile those two wear -- 46 by 28 with the box's own
+   corner. Standing under one another, a circle among rectangles read as a
+   different KIND of choice than it is.
+
+   The swatch has to be told its size in so many words. Coloris gives it
+   `width: 30px; right: 0; top: 50%` of its own (coloris.css), and that
+   stylesheet is loaded AFTER this one -- so a rule naming one class, the
+   way the shared .clr-field rules above do, loses to it and leaves a
+   30-pixel block of colour in a 46-pixel tile with white beside it. Two
+   classes outweigh it whatever the order. */
+.color-choice .clr-field { width: 46px; height: 28px; }
+/* The colour is laid edge to edge, exactly as a gradient tile lays its
+   gradient: as the tile's GROUND, with the hairline painted over it. The
+   obvious arrangement -- colour inside, border around -- draws two arcs at
+   every corner, one a pixel inside the other, and a hairline standing on
+   white paper beside eight hairlines standing on their own colour reads as
+   a heavier line than theirs. One arc, one edge, and the swatch sits in
+   the row as one of them. */
+.color-choice .clr-field button {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: var(--radius);
+}
+/* The edge, over the colour. A pseudo-element of the field and not the
+   border of the input underneath, because the input is below the swatch
+   and anything it draws would be painted out by it. */
+.color-choice .clr-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+.color-choice .clr-field:hover::after { border-color: var(--accent); }
+/* Which leaves the input to hold the empty state and nothing else -- the
+   diagonal that says a slide has been given no colour of its own. */
+.color-choice .clr-field input.color-field {
+  border-color: transparent;
+  border-radius: var(--radius);
 }
 .clr-field {
   width: 1.75rem;

@@ -8,7 +8,7 @@
 import { $, $$, t, schreibHead, verzoegert } from "./base.js";
 import * as rt from "./richtext.js";
 import { createPreview } from "./preview.js";
-import { drawList, dragEnable } from "./slide-list.js";
+import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
@@ -22,7 +22,15 @@ LAYOUTS.forEach(function (l) { layoutsById[l.id] = l; });
 
 var active = 0;
 var sourceMode = false; // shows the current slide as Markdown
+// Two different kinds of "behind", and with autosave off they are not the
+// same thing:
+//   schmutzig    the model here is ahead of the SERVER. Drives the delayed
+//                send, and has to be nil before the talk is opened.
+//   ungesichert  the FILE is behind. Only ever true with autosave off, and
+//                only the Save button clears it.
 var schmutzig = false;
+var ungesichert = false;
+var autosaveOn = window.autosave ? window.autosave.read() : true;
 
 var el = {
   list: $("#slide-list"),
@@ -41,8 +49,12 @@ var el = {
   qrBackground: $("#qr-background"),
   qrTextColor: $("#qr-text-color"),
   videoNote: $("#video-note"),
+  fragmentMenu: $("#fragment-menu"),
+  fragmentButton: $("#fragment-button"),
   textSideMenu: $("#text-side-menu"),
   textSideButton: $("#text-side-button"),
+  textPlaceMenu: $("#text-place-menu"),
+  textPlaceButton: $("#text-place-button"),
   textWidthMenu: $("#text-width-menu"),
   textWidthButton: $("#text-width-button"),
   fieldImage: $(".field-image"),
@@ -55,6 +67,7 @@ var el = {
   layoutHint: $("#layout-hint"),
   layoutLocked: $("#layout-locked"),
   state: $("#save-state"),
+  saveButton: $("#deck-save"),
   customColor: $("#background-custom"),
   customTextColor: $("#text-color-custom"),
   textColorTool: $("#text-color-tool"),
@@ -62,7 +75,6 @@ var el = {
   gradientHint: $("#gradient-hint"),
   gradientVorlagen: $("#gradient-presets"),
   effectTiles: $("#effect-tiles"),
-  colorsGroup: $("#colors-group"),
   codeButton: $("#code-insert"),
   codeDialog: $("#code-dialog"),
   codeLanguage: $("#code-language"),
@@ -107,12 +119,18 @@ function stateShow(text, cls) {
   el.state.className = "save-state " + (cls || "");
 }
 
-function saveNow() {
+// One way to the server, two things it may mean. With autosave on, and
+// whenever the Save button asks for it, the deck is written. Otherwise it
+// is HELD there (backend/storage.js) -- which is why paging through the
+// slides, the preview and the talk in its own tab all show what was typed
+// although no file has been touched: they all read the one deck the server
+// has, and the server has this one.
+function saveNow(toFile) {
   harvest();
   return fetch(BASE + "/deck.json", {
     method: "PUT",
     headers: schreibHead({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ deck: deck }),
+    body: JSON.stringify({ deck: deck, draft: !autosaveOn && !toFile }),
   })
     .then(function (r) {
       if (!r.ok) throw new Error("Status " + r.status);
@@ -124,9 +142,19 @@ function saveNow() {
       // editor would show something other than what the file holds.
       deck = d.deck;
       schmutzig = false;
-      // Saved is the normal state, and the normal state says nothing.
-      // What is worth a word is the wait and the failure.
-      stateShow("");
+      // The server says whether it is still holding this deck rather than
+      // having written it -- that, and not what was asked for, is what the
+      // word in the header has to report.
+      ungesichert = !!d.draft;
+      // Now the list can show what the file holds -- the card's name, its
+      // layout and its picture. The picture especially: the server draws
+      // it FROM the saved file (views/thumb.ejs), so this is the first
+      // moment it can be right. Both are filled in place, so nothing in
+      // the list moves and only a slide that really looks different is
+      // fetched again (js/editor/slide-list.js).
+      drawList(el.list, deck, active, layoutsById);
+      drawPictures(el.list, deck);
+      drawSaveState();
     })
     .catch(function (e) {
       console.error(e);
@@ -135,6 +163,32 @@ function saveNow() {
 }
 
 var saveSoon = verzoegert(900, saveNow);
+
+// --- Saved, or owed ----------------------------------------------------
+// With autosave on this says nothing at all: writing the file is the normal
+// course of things, and a word after every keystroke would be a complaint
+// about it. Switched off, the opposite holds -- nothing is written unless
+// one presses the button, so the header has to say that something is owed,
+// and the button has to be there to press.
+function drawSaveState() {
+  el.saveButton.hidden = autosaveOn;
+  var owed = !autosaveOn && (schmutzig || ungesichert);
+  el.saveButton.classList.toggle("is-owed", owed);
+  stateShow(owed ? t("state.unsaved") : "");
+}
+
+el.saveButton.addEventListener("click", function () { saveNow(true); });
+
+// Switched in the settings dialog while the editor stands open
+// (js/autosave.js). Turning it ON with something owed writes it at once --
+// that is what the words on the switch promise.
+document.addEventListener("autosave", function (ev) {
+  autosaveOn = !!(ev.detail && ev.detail.on);
+  if (autosaveOn && (schmutzig || ungesichert)) saveNow(true);
+  else drawSaveState();
+});
+
+drawSaveState();
 
 // Anything that wants to leave the page -- the language switch, for one --
 // has to be able to flush what is quiet owed. Saving is on a delay, and a
@@ -145,6 +199,10 @@ window.trivialSlidesSave = function () {
 
 function remember() {
   harvest();
+  // Owed from the first keystroke, not from the first send: the word in the
+  // header would otherwise appear a second late, which on a manual save is
+  // exactly the second that matters.
+  if (!autosaveOn && !ungesichert) { ungesichert = true; drawSaveState(); }
   // The first word typed locks the layout, the last one deleted frees it
   // again -- so this belongs on the typing path, not only on a redraw.
   drawLayoutLock();
@@ -170,7 +228,7 @@ function structureChanged(newIndex) {
 }
 
 window.addEventListener("beforeunload", function (ev) {
-  if (!schmutzig) return;
+  if (!schmutzig && !ungesichert) return;
   ev.preventDefault();
   ev.returnValue = "";
 });
@@ -203,6 +261,7 @@ function harvest() {
   // The bar shows the side as an icon, so the chosen one lives on the
   // button rather than in a field value.
   slide.textSide = el.textSideButton.dataset.side || "oben";
+  slide.textPlace = el.textPlaceButton.dataset.place || "center";
   slide.textWidth = el.textWidthButton.dataset.width || defaultWidth();
   // The chooser beside the heading keeps two things apart: what the slide
   // has CHOSEN (which may be nothing) and what the button SHOWS, which is
@@ -281,6 +340,8 @@ function showSlide() {
   // A slide that has never been arranged is arranged the way it has always
   // looked, so the button shows the same thing the slide does.
   showTextSide(slide.textSide || "oben");
+  showTextPlace(slide.textPlace || "center");
+  drawFragment();
   showTitleAlign(slide.titleAlign || "");
   showTextWidth(slide.textWidth || defaultWidth());
   showVideo();
@@ -299,10 +360,12 @@ function showSlide() {
   el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
   el.columnsSplit.checked = slide.columnMode === SPLIT;
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
+  el.textPlaceMenu.hidden = def.fields.indexOf("textPlace") === -1;
   el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
   // A menu left standing open over a layout that no longer has the button
   // would hang in the bar with nothing under it.
   if (el.textSideMenu.hidden) el.textSideMenu.open = false;
+  if (el.textPlaceMenu.hidden) el.textPlaceMenu.open = false;
   if (el.textWidthMenu.hidden) el.textWidthMenu.open = false;
   showImage(slide.image);
 
@@ -320,10 +383,6 @@ function showSlide() {
   $$(".effect-tile").forEach(function (k) {
     k.classList.toggle("is-active", k.dataset.effect === (slide.effect || ""));
   });
-  // Folded, the group shows nothing of what the slide carries. The mark on
-  // its label says that there is something to unfold.
-  el.colorsGroup.classList.toggle("has-own",
-    !!(slide.background || slide.textColor || slide.gradient || slide.effect));
 }
 
 function setContentMode(slide) {
@@ -337,6 +396,10 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // "This paragraph" needs a paragraph, and in source mode there is none --
+  // only text. The slide's own text box is a different matter: it is an
+  // attribute of the slide and can be set from either mode.
+  $('.menu-item[data-fragment="block"]').disabled = sourceMode;
   // The colour is not a button but a field, so it is shut separately --
   // it acts on a selection in the rich-text field, and in source mode
   // there is none.
@@ -515,15 +578,7 @@ headerMenu("deck-theme", function () {
 });
 headerMenu("deck-transition", function () { saveNow(); });
 
-el.title.addEventListener("input", function () {
-  remember();
-  // The card in the list carries the heading -- it has to follow along as
-  // you type, otherwise the list looks frozen.
-  var card = el.list.children[active];
-  // The same wording the card uses when it is drawn (slide-list.js), and
-  // out of the table rather than written here in one language.
-  if (card) $(".card-title", card).textContent = el.title.value || t("card.untitled");
-});
+el.title.addEventListener("input", remember);
 el.content.addEventListener("input", remember);
 
 // Ctrl+B / Ctrl+I in the body field -- the browser does this by itself,
@@ -560,6 +615,33 @@ $$(".column-tab", el.columnTabs).forEach(function (tab) {
 });
 el.sourceText.addEventListener("input", remember);
 el.source.addEventListener("input", remember);
+
+// --- Where the text box stands on a full-bleed picture -----------------
+// Nine places. The one in force is marked in the menu, and it also rides on
+// the button -- not to be seen there, but because that is where harvest()
+// reads it from, the way the side button next to it holds its side. The
+// words come from the menu entries, which the server has already put into
+// the page.
+function showTextPlace(place) {
+  el.textPlaceButton.dataset.place = place;
+  var chosen = null;
+  $$("#text-place-menu .place-cell").forEach(function (cell) {
+    var is = cell.dataset.place === place;
+    cell.setAttribute("aria-checked", is ? "true" : "false");
+    if (is) chosen = cell;
+  });
+  var name = el.textPlaceMenu.dataset.name + (chosen ? ": " + chosen.dataset.tip : "");
+  el.textPlaceButton.setAttribute("aria-label", name);
+  el.textPlaceButton.dataset.tip = name;
+}
+
+$$("#text-place-menu .place-cell").forEach(function (cell) {
+  cell.addEventListener("click", function () {
+    showTextPlace(cell.dataset.place);
+    el.textPlaceMenu.open = false;
+    remember();
+  });
+});
 
 // --- Where the text sits on a video slide ------------------------------
 // The bar has room for an icon and no more, so the name of the side has to
@@ -677,6 +759,50 @@ $$("#title-align-menu .menu-item").forEach(function (button) {
     showTitleAlign(button.dataset.align);
     el.titleAlignMenu.open = false;
     remember();
+  });
+});
+
+// --- Reveal on a click --------------------------------------------------
+// Two different things behind one icon (views/editor.ejs): one block of the
+// text, which is a class in the body, and the slide's whole text box, which
+// is an attribute of the slide. Checkmarks and not a choice -- a slide may
+// have both, and then it takes two clicks to show everything.
+function drawFragment() {
+  var slide = deck.slides[active];
+  mark('.menu-item[data-fragment="block"]',
+    !sourceMode && rt.fragmentHere(el.content, markedRange && markedRange.startContainer));
+  mark('.menu-item[data-fragment="text"]', !!(slide && slide.textFragment));
+}
+
+function mark(selector, on) {
+  var row = $(selector);
+  row.classList.toggle("is-active", on);
+  row.setAttribute("aria-checked", on ? "true" : "false");
+}
+
+// The caret is what "this paragraph" means, and opening a menu takes the
+// focus off it. So the range is written down on the way in -- the same
+// trick the colour tool plays further down -- and put back before the
+// command runs.
+el.fragmentButton.addEventListener("mousedown", rememberRange);
+el.fragmentMenu.addEventListener("toggle", function () {
+  if (el.fragmentMenu.open) drawFragment();
+});
+
+$$("#fragment-menu .menu-item").forEach(function (row) {
+  row.addEventListener("click", function () {
+    if (row.dataset.fragment === "text") {
+      var slide = deck.slides[active];
+      if (slide) slide.textFragment = !slide.textFragment;
+    } else if (!sourceMode && markedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(markedRange);
+      rt.befehl(el.content, "fragment");
+    }
+    el.fragmentMenu.open = false;
+    remember();
+    drawFragment();
   });
 });
 
@@ -1116,22 +1242,50 @@ colorFieldWire(el.qrColor, "qrColor");
 colorFieldWire(el.qrBackground, "qrBackground");
 colorFieldWire(el.qrTextColor, "qrTextColor");
 
-// --- The colour group ---------------------------------------------------
-// Closed to begin with: colours, gradients and effects are what one reaches
-// for after a while, and the editor should not open with them. Whoever has
-// opened it once is past that point, so the choice is kept -- in the
-// browser, like the light/dark setting, because it belongs to the person
-// and not to the deck.
-var COLORS_OPEN = "trivialslides:colors-open";
+// --- The slide's two tabs ----------------------------------------------
+// What the slide says and what it looks like, one in front of the other
+// (views/editor.ejs). The chosen tab belongs to the person and not to the
+// slide, so it stays put while one slide after another is worked through
+// -- someone giving a whole deck its colours should not have to choose the
+// tab thirteen times.
+//
+// It is NOT kept past a reload, though, and that is the one place where
+// this differs from the group it replaces. The editor opening onto
+// anything but the text of the first slide would be a worse start than the
+// one thing the old fold could not do, which was to be in the way.
+function tabShow(tab) {
+  $$(".tab").forEach(function (b) {
+    var front = b === tab;
+    b.setAttribute("aria-selected", front ? "true" : "false");
+    // Out of the tab order, all but the one in front: a row of tabs is one
+    // stop, and the arrow keys move inside it (below). That is what a
+    // screen reader expects of a tablist, and it saves four presses of Tab
+    // on the way to the text field.
+    b.tabIndex = front ? 0 : -1;
+    $("#" + b.dataset.panel).hidden = !front;
+  });
+}
 
-try {
-  el.colorsGroup.open = localStorage.getItem(COLORS_OPEN) === "1";
-} catch (e) { /* private window, storage blocked */ }
+$$(".tab").forEach(function (tab) {
+  tab.addEventListener("click", function () { tabShow(tab); });
+});
 
-el.colorsGroup.addEventListener("toggle", function () {
-  try {
-    localStorage.setItem(COLORS_OPEN, el.colorsGroup.open ? "1" : "0");
-  } catch (e) { /* see above */ }
+// Left and right walk the row and take the focus with them -- pressing a
+// tab and arriving at it are the same thing here, there is nothing to
+// confirm. Home and End for the ends of the row.
+$(".tab-row").addEventListener("keydown", function (ev) {
+  var tabs = $$(".tab");
+  var here = tabs.indexOf(document.activeElement);
+  if (here === -1) return;
+  var there = null;
+  if (ev.key === "ArrowLeft") there = (here - 1 + tabs.length) % tabs.length;
+  else if (ev.key === "ArrowRight") there = (here + 1) % tabs.length;
+  else if (ev.key === "Home") there = 0;
+  else if (ev.key === "End") there = tabs.length - 1;
+  if (there === null) return;
+  ev.preventDefault();
+  tabShow(tabs[there]);
+  tabs[there].focus();
 });
 
 // --- Gradient ----------------------------------------------------------
@@ -1281,6 +1435,24 @@ $("#image-file").addEventListener("change", function (ev) {
 // what the delayed save still owes has been written -- opening it after
 // the save would leave it to the popup blocker, and opening it with the
 // address straight away would show a file one keystroke old.
+// The talk has to show what stands on the screen here, written or not --
+// with autosave off that is the whole point of being able to present
+// without saving first. These three are plain links, so the flush has to be
+// hung on the click: the tab is opened INSIDE it and sent on its way once
+// the server has what it is owed. Opening it after the wait would leave it
+// to the popup blocker, which is the same dance presentFromStart does below
+// for the key that starts the talk.
+$$("a.present-direct, a.present-from-start, #present-from-current").forEach(function (link) {
+  link.addEventListener("click", function (ev) {
+    if (!schmutzig) return;   // the server is level; the link does its own job
+    ev.preventDefault();
+    var tab = window.open("", "_blank");
+    if (!tab) { window.trivialSlidesSave(); return; }
+    var los = function () { tab.location = link.href; };
+    Promise.resolve(window.trivialSlidesSave()).then(los, los);
+  });
+});
+
 function presentFromStart() {
   var tab = window.open("", "_blank");
   if (!tab) return;   // a blocker said no; nothing to be done about it here
@@ -1347,9 +1519,17 @@ function adoptDeck(fresh, wrote) {
   active = Math.max(0, Math.min(wrote == null ? active : wrote, deck.slides.length - 1));
   activeColumn = 0;
   schmutzig = false;
+  // That dialog writes the FILE, whatever autosave says -- it is the file
+  // one is editing over there. So nothing is owed any more.
+  ungesichert = false;
+  drawSaveState();
   drawHeader();
   drawAll();
-  // The preview renders from the file, which has just been written.
+  // The file has just been written, so this is a moment at which the
+  // pictures on the cards can be right -- the same reason the preview is
+  // reloaded on the next line: both render from the file, not from the
+  // model here.
+  drawPictures(el.list, deck);
   preview.newLoad(active);
 }
 

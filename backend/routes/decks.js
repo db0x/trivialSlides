@@ -132,6 +132,7 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     videoPattern: video.PATTERN,
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
+    places: i18n.placesTranslated(layouts.PLACES, req.language),
     codeLanguages: code.LANGUAGES,
     emoji: i18n.emojiTranslated(emoji.GROUPS, req.language),
     codeStyles: code.STYLES,
@@ -155,10 +156,19 @@ router.get("/d/:slug/deck.json", loadDeck, (req, res) => {
   res.json({ deck: req.deck, images: storage.images(req.slug) });
 });
 
+// The editor sends its model the same way whether autosave is on or off --
+// what differs is the one word `draft`. With it, the deck is held in the
+// server's memory and the file is left alone (storage.js); without it, the
+// file is written, which is what the Save button asks for.
+//
+// Held or written, the answer is the same normalised model, because the
+// editor has to end up showing what the server made of what it sent either
+// way.
 router.put("/d/:slug/deck.json", sameOriginOnly, loadDeck, (req, res) => {
   const model = deck.normalize(req.body && req.body.deck);
-  storage.save(req.slug, model);
-  res.json({ ok: true, deck: model });
+  if (req.body && req.body.draft) storage.keepDraft(req.slug, model);
+  else storage.save(req.slug, model);
+  res.json({ ok: true, deck: model, draft: storage.hasDraft(req.slug) });
 });
 
 // A single slide as HTML -- so that after every keystroke the preview
@@ -166,6 +176,24 @@ router.put("/d/:slug/deck.json", sameOriginOnly, loadDeck, (req, res) => {
 router.post("/d/:slug/slide.html", sameOriginOnly, loadDeck, (req, res) => {
   const slide = deck.normalize({ slides: [req.body && req.body.slide] }).slides[0];
   res.json({ html: render.slideHtml(slide, imageBase(req.slug)) });
+});
+
+// A single slide as a picture standing still -- what a card in the
+// editor's slide list carries behind its words (js/editor/slide-list.js).
+//
+// A page of its own rather than the preview's: the preview is a running
+// presentation, and a list of thirteen slides cannot be thirteen running
+// presentations. This one brings the theme and the layout stylesheet, so
+// the card shows the slide rather than a sketch of it, and brings neither
+// reveal.js nor the highlighter nor a player (views/thumb.ejs).
+router.get("/d/:slug/thumb/:index", loadDeck, (req, res) => {
+  const slide = req.deck.slides[Number(req.params.index)];
+  if (!slide) return res.status(404).end();
+  res.render("thumb", {
+    deck: req.deck,
+    slide: render.slideHtml(slide, imageBase(req.slug)),
+    background: render.backgroundHtml(slide, imageBase(req.slug)),
+  });
 });
 
 // --- Viewing -----------------------------------------------------------
