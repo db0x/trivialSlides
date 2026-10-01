@@ -78,15 +78,51 @@ function list() {
     .sort((a, b) => b.changed.localeCompare(a.changed));
 }
 
+// --- A deck being written in with autosave off -------------------------
+// With autosave on, every pause in the typing writes the file. Switched
+// off, the editor keeps sending its model exactly as before -- what
+// changes is where this module puts it: here, until the Save button says
+// otherwise.
+//
+// In memory and not in a second file beside the deck, because "not saved"
+// has to mean that nothing was written or the word is worth nothing. What
+// it costs is that a restart of the server drops what was never saved;
+// what it buys is that everything else in this app -- the preview, the
+// cards, the talk in its own tab, the export -- goes on reading ONE deck
+// through load() below and needs to know nothing about any of this.
+const drafts = new Map();
+
+function keepDraft(slug, model) {
+  if (!folderFor(slug)) return false;
+  drafts.set(slug, model);
+  return true;
+}
+
+function dropDraft(slug) {
+  drafts.delete(slug);
+}
+
+function hasDraft(slug) {
+  return drafts.has(slug);
+}
+
 function load(slug) {
   const o = folderFor(slug);
   if (!o || !fs.existsSync(path.join(o, FILE))) return null;
+  // What is being written in beats what is on disk. Reopening the editor
+  // therefore shows the unsaved work rather than the version before it,
+  // and so does the talk -- which is the point of being able to present
+  // without saving first.
+  if (drafts.has(slug)) return drafts.get(slug);
   return deck.parse(fs.readFileSync(path.join(o, FILE), "utf8"));
 }
 
 function save(slug, model) {
   const o = folderFor(slug);
   if (!o) return false;
+  // Written is written: whatever was being held for this deck is now the
+  // file, and holding a copy of it would only be a second truth.
+  drafts.delete(slug);
   fs.mkdirSync(o, { recursive: true });
   // Write alongside first, then rename: an interrupted write then leaves
   // the previous version behind rather than half a file.
@@ -128,4 +164,5 @@ function images(slug) {
     .sort();
 }
 
-module.exports = { FILE, ASSETS, slugify, folderFor, exists, list, load, save, create, imagePath, images, ensure };
+module.exports = { FILE, ASSETS, slugify, folderFor, exists, list, load, save, create, imagePath, images, ensure,
+  keepDraft, dropDraft, hasDraft };

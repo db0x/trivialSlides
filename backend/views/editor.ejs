@@ -52,6 +52,13 @@
     </details>
   </span>
 
+  <!-- Only there while autosave is off (js/autosave.js, js/editor/index.js).
+       With autosave on it would be a button for something that has already
+       happened; off, it is the only thing that writes the file, which is
+       why it sits here beside the word that says whether anything is owed
+       rather than in the text bar, which is for formatting. -->
+  <button type="button" id="deck-save" class="button button-icon header-save" hidden
+          data-tip="<%= t('header.save') %>" aria-label="<%= t('header.save') %>"></button>
   <span id="save-state" class="save-state" role="status"></span>
 
   <!-- Presenting is two things: from the top, or from wherever the editor
@@ -127,7 +134,7 @@
            reads) the slide has one text and the browser distributes it. -->
       <label class="field field-columns" hidden
              data-tip="<%= t('editor.columnsSplitHint') %>">
-        <input type="checkbox" id="slide-columns-split">
+        <input type="checkbox" id="slide-columns-split" class="switch">
         <span><%= t('editor.columnsSplit') %></span>
       </label>
     </fieldset>
@@ -578,7 +585,7 @@
                 placeholder="<%= t('dialog.codePlaceholder') %>"></textarea>
     </label>
     <label class="field field-schmal code-fragment-line">
-      <input type="checkbox" id="code-fragment">
+      <input type="checkbox" id="code-fragment" class="switch">
       <span><%= t('dialog.codeFragment') %></span>
     </label>
     <p id="code-note" class="hint"><%= t('dialog.codeNote') %></p>

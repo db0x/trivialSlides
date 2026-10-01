@@ -22,7 +22,15 @@ LAYOUTS.forEach(function (l) { layoutsById[l.id] = l; });
 
 var active = 0;
 var sourceMode = false; // shows the current slide as Markdown
+// Two different kinds of "behind", and with autosave off they are not the
+// same thing:
+//   schmutzig    the model here is ahead of the SERVER. Drives the delayed
+//                send, and has to be nil before the talk is opened.
+//   ungesichert  the FILE is behind. Only ever true with autosave off, and
+//                only the Save button clears it.
 var schmutzig = false;
+var ungesichert = false;
+var autosaveOn = window.autosave ? window.autosave.read() : true;
 
 var el = {
   list: $("#slide-list"),
@@ -59,6 +67,7 @@ var el = {
   layoutHint: $("#layout-hint"),
   layoutLocked: $("#layout-locked"),
   state: $("#save-state"),
+  saveButton: $("#deck-save"),
   customColor: $("#background-custom"),
   customTextColor: $("#text-color-custom"),
   textColorTool: $("#text-color-tool"),
@@ -110,12 +119,18 @@ function stateShow(text, cls) {
   el.state.className = "save-state " + (cls || "");
 }
 
-function saveNow() {
+// One way to the server, two things it may mean. With autosave on, and
+// whenever the Save button asks for it, the deck is written. Otherwise it
+// is HELD there (backend/storage.js) -- which is why paging through the
+// slides, the preview and the talk in its own tab all show what was typed
+// although no file has been touched: they all read the one deck the server
+// has, and the server has this one.
+function saveNow(toFile) {
   harvest();
   return fetch(BASE + "/deck.json", {
     method: "PUT",
     headers: schreibHead({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ deck: deck }),
+    body: JSON.stringify({ deck: deck, draft: !autosaveOn && !toFile }),
   })
     .then(function (r) {
       if (!r.ok) throw new Error("Status " + r.status);
@@ -127,6 +142,10 @@ function saveNow() {
       // editor would show something other than what the file holds.
       deck = d.deck;
       schmutzig = false;
+      // The server says whether it is still holding this deck rather than
+      // having written it -- that, and not what was asked for, is what the
+      // word in the header has to report.
+      ungesichert = !!d.draft;
       // Now the list can show what the file holds -- the card's name, its
       // layout and its picture. The picture especially: the server draws
       // it FROM the saved file (views/thumb.ejs), so this is the first
@@ -135,9 +154,7 @@ function saveNow() {
       // fetched again (js/editor/slide-list.js).
       drawList(el.list, deck, active, layoutsById);
       drawPictures(el.list, deck);
-      // Saved is the normal state, and the normal state says nothing.
-      // What is worth a word is the wait and the failure.
-      stateShow("");
+      drawSaveState();
     })
     .catch(function (e) {
       console.error(e);
@@ -146,6 +163,32 @@ function saveNow() {
 }
 
 var saveSoon = verzoegert(900, saveNow);
+
+// --- Saved, or owed ----------------------------------------------------
+// With autosave on this says nothing at all: writing the file is the normal
+// course of things, and a word after every keystroke would be a complaint
+// about it. Switched off, the opposite holds -- nothing is written unless
+// one presses the button, so the header has to say that something is owed,
+// and the button has to be there to press.
+function drawSaveState() {
+  el.saveButton.hidden = autosaveOn;
+  var owed = !autosaveOn && (schmutzig || ungesichert);
+  el.saveButton.classList.toggle("is-owed", owed);
+  stateShow(owed ? t("state.unsaved") : "");
+}
+
+el.saveButton.addEventListener("click", function () { saveNow(true); });
+
+// Switched in the settings dialog while the editor stands open
+// (js/autosave.js). Turning it ON with something owed writes it at once --
+// that is what the words on the switch promise.
+document.addEventListener("autosave", function (ev) {
+  autosaveOn = !!(ev.detail && ev.detail.on);
+  if (autosaveOn && (schmutzig || ungesichert)) saveNow(true);
+  else drawSaveState();
+});
+
+drawSaveState();
 
 // Anything that wants to leave the page -- the language switch, for one --
 // has to be able to flush what is quiet owed. Saving is on a delay, and a
@@ -156,6 +199,10 @@ window.trivialSlidesSave = function () {
 
 function remember() {
   harvest();
+  // Owed from the first keystroke, not from the first send: the word in the
+  // header would otherwise appear a second late, which on a manual save is
+  // exactly the second that matters.
+  if (!autosaveOn && !ungesichert) { ungesichert = true; drawSaveState(); }
   // The first word typed locks the layout, the last one deleted frees it
   // again -- so this belongs on the typing path, not only on a redraw.
   drawLayoutLock();
@@ -181,7 +228,7 @@ function structureChanged(newIndex) {
 }
 
 window.addEventListener("beforeunload", function (ev) {
-  if (!schmutzig) return;
+  if (!schmutzig && !ungesichert) return;
   ev.preventDefault();
   ev.returnValue = "";
 });
@@ -1388,6 +1435,24 @@ $("#image-file").addEventListener("change", function (ev) {
 // what the delayed save still owes has been written -- opening it after
 // the save would leave it to the popup blocker, and opening it with the
 // address straight away would show a file one keystroke old.
+// The talk has to show what stands on the screen here, written or not --
+// with autosave off that is the whole point of being able to present
+// without saving first. These three are plain links, so the flush has to be
+// hung on the click: the tab is opened INSIDE it and sent on its way once
+// the server has what it is owed. Opening it after the wait would leave it
+// to the popup blocker, which is the same dance presentFromStart does below
+// for the key that starts the talk.
+$$("a.present-direct, a.present-from-start, #present-from-current").forEach(function (link) {
+  link.addEventListener("click", function (ev) {
+    if (!schmutzig) return;   // the server is level; the link does its own job
+    ev.preventDefault();
+    var tab = window.open("", "_blank");
+    if (!tab) { window.trivialSlidesSave(); return; }
+    var los = function () { tab.location = link.href; };
+    Promise.resolve(window.trivialSlidesSave()).then(los, los);
+  });
+});
+
 function presentFromStart() {
   var tab = window.open("", "_blank");
   if (!tab) return;   // a blocker said no; nothing to be done about it here
@@ -1454,6 +1519,10 @@ function adoptDeck(fresh, wrote) {
   active = Math.max(0, Math.min(wrote == null ? active : wrote, deck.slides.length - 1));
   activeColumn = 0;
   schmutzig = false;
+  // That dialog writes the FILE, whatever autosave says -- it is the file
+  // one is editing over there. So nothing is owed any more.
+  ungesichert = false;
+  drawSaveState();
   drawHeader();
   drawAll();
   // The file has just been written, so this is a moment at which the

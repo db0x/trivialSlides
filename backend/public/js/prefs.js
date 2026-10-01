@@ -164,11 +164,25 @@
     blocks.some(function (b) { return b.nimm(ev.key); });
   }, true);
 
+  // Autosave. Not a key-recorder like the two blocks above, just a switch
+  // -- but it belongs in the same dialog for the same reason: it says how
+  // this browser works, not what a deck says.
+  var autosaveBox = document.getElementById("prefs-autosave");
+  if (autosaveBox && window.autosave) {
+    autosaveBox.checked = window.autosave.read();
+    autosaveBox.addEventListener("change", function () {
+      window.autosave.write(autosaveBox.checked);
+    });
+  }
+
   // The row in the settings menu opens it. Delegated, because the menu is
   // the same partial on both pages and closes itself on the click.
   document.addEventListener("click", function (ev) {
     if (!ev.target.closest || !ev.target.closest("#prefs-open")) return;
     blocks.forEach(function (b) { b.draw(); b.stop(); });
+    // It can have been switched from the editor's own button since the
+    // dialog was last open.
+    if (autosaveBox && window.autosave) autosaveBox.checked = window.autosave.read();
     dialog.showModal();
   });
 

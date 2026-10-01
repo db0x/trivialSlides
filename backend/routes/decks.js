@@ -156,10 +156,19 @@ router.get("/d/:slug/deck.json", loadDeck, (req, res) => {
   res.json({ deck: req.deck, images: storage.images(req.slug) });
 });
 
+// The editor sends its model the same way whether autosave is on or off --
+// what differs is the one word `draft`. With it, the deck is held in the
+// server's memory and the file is left alone (storage.js); without it, the
+// file is written, which is what the Save button asks for.
+//
+// Held or written, the answer is the same normalised model, because the
+// editor has to end up showing what the server made of what it sent either
+// way.
 router.put("/d/:slug/deck.json", sameOriginOnly, loadDeck, (req, res) => {
   const model = deck.normalize(req.body && req.body.deck);
-  storage.save(req.slug, model);
-  res.json({ ok: true, deck: model });
+  if (req.body && req.body.draft) storage.keepDraft(req.slug, model);
+  else storage.save(req.slug, model);
+  res.json({ ok: true, deck: model, draft: storage.hasDraft(req.slug) });
 });
 
 // A single slide as HTML -- so that after every keystroke the preview

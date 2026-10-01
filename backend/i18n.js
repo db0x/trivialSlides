@@ -47,7 +47,7 @@ function translate(language, schluessel, values) {
 // what the server already rendered does not need sending twice.
 const FOR_BROWSER = [
   "theme.tooLight", "theme.tooDark",
-  "state.offline",
+  "state.offline", "state.unsaved",
   "color.none", "color.reset", "color.done",
   "editor.gradientInvalid",
   "dialog.codeTitle", "dialog.codeEdit", "dialog.codeInsert", "dialog.codeApply",

@@ -1,6 +1,6 @@
 ---
 titel: Example
-theme: white
+theme: simple
 transition: convex
 ---
 
@@ -128,7 +128,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 ## Full-bleed image
 
 ⭐ The picture covers the whole slide, the text stays readable on top of it.
-<!-- .element: class="align-fill" -->
+<!-- .element: class="align-center" -->
 
 ---
 
