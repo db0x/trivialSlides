@@ -62,7 +62,6 @@ var el = {
   gradientHint: $("#gradient-hint"),
   gradientVorlagen: $("#gradient-presets"),
   effectTiles: $("#effect-tiles"),
-  colorsGroup: $("#colors-group"),
   codeButton: $("#code-insert"),
   codeDialog: $("#code-dialog"),
   codeLanguage: $("#code-language"),
@@ -328,10 +327,6 @@ function showSlide() {
   $$(".effect-tile").forEach(function (k) {
     k.classList.toggle("is-active", k.dataset.effect === (slide.effect || ""));
   });
-  // Folded, the group shows nothing of what the slide carries. The mark on
-  // its label says that there is something to unfold.
-  el.colorsGroup.classList.toggle("has-own",
-    !!(slide.background || slide.textColor || slide.gradient || slide.effect));
 }
 
 function setContentMode(slide) {
@@ -1116,22 +1111,50 @@ colorFieldWire(el.qrColor, "qrColor");
 colorFieldWire(el.qrBackground, "qrBackground");
 colorFieldWire(el.qrTextColor, "qrTextColor");
 
-// --- The colour group ---------------------------------------------------
-// Closed to begin with: colours, gradients and effects are what one reaches
-// for after a while, and the editor should not open with them. Whoever has
-// opened it once is past that point, so the choice is kept -- in the
-// browser, like the light/dark setting, because it belongs to the person
-// and not to the deck.
-var COLORS_OPEN = "trivialslides:colors-open";
+// --- The slide's two tabs ----------------------------------------------
+// What the slide says and what it looks like, one in front of the other
+// (views/editor.ejs). The chosen tab belongs to the person and not to the
+// slide, so it stays put while one slide after another is worked through
+// -- someone giving a whole deck its colours should not have to choose the
+// tab thirteen times.
+//
+// It is NOT kept past a reload, though, and that is the one place where
+// this differs from the group it replaces. The editor opening onto
+// anything but the text of the first slide would be a worse start than the
+// one thing the old fold could not do, which was to be in the way.
+function tabShow(tab) {
+  $$(".tab").forEach(function (b) {
+    var front = b === tab;
+    b.setAttribute("aria-selected", front ? "true" : "false");
+    // Out of the tab order, all but the one in front: a row of tabs is one
+    // stop, and the arrow keys move inside it (below). That is what a
+    // screen reader expects of a tablist, and it saves four presses of Tab
+    // on the way to the text field.
+    b.tabIndex = front ? 0 : -1;
+    $("#" + b.dataset.panel).hidden = !front;
+  });
+}
 
-try {
-  el.colorsGroup.open = localStorage.getItem(COLORS_OPEN) === "1";
-} catch (e) { /* private window, storage blocked */ }
+$$(".tab").forEach(function (tab) {
+  tab.addEventListener("click", function () { tabShow(tab); });
+});
 
-el.colorsGroup.addEventListener("toggle", function () {
-  try {
-    localStorage.setItem(COLORS_OPEN, el.colorsGroup.open ? "1" : "0");
-  } catch (e) { /* see above */ }
+// Left and right walk the row and take the focus with them -- pressing a
+// tab and arriving at it are the same thing here, there is nothing to
+// confirm. Home and End for the ends of the row.
+$(".tab-row").addEventListener("keydown", function (ev) {
+  var tabs = $$(".tab");
+  var here = tabs.indexOf(document.activeElement);
+  if (here === -1) return;
+  var there = null;
+  if (ev.key === "ArrowLeft") there = (here - 1 + tabs.length) % tabs.length;
+  else if (ev.key === "ArrowRight") there = (here + 1) % tabs.length;
+  else if (ev.key === "Home") there = 0;
+  else if (ev.key === "End") there = tabs.length - 1;
+  if (there === null) return;
+  ev.preventDefault();
+  tabShow(tabs[there]);
+  tabs[there].focus();
 });
 
 // --- Gradient ----------------------------------------------------------

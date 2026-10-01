@@ -11,6 +11,13 @@
 :root {
   --paper: #ffffff;
   --surface: #f4f5f7;
+  /* The tab in front, against the strip its neighbours stand on
+     (.tab-row). Its own token because the two palettes do not agree on
+     which direction "set apart" goes: in the light one it is the white of
+     the paper below, in the dark one it is DARKER than everything around
+     it -- a lighter tab there would read as the lit one rather than the
+     open one. */
+  --tab-front: #ffffff;
   --border: #d8dbe0;
   --text: #1c1f23;
   --muted: #666c75;
@@ -22,6 +29,7 @@
   /* The dark palette, not in use until one of the blocks below points at it. */
   --d-paper: #1b1e22;
   --d-surface: #15171a;
+  --d-tab-front: #101216;
   --d-border: #343a41;
   --d-text: #e7e9ec;
   --d-muted: #9aa1aa;
@@ -52,6 +60,7 @@
   :root:not([data-theme="light"]) {
     --paper: var(--d-paper);
     --surface: var(--d-surface);
+    --tab-front: var(--d-tab-front);
     --border: var(--d-border);
     --text: var(--d-text);
     --muted: var(--d-muted);
@@ -68,6 +77,7 @@
 :root[data-theme="dark"] {
   --paper: var(--d-paper);
   --surface: var(--d-surface);
+  --tab-front: var(--d-tab-front);
   --border: var(--d-border);
   --text: var(--d-text);
   --muted: var(--d-muted);
@@ -589,39 +599,76 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   margin-bottom: 4px;
   line-height: 17px;
 }
-/* The one group that folds away. Its label cannot sit above the box the way
-   the others do: it has to be clickable and it has to stay when the box is
-   closed, so it lives inside as the summary -- which then IS the whole box
-   while folded. The browser's own marker does the rest. */
-/* Folded, the summary IS the box -- so the box contributes no padding of
-   its own and the row sits evenly between the borders. Open, the bottom
-   padding comes back for the content below. */
-.fieldset-fold { padding-top: 0; padding-bottom: 0; }
-.fieldset-fold[open] { padding-bottom: 12px; }
-.fieldset-fold > summary {
-  padding: 7px 0;
-  line-height: 17px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+/* --- The slide's two tabs ---------------------------------------------- */
+/* One box, two halves: what the slide says, and what it looks like
+   (views/editor.ejs).
+
+   The chooser is a strip along the top of the box, and it is deliberately
+   the loudest thing in this column. Every other label here -- small grey
+   capitals floating above a border -- is made to be read once and then
+   ignored, which is right for a label and wrong for a switch: half the
+   form is behind this one, and something that can be overlooked will be.
+   So it gets the height of a control, type at reading size, a ground of
+   its own against the box below, and a bar in the accent colour under the
+   half in front. */
+.tabbed {
+  margin: 21px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  /* Deliberately NOT overflow: hidden, however much the rounded corners
+     would like it -- the menus in the text bar below open out of their
+     box, and the emoji panel is taller than the form. The strip rounds its
+     own top corners instead, minus the border it sits inside. */
+}
+.tab-row {
+  display: flex;
+  gap: 2px;
+  padding: 0 6px;
+  border-bottom: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+  background: var(--surface);
+}
+.tab {
+  position: relative;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  /* A button brings its own typeface; `font` takes it back in one word.
+     It takes the line height with it, so the two that this strip's height
+     rests on are said again after it, not before. */
+  font: inherit;
+  font-size: 13px;
+  line-height: 18px;
   color: var(--muted);
   cursor: pointer;
 }
-.fieldset-fold > summary:hover { color: var(--text); }
-.fieldset-fold > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* Folded, the group hides what the slide carries -- so it says THAT it
-   carries something. Without this the dot would be decoration; with it, it
-   is the only way to tell a plain slide from one with a gradient. */
-.fold-mark { display: none; }
-.has-own > summary > .fold-mark {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-left: 2px;
-  border-radius: 50%;
-  background: var(--accent);
-  vertical-align: 0.05em;
+/* The bar sits ON the line that divides the strip from the box, which is
+   what ties the half in front to what is under it. Its own element rather
+   than a border, so that switching tabs moves no text by a pixel. */
+.tab::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  bottom: -1px;
+  left: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
 }
+.tab:hover { color: var(--text); }
+/* Set apart twice over: by its ground and by the bar under it. The bar
+   alone was too quiet a thing to carry half a form. */
+.tab[aria-selected="true"] {
+  background: var(--tab-front);
+  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+  color: var(--text);
+  cursor: default;
+}
+.tab[aria-selected="true"]::after { background: var(--accent); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+/* The box is the wrapper now, so the panel is nothing but padding. */
+.tab-panel { padding: 10px 12px 12px; }
 
 .field { display: block; margin-bottom: 10px; }
 .field:last-child { margin-bottom: 0; }

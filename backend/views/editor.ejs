@@ -132,304 +132,318 @@
       </label>
     </fieldset>
 
-    <fieldset class="fieldset">
-      <legend><%= t('editor.content') %></legend>
+    <!-- What the slide SAYS and what it LOOKS like, as two tabs over one
+         box. Two boxes under each other is what this was, with the second
+         folded away because it is reached for later -- and a box that is
+         sometimes there and sometimes not is a different form every time
+         one opens it. Tabs say the same thing without moving anything: one
+         of the two is in front, both are always a click away, and the form
+         below the chooser is always the same height.
 
-      <!-- No longer a <label> around the whole thing: a click on the
-           chooser beside the field would otherwise land in the field,
-           which is what a label does. The word keeps its "for" instead. -->
-      <div class="field">
-        <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
-        <div class="field-row">
-          <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
-          <!-- Where the heading stands on the slide. It sits INSIDE the
-               field's box (the row carries the border and the focus ring,
-               app.css), so the two read as one control. The button wears
-               the icon of the alignment in force -- also while the slide
-               has made no choice and the layout decides, because what one
-               wants to see here is where the heading IS. Which of the four
-               is chosen is marked in the menu (js/editor/index.js). -->
-          <details id="title-align-menu" class="menu title-align"
-                   data-name="<%= t('editor.titleAlign') %>">
-            <summary id="title-align-button" class="button-icon tool-align"
-                     data-align="left" data-choice=""
-                     aria-label="<%= t('editor.titleAlign') %>"></summary>
-            <div class="menu-content" role="menu">
-              <button type="button" class="menu-item tool-align" role="menuitemradio"
-                      aria-checked="false" data-align=""><span
-                      class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.default') %></button>
-              <% ["left", "center", "right"].forEach(function (a) { %>
+         The chooser is a strip along the top of the box rather than a line
+         of labels floating above it (app.css). It is the one piece of
+         furniture in this column that has to be NOTICED -- half the form
+         is behind it -- and the small grey capitals the other boxes wear
+         are made to be read once and then ignored. -->
+    <div class="tabbed">
+      <div class="tab-row" role="tablist" aria-label="<%= t('editor.tabs') %>">
+        <button type="button" class="tab" id="tab-content" role="tab"
+                aria-controls="panel-content" aria-selected="true"
+                data-panel="panel-content"><%= t('editor.content') %></button>
+        <button type="button" class="tab" id="tab-colors" role="tab"
+                aria-controls="panel-colors" aria-selected="false" tabindex="-1"
+                data-panel="panel-colors"><%= t('editor.colorsTab') %></button>
+      </div>
+
+      <div id="panel-content" class="tab-panel" role="tabpanel"
+           aria-labelledby="tab-content">
+
+        <!-- No longer a <label> around the whole thing: a click on the
+             chooser beside the field would otherwise land in the field,
+             which is what a label does. The word keeps its "for" instead. -->
+        <div class="field">
+          <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
+          <div class="field-row">
+            <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
+            <!-- Where the heading stands on the slide. It sits INSIDE the
+                 field's box (the row carries the border and the focus ring,
+                 app.css), so the two read as one control. The button wears
+                 the icon of the alignment in force -- also while the slide
+                 has made no choice and the layout decides, because what one
+                 wants to see here is where the heading IS. Which of the four
+                 is chosen is marked in the menu (js/editor/index.js). -->
+            <details id="title-align-menu" class="menu title-align"
+                     data-name="<%= t('editor.titleAlign') %>">
+              <summary id="title-align-button" class="button-icon tool-align"
+                       data-align="left" data-choice=""
+                       aria-label="<%= t('editor.titleAlign') %>"></summary>
+              <div class="menu-content" role="menu">
                 <button type="button" class="menu-item tool-align" role="menuitemradio"
-                        aria-checked="false" data-align="<%= a %>"><span
-                        class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.' + a) %></button>
-              <% }); %>
-            </div>
-          </details>
-        </div>
-      </div>
-
-      <div class="field">
-        <span class="field-label" id="text-label"><%= t('editor.text') %></span>
-        <!-- Which column the field below shows. They stand where the label
-             stands and take its place, because "Text" and "Column 2" are
-             the same line of the form -- and one field with a chooser over
-             it keeps the bar, the code dialog and the whole field height
-             for whichever column is being written (js/editor/index.js).
-             Three is the most any layout has; which of them are shown
-             follows the layout. -->
-        <div class="column-tabs" id="column-tabs" role="tablist" hidden>
-          <% [1, 2, 3].forEach(function (n) { %>
-            <button type="button" class="column-tab" role="tab" data-column="<%= n %>"
-                    aria-selected="false"><%= t('editor.column', { n: n }) %></button>
-          <% }); %>
-        </div>
-        <div class="toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
-          <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
-          <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
-          <button type="button" class="tool-icon" data-command="strikeThrough" data-tip="<%= t('tool.strikethrough') %>" aria-label="<%= t('tool.strikethrough') %>"></button>
-          <button type="button" class="tool-icon" data-command="insertUnorderedList" data-tip="<%= t('tool.bulletList') %>" aria-label="<%= t('tool.bulletList') %>"></button>
-          <button type="button" class="tool-icon" data-command="insertOrderedList" data-tip="<%= t('tool.numberedList') %>" aria-label="<%= t('tool.numberedList') %>"></button>
-          <button type="button" class="tool-icon" data-command="link" data-tip="<%= t('tool.link') %>" aria-label="<%= t('tool.link') %>"></button>
-          <span class="toolbar-divider"></span>
-          <!-- Where the text stands. Unlike the two menus further along
-               this bar, these are NOT slide-wide: they mark the paragraph
-               the cursor is in, or every one the selection touches. The
-               mark travels in the .md as the class of an .element comment
-               -- the same line the fragment above rides on, so a centred
-               bullet that appears on click is one comment with two
-               classes (js/editor/richtext.js). -->
-          <% [["left", "alignLeft"], ["center", "alignCenter"], ["right", "alignRight"], ["fill", "alignFill"]].forEach(function (a) { %>
-            <button type="button" class="tool-icon" data-command="align-<%= a[0] %>"
-                    data-tip="<%= t('tool.' + a[1]) %> — <%= t('tool.alignTip') %>"
-                    aria-label="<%= t('tool.' + a[1]) %>"></button>
-          <% }); %>
-          <span class="toolbar-divider"></span>
-          <!-- Colour for a few words. Not a button but a field, because the
-               picker is the one the colour choices further down use and it
-               hangs itself on a field (js/editor/index.js). Coloris wraps
-               it, paints its wrapper in the chosen colour, and that is what
-               tints the drop on the button -- the icon wears the colour it
-               would apply, without anyone having to write it there.
-               The field carries the value; the drop and the invisible input
-               over it are drawn by app.css. -->
-          <span class="tool-color" data-tip="<%= t('tool.colorTip') %>">
-            <input id="text-color-tool" class="color-field" type="text" value=""
-                   aria-label="<%= t('tool.color') %>">
-          </span>
-          <span class="toolbar-divider"></span>
-          <button type="button" class="tool-icon" data-command="fragment" data-tip="<%= t('tool.fragmentTip') %>" aria-label="<%= t('tool.fragment') %>"></button>
-          <!-- Code is the one thing in this bar that the rich-text field
-               cannot hold, so it does not run through execCommand and it
-               stays usable in source mode -- that is where it lands. -->
-          <button type="button" id="code-insert" class="tool-icon" data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
-          <!-- Emoji. Like the code button this is not a formatting command
-               but something inserted, so it keeps working in source mode --
-               there the character goes into the textarea at the cursor.
-               A handful and not all of Unicode (emoji.js); the system's own
-               picker is still there for the rest and still works in the
-               field. -->
-          <details id="emoji-menu" class="menu menu-tool" data-keep-open>
-            <summary class="tool-icon tool-emoji" data-tip="<%= t('tool.emojiTip') %>"
-                     aria-label="<%= t('tool.emoji') %>"></summary>
-            <!-- Filled by the page from the table at the end of this file:
-                 450 buttons written out here would be 30 kB of markup for
-                 something most of which is never looked at. -->
-            <div class="menu-content emoji-panel" role="menu">
-              <div id="emoji-grid" class="emoji-grid"></div>
-            </div>
-          </details>
-          <span class="toolbar-divider"></span>
-          <!-- Where the text sits in relation to the player, on a video
-               slide. In the bar it is the icon of the side in force and
-               nothing else; the words are in the menu, where there is room
-               for them. Like the code button it is not a rich-text command,
-               so it keeps working in source mode.
-
-               Two words per entry, for the same reason the width button
-               below carries two names: the thing the text stands beside is
-               a player on a video slide and a code on a QR one. Both
-               travel with the entry and the page puts the fitting one in
-               (js/editor/index.js). -->
-          <details id="text-side-menu" class="menu menu-tool"
-                   data-name="<%= t('editor.textSide') %>" hidden>
-            <summary id="text-side-button" class="tool-icon tool-side" data-side="oben"
-                     aria-label="<%= t('editor.textSide') %>"></summary>
-            <div class="menu-content" role="menu">
-              <% textSides.forEach(function (s) { %>
-                <button type="button" class="menu-item tool-side" role="menuitemradio"
-                        aria-checked="false" data-side="<%= s.id %>"
-                        data-name-video="<%= s.nameVideo %>"
-                        data-name-qr="<%= s.nameQr %>"><span
-                        class="menu-item-icon" aria-hidden="true"></span><span
-                        class="menu-item-text"><%= s.nameVideo %></span></button>
-              <% }); %>
-            </div>
-          </details>
-          <!-- How wide the text may get beside the player. A percentage
-               says itself, so this one wears its value rather than an icon
-               -- and it is switched off, not hidden, while the text is
-               above or below the player: there it has the full width and
-               the number would be a promise the slide does not keep. -->
-          <!-- Two names, because the thing the text stands beside differs by
-               layout: a picture on image-links/-rechts, a player on video.
-               Both travel with the button and the page picks the fitting
-               one (js/editor/index.js) -- naming it after the layout on the
-               server would mean re-rendering the bar on every layout
-               change. -->
-          <details id="text-width-menu" class="menu menu-tool" hidden
-                   data-name-image="<%= t('editor.textWidthImage') %>"
-                   data-name-video="<%= t('editor.textWidthVideo') %>"
-                   data-name-qr="<%= t('editor.textWidthQr') %>">
-            <summary id="text-width-button" class="tool-word"></summary>
-            <div class="menu-content" role="menu">
-              <% textWidths.forEach(function (b) { %>
-                <button type="button" class="menu-item" role="menuitemradio"
-                        aria-checked="false" data-width="<%= b %>"><%= b %>&nbsp;%</button>
-              <% }); %>
-            </div>
-          </details>
-          <span class="toolbar-divider"></span>
-          <button type="button" id="source-toggle" class="tool-icon" data-tip="<%= t('tool.sourceTip') %>" aria-label="<%= t('tool.source') %>"></button>
-        </div>
-        <!-- The frame, not the field, is what scrolls: OverlayScrollbars
-             builds its own DOM inside whatever it is attached to, and the
-             editor reads the content field's innerHTML back as Markdown. -->
-        <div id="content-frame" class="field-frame">
-          <div id="slide-content" class="content-field" contenteditable="true" spellcheck="true"
-               data-placeholder="<%= t('editor.textPlaceholder') %>"></div>
-        </div>
-        <div id="source-frame" class="field-frame" hidden>
-          <textarea id="slide-source-text" class="source-field" spellcheck="false"></textarea>
-        </div>
-        <p id="source-note" class="hint" hidden>
-          <%= t('editor.sourceNote') %>
-        </p>
-      </div>
-
-      <div class="field field-image" hidden>
-        <span class="field-label"><%= t('editor.image') %></span>
-        <div class="image-row">
-          <img id="image-preview" class="image-preview" alt="" hidden>
-          <div class="image-buttons">
-            <button type="button" id="image-choose" class="button"><%= t('editor.imageChoose') %></button>
-            <button type="button" id="image-remove" class="button button-quiet" hidden><%= t('editor.imageRemove') %></button>
+                        aria-checked="false" data-align=""><span
+                        class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.default') %></button>
+                <% ["left", "center", "right"].forEach(function (a) { %>
+                  <button type="button" class="menu-item tool-align" role="menuitemradio"
+                          aria-checked="false" data-align="<%= a %>"><span
+                          class="menu-item-icon" aria-hidden="true"></span><%= t('titleAlign.' + a) %></button>
+                <% }); %>
+              </div>
+            </details>
           </div>
         </div>
+
+        <div class="field">
+          <span class="field-label" id="text-label"><%= t('editor.text') %></span>
+          <!-- Which column the field below shows. They stand where the label
+               stands and take its place, because "Text" and "Column 2" are
+               the same line of the form -- and one field with a chooser over
+               it keeps the bar, the code dialog and the whole field height
+               for whichever column is being written (js/editor/index.js).
+               Three is the most any layout has; which of them are shown
+               follows the layout. -->
+          <div class="column-tabs" id="column-tabs" role="tablist" hidden>
+            <% [1, 2, 3].forEach(function (n) { %>
+              <button type="button" class="column-tab" role="tab" data-column="<%= n %>"
+                      aria-selected="false"><%= t('editor.column', { n: n }) %></button>
+            <% }); %>
+          </div>
+          <div class="toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
+            <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
+            <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
+            <button type="button" class="tool-icon" data-command="strikeThrough" data-tip="<%= t('tool.strikethrough') %>" aria-label="<%= t('tool.strikethrough') %>"></button>
+            <button type="button" class="tool-icon" data-command="insertUnorderedList" data-tip="<%= t('tool.bulletList') %>" aria-label="<%= t('tool.bulletList') %>"></button>
+            <button type="button" class="tool-icon" data-command="insertOrderedList" data-tip="<%= t('tool.numberedList') %>" aria-label="<%= t('tool.numberedList') %>"></button>
+            <button type="button" class="tool-icon" data-command="link" data-tip="<%= t('tool.link') %>" aria-label="<%= t('tool.link') %>"></button>
+            <span class="toolbar-divider"></span>
+            <!-- Where the text stands. Unlike the two menus further along
+                 this bar, these are NOT slide-wide: they mark the paragraph
+                 the cursor is in, or every one the selection touches. The
+                 mark travels in the .md as the class of an .element comment
+                 -- the same line the fragment above rides on, so a centred
+                 bullet that appears on click is one comment with two
+                 classes (js/editor/richtext.js). -->
+            <% [["left", "alignLeft"], ["center", "alignCenter"], ["right", "alignRight"], ["fill", "alignFill"]].forEach(function (a) { %>
+              <button type="button" class="tool-icon" data-command="align-<%= a[0] %>"
+                      data-tip="<%= t('tool.' + a[1]) %> — <%= t('tool.alignTip') %>"
+                      aria-label="<%= t('tool.' + a[1]) %>"></button>
+            <% }); %>
+            <span class="toolbar-divider"></span>
+            <!-- Colour for a few words. Not a button but a field, because the
+                 picker is the one the colour choices further down use and it
+                 hangs itself on a field (js/editor/index.js). Coloris wraps
+                 it, paints its wrapper in the chosen colour, and that is what
+                 tints the drop on the button -- the icon wears the colour it
+                 would apply, without anyone having to write it there.
+                 The field carries the value; the drop and the invisible input
+                 over it are drawn by app.css. -->
+            <span class="tool-color" data-tip="<%= t('tool.colorTip') %>">
+              <input id="text-color-tool" class="color-field" type="text" value=""
+                     aria-label="<%= t('tool.color') %>">
+            </span>
+            <span class="toolbar-divider"></span>
+            <button type="button" class="tool-icon" data-command="fragment" data-tip="<%= t('tool.fragmentTip') %>" aria-label="<%= t('tool.fragment') %>"></button>
+            <!-- Code is the one thing in this bar that the rich-text field
+                 cannot hold, so it does not run through execCommand and it
+                 stays usable in source mode -- that is where it lands. -->
+            <button type="button" id="code-insert" class="tool-icon" data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
+            <!-- Emoji. Like the code button this is not a formatting command
+                 but something inserted, so it keeps working in source mode --
+                 there the character goes into the textarea at the cursor.
+                 A handful and not all of Unicode (emoji.js); the system's own
+                 picker is still there for the rest and still works in the
+                 field. -->
+            <details id="emoji-menu" class="menu menu-tool" data-keep-open>
+              <summary class="tool-icon tool-emoji" data-tip="<%= t('tool.emojiTip') %>"
+                       aria-label="<%= t('tool.emoji') %>"></summary>
+              <!-- Filled by the page from the table at the end of this file:
+                   450 buttons written out here would be 30 kB of markup for
+                   something most of which is never looked at. -->
+              <div class="menu-content emoji-panel" role="menu">
+                <div id="emoji-grid" class="emoji-grid"></div>
+              </div>
+            </details>
+            <span class="toolbar-divider"></span>
+            <!-- Where the text sits in relation to the player, on a video
+                 slide. In the bar it is the icon of the side in force and
+                 nothing else; the words are in the menu, where there is room
+                 for them. Like the code button it is not a rich-text command,
+                 so it keeps working in source mode.
+
+                 Two words per entry, for the same reason the width button
+                 below carries two names: the thing the text stands beside is
+                 a player on a video slide and a code on a QR one. Both
+                 travel with the entry and the page puts the fitting one in
+                 (js/editor/index.js). -->
+            <details id="text-side-menu" class="menu menu-tool"
+                     data-name="<%= t('editor.textSide') %>" hidden>
+              <summary id="text-side-button" class="tool-icon tool-side" data-side="oben"
+                       aria-label="<%= t('editor.textSide') %>"></summary>
+              <div class="menu-content" role="menu">
+                <% textSides.forEach(function (s) { %>
+                  <button type="button" class="menu-item tool-side" role="menuitemradio"
+                          aria-checked="false" data-side="<%= s.id %>"
+                          data-name-video="<%= s.nameVideo %>"
+                          data-name-qr="<%= s.nameQr %>"><span
+                          class="menu-item-icon" aria-hidden="true"></span><span
+                          class="menu-item-text"><%= s.nameVideo %></span></button>
+                <% }); %>
+              </div>
+            </details>
+            <!-- How wide the text may get beside the player. A percentage
+                 says itself, so this one wears its value rather than an icon
+                 -- and it is switched off, not hidden, while the text is
+                 above or below the player: there it has the full width and
+                 the number would be a promise the slide does not keep. -->
+            <!-- Two names, because the thing the text stands beside differs by
+                 layout: a picture on image-links/-rechts, a player on video.
+                 Both travel with the button and the page picks the fitting
+                 one (js/editor/index.js) -- naming it after the layout on the
+                 server would mean re-rendering the bar on every layout
+                 change. -->
+            <details id="text-width-menu" class="menu menu-tool" hidden
+                     data-name-image="<%= t('editor.textWidthImage') %>"
+                     data-name-video="<%= t('editor.textWidthVideo') %>"
+                     data-name-qr="<%= t('editor.textWidthQr') %>">
+              <summary id="text-width-button" class="tool-word"></summary>
+              <div class="menu-content" role="menu">
+                <% textWidths.forEach(function (b) { %>
+                  <button type="button" class="menu-item" role="menuitemradio"
+                          aria-checked="false" data-width="<%= b %>"><%= b %>&nbsp;%</button>
+                <% }); %>
+              </div>
+            </details>
+            <span class="toolbar-divider"></span>
+            <button type="button" id="source-toggle" class="tool-icon" data-tip="<%= t('tool.sourceTip') %>" aria-label="<%= t('tool.source') %>"></button>
+          </div>
+          <!-- The frame, not the field, is what scrolls: OverlayScrollbars
+               builds its own DOM inside whatever it is attached to, and the
+               editor reads the content field's innerHTML back as Markdown. -->
+          <div id="content-frame" class="field-frame">
+            <div id="slide-content" class="content-field" contenteditable="true" spellcheck="true"
+                 data-placeholder="<%= t('editor.textPlaceholder') %>"></div>
+          </div>
+          <div id="source-frame" class="field-frame" hidden>
+            <textarea id="slide-source-text" class="source-field" spellcheck="false"></textarea>
+          </div>
+          <p id="source-note" class="hint" hidden>
+            <%= t('editor.sourceNote') %>
+          </p>
+        </div>
+
+        <div class="field field-image" hidden>
+          <span class="field-label"><%= t('editor.image') %></span>
+          <div class="image-row">
+            <img id="image-preview" class="image-preview" alt="" hidden>
+            <div class="image-buttons">
+              <button type="button" id="image-choose" class="button"><%= t('editor.imageChoose') %></button>
+              <button type="button" id="image-remove" class="button button-quiet" hidden><%= t('editor.imageRemove') %></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- The link as it sits in the clipboard; what lands in the file is
+             the id inside it (video.js). The pattern is the server's, so the
+             page recognises a link the same way the server does. -->
+        <label class="field field-video" hidden>
+          <span class="field-label"><%= t('editor.video') %></span>
+          <input id="slide-video" type="text" maxlength="200" spellcheck="false"
+                 placeholder="<%= t('editor.videoPlaceholder') %>"
+                 data-pattern="<%= videoPattern %>">
+          <span id="video-note" class="hint"></span>
+        </label>
+
+        <!-- The address the code points at. Same shape as the video field:
+             whatever is pasted goes to the server as it stands, and the
+             server decides what a usable address is (qr.js). -->
+        <label class="field field-url" hidden>
+          <span class="field-label"><%= t('editor.url') %></span>
+          <input id="slide-url" type="text" maxlength="300" spellcheck="false"
+                 placeholder="<%= t('editor.urlPlaceholder') %>">
+          <span id="url-note" class="hint"></span>
+        </label>
+
+        <!-- The code's own colours. Here with the code's address and not on
+             the colour tab, because the colours over there belong to the
+             SLIDE and these to the one picture on it -- and because that is
+             where somebody who has just typed the address is looking.
+             Clearing the background is what makes it see-through. -->
+        <div class="field field-qr-colors" hidden>
+          <span class="field-label"><%= t('editor.qrColors') %></span>
+          <div class="color-row">
+            <label class="color-choice">
+              <input id="qr-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrColor') %>">
+              <span><%= t('editor.qrColor') %></span>
+            </label>
+            <label class="color-choice">
+              <input id="qr-background" class="color-field" type="text" value="" aria-label="<%= t('editor.qrBackground') %>">
+              <span><%= t('editor.qrBackground') %></span>
+            </label>
+            <label class="color-choice">
+              <input id="qr-text-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrTextColor') %>">
+              <span><%= t('editor.qrTextColor') %></span>
+            </label>
+          </div>
+          <p class="hint"><%= t('editor.qrColorsHint') %></p>
+        </div>
+
+        <label class="field field-source" hidden>
+          <span class="field-label"><%= t('editor.source') %></span>
+          <input id="slide-source" maxlength="200" placeholder="<%= t('editor.sourcePlaceholder') %>">
+        </label>
       </div>
 
-      <!-- The link as it sits in the clipboard; what lands in the file is
-           the id inside it (video.js). The pattern is the server's, so the
-           page recognises a link the same way the server does. -->
-      <label class="field field-video" hidden>
-        <span class="field-label"><%= t('editor.video') %></span>
-        <input id="slide-video" type="text" maxlength="200" spellcheck="false"
-               placeholder="<%= t('editor.videoPlaceholder') %>"
-               data-pattern="<%= videoPattern %>">
-        <span id="video-note" class="hint"></span>
-      </label>
-
-      <!-- The address the code points at. Same shape as the video field:
-           whatever is pasted goes to the server as it stands, and the
-           server decides what a usable address is (qr.js). -->
-      <label class="field field-url" hidden>
-        <span class="field-label"><%= t('editor.url') %></span>
-        <input id="slide-url" type="text" maxlength="300" spellcheck="false"
-               placeholder="<%= t('editor.urlPlaceholder') %>">
-        <span id="url-note" class="hint"></span>
-      </label>
-
-      <!-- The code's own colours. Its own block and not in the colour group
-           below, because those belong to the slide and these to the one
-           picture on it -- and because the group is folded away by default,
-           where somebody looking for the code's colours would not think to
-           look. Clearing the background is what makes it see-through. -->
-      <div class="field field-qr-colors" hidden>
-        <span class="field-label"><%= t('editor.qrColors') %></span>
+      <div id="panel-colors" class="tab-panel" role="tabpanel"
+           aria-labelledby="tab-colors" hidden>
         <div class="color-row">
           <label class="color-choice">
-            <input id="qr-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrColor') %>">
-            <span><%= t('editor.qrColor') %></span>
+            <input id="background-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.background') %>">
+            <span><%= t('editor.background') %></span>
           </label>
           <label class="color-choice">
-            <input id="qr-background" class="color-field" type="text" value="" aria-label="<%= t('editor.qrBackground') %>">
-            <span><%= t('editor.qrBackground') %></span>
-          </label>
-          <label class="color-choice">
-            <input id="qr-text-color" class="color-field" type="text" value="" aria-label="<%= t('editor.qrTextColor') %>">
-            <span><%= t('editor.qrTextColor') %></span>
+            <input id="text-color-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.textColor') %>">
+            <span><%= t('editor.textColor') %></span>
           </label>
         </div>
-        <p class="hint"><%= t('editor.qrColorsHint') %></p>
-      </div>
 
-      <label class="field field-source" hidden>
-        <span class="field-label"><%= t('editor.source') %></span>
-        <input id="slide-source" maxlength="200" placeholder="<%= t('editor.sourcePlaceholder') %>">
-      </label>
-    </fieldset>
-
-    <!-- Colours, gradient and effect are the things one reaches for after a
-         while, not at the start -- so the group folds away, and starts
-         folded. <details> rather than a button of our own: the browser
-         brings the keyboard, the marker and the semantics with it. The
-         choice is remembered (js/editor/index.js), because someone who has
-         opened it once is usually past the start. -->
-    <details id="colors-group" class="fieldset fieldset-fold">
-      <summary>
-        <%= t('editor.colors') %>
-        <span class="fold-mark" data-tip="<%= t('editor.colorsCustom') %>"
-              aria-label="<%= t('editor.colorsCustom') %>"></span>
-      </summary>
-      <div class="color-row">
-        <label class="color-choice">
-          <input id="background-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.background') %>">
-          <span><%= t('editor.background') %></span>
-        </label>
-        <label class="color-choice">
-          <input id="text-color-custom" class="color-field" type="text" value="" aria-label="<%= t('editor.textColor') %>">
-          <span><%= t('editor.textColor') %></span>
-        </label>
-      </div>
-
-      <!-- The gradient, twice over: the swatches for picking one, the field
-           below for writing one. The swatches come from gradients.js, which
-           a deck collection extends through decks/gradients.json -- so this
-           row is as long as someone made it, not eight items by design.
-           Each swatch wears its own gradient, which is why the value is in
-           the style attribute: a stylesheet cannot know them. -->
-      <div class="field field-gradient">
-        <span class="field-label"><%= t('editor.gradient') %></span>
-        <div id="gradient-presets" class="gradient-presets" role="group" aria-label="<%= t('editor.gradientPresets') %>">
-          <button type="button" class="gradient-probe gradient-none" data-gradient=""
-                  data-tip="<%= t('editor.gradientNone') %>" aria-label="<%= t('editor.gradientNone') %>"></button>
-          <% gradients.forEach(function (v) { %>
-            <button type="button" class="gradient-probe" data-gradient="<%= v.css %>"
-                    style="background-image: <%= v.css %>"
-                    data-tip="<%= v.name %>" aria-label="<%= v.name %>"></button>
-          <% }); %>
+        <!-- The gradient, twice over: the swatches for picking one, the field
+             below for writing one. The swatches come from gradients.js, which
+             a deck collection extends through decks/gradients.json -- so this
+             row is as long as someone made it, not eight items by design.
+             Each swatch wears its own gradient, which is why the value is in
+             the style attribute: a stylesheet cannot know them. -->
+        <div class="field field-gradient">
+          <span class="field-label"><%= t('editor.gradient') %></span>
+          <div id="gradient-presets" class="gradient-presets" role="group" aria-label="<%= t('editor.gradientPresets') %>">
+            <button type="button" class="gradient-probe gradient-none" data-gradient=""
+                    data-tip="<%= t('editor.gradientNone') %>" aria-label="<%= t('editor.gradientNone') %>"></button>
+            <% gradients.forEach(function (v) { %>
+              <button type="button" class="gradient-probe" data-gradient="<%= v.css %>"
+                      style="background-image: <%= v.css %>"
+                      data-tip="<%= v.name %>" aria-label="<%= v.name %>"></button>
+            <% }); %>
+          </div>
+          <input id="slide-gradient" class="gradient-field" type="text" spellcheck="false"
+                 maxlength="<%= gradientMax %>" pattern="<%= gradientPattern %>"
+                 placeholder="<%= t('editor.gradientPlaceholder') %>" aria-label="<%= t('editor.gradientCustom') %>">
+          <p id="gradient-hint" class="hint"><%= t('editor.gradientNote') %></p>
         </div>
-        <input id="slide-gradient" class="gradient-field" type="text" spellcheck="false"
-               maxlength="<%= gradientMax %>" pattern="<%= gradientPattern %>"
-               placeholder="<%= t('editor.gradientPlaceholder') %>" aria-label="<%= t('editor.gradientCustom') %>">
-        <p id="gradient-hint" class="hint"><%= t('editor.gradientNote') %></p>
-      </div>
 
-      <!-- Animated backgrounds. A name, not a value -- what it looks like
-           is in slides.css (see effects.js), so a tile can only show a
-           quiet of it. -->
-      <div class="field field-effect">
-        <span class="field-label"><%= t('editor.effect') %></span>
-        <div id="effect-tiles" class="effect-tiles" role="group" aria-label="<%= t('editor.effect') %>">
-          <button type="button" class="effect-tile effect-none" data-effect=""
-                  data-tip="<%= t('editor.effectNone') %>" aria-label="<%= t('editor.effectNone') %>"></button>
-          <% effects.forEach(function (e) { %>
-            <button type="button" class="effect-tile" data-effect="<%= e.id %>"
-                    data-tip="<%= e.name %>" aria-label="<%= e.name %>"></button>
-          <% }); %>
+        <!-- Animated backgrounds. A name, not a value -- what it looks like
+             is in slides.css (see effects.js), so a tile can only show a
+             quiet of it. -->
+        <div class="field field-effect">
+          <span class="field-label"><%= t('editor.effect') %></span>
+          <div id="effect-tiles" class="effect-tiles" role="group" aria-label="<%= t('editor.effect') %>">
+            <button type="button" class="effect-tile effect-none" data-effect=""
+                    data-tip="<%= t('editor.effectNone') %>" aria-label="<%= t('editor.effectNone') %>"></button>
+            <% effects.forEach(function (e) { %>
+              <button type="button" class="effect-tile" data-effect="<%= e.id %>"
+                      data-tip="<%= e.name %>" aria-label="<%= e.name %>"></button>
+            <% }); %>
+          </div>
+          <p class="hint"><%= t('editor.effectNote') %></p>
         </div>
-        <p class="hint"><%= t('editor.effectNote') %></p>
       </div>
-    </details>
+    </div>
   </section>
 
   <!-- Right: real reveal.js, not a replica. What stands here is what
