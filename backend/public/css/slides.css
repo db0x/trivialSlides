@@ -199,13 +199,58 @@
 .reveal .slides section.layout-bild-links[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
 
 /* --- Full-bleed image ------------------------------------------------- */
-/* The image is reveal.js' slide background; all that is left here is the
-   box that keeps the text on top of it readable. */
+/* The image is reveal.js' slide background; what is left here is the box
+   that keeps the text on top of it readable, and WHERE on the picture that
+   box stands (data-text-place, see layouts.js).
+
+   The slide has to be as tall as the stage for any of that to mean
+   anything, and that is harder than it looks: reveal.js' centre mode --
+   which is how it ships, and what this project leaves it at -- writes
+   `min-height: 0 !important` onto every slide
+   (.reveal.center .slides section). So this rule has to say !important
+   too, and it wins the tie on weight by being the later stylesheet. Said
+   plainly here because it took a measurement to find: without it the slide
+   is only as tall as its text, and every vertical placement below is a
+   line that does nothing. */
 .reveal .slides section.layout-bild-voll {
-  display: flex !important;
-  align-items: flex-end;
-  min-height: 100%;
+  display: grid !important;
+  /* The padding has to count INSIDE the hundred per cent, or the slide
+     comes out taller than the stage and the lower row of places falls off
+     the picture. Said here rather than relied on: the presentation loads
+     this stylesheet and the theme, not the editor's, and the blanket
+     border-box rule lives over there (css/app.css). */
+  box-sizing: border-box;
+  min-height: 100% !important;
+  /* The air between the box and the edge of the picture. In em, so it
+     follows the type the way the box's own padding does. */
+  padding: 1.2em !important;
 }
+/* Nine places. One cell spanning the whole picture (1fr by 1fr), and the
+   box placed INSIDE it -- place-items, not place-content.
+
+   The difference matters and cost a measurement to find: place-content
+   moves the cell, and a cell left to size itself is as wide as the longest
+   line of the text wants to be, which on a full slide is the whole width.
+   There is then nothing left to move it within, and every horizontal place
+   comes out the same. A cell told to fill the picture has no such opinion,
+   and the box inside it goes where it is sent.
+
+   Written down first, then across -- which is the order place-items reads
+   in. */
+.reveal .slides section.layout-bild-voll {
+  grid-template: 1fr / 1fr;
+  place-items: center;
+}
+.reveal .slides section.layout-bild-voll[data-text-place="top-left"] { place-items: start start; }
+.reveal .slides section.layout-bild-voll[data-text-place="top"] { place-items: start center; }
+.reveal .slides section.layout-bild-voll[data-text-place="top-right"] { place-items: start end; }
+.reveal .slides section.layout-bild-voll[data-text-place="left"] { place-items: center start; }
+.reveal .slides section.layout-bild-voll[data-text-place="center"] { place-items: center center; }
+.reveal .slides section.layout-bild-voll[data-text-place="right"] { place-items: center end; }
+.reveal .slides section.layout-bild-voll[data-text-place="bottom-left"] { place-items: end start; }
+.reveal .slides section.layout-bild-voll[data-text-place="bottom"] { place-items: end center; }
+.reveal .slides section.layout-bild-voll[data-text-place="bottom-right"] { place-items: end end; }
+
 .reveal .layout-bild-voll .slide-text {
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
@@ -852,7 +897,7 @@ html.reveal-print .reveal .slides section.layout-bild-links {
   display: grid !important;
 }
 html.reveal-print .reveal .slides section.layout-bild-voll {
-  display: flex !important;
+  display: grid !important;
 }
 /* The video layout needs it for the same reason, and needs it more since
    there is a choice of sides: without this line the handout would put the

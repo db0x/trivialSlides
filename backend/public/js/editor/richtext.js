@@ -452,6 +452,26 @@ function fragmentToggle(field) {
   if (k) k.classList.toggle("fragment");
 }
 
+// Whether the block at a given point waits for a click. The menu that
+// offers the toggle shows it as a checkmark, and only this file knows
+// which element "this paragraph" means.
+//
+// Read only, and deliberately not blockAt(): that one MAKES a paragraph
+// where the field holds bare text, and a menu asking what the state is
+// must not change it. The point comes from outside because by the time the
+// menu is open the caret is no longer in the field (js/editor/index.js
+// writes it down beforehand).
+function fragmentHere(field, node) {
+  var k = node;
+  if (!k) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return false;
+    k = sel.getRangeAt(0).startContainer;
+  }
+  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
+  return !!(k && k !== field && k.classList && k.classList.contains("fragment"));
+}
+
 // What an alignment applies to. In a list that is the LIST and not the
 // single item: reveal.js lays a list out as wide as its longest line, so
 // centring one bullet inside it does nothing anybody can see -- and
@@ -497,4 +517,4 @@ function farbe(field, value) {
   document.execCommand("foreColor", false, value || "currentColor");
 }
 
-export { isSimple, mdToHtml, htmlToMd, befehl, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };
+export { isSimple, mdToHtml, htmlToMd, befehl, fragmentHere, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };

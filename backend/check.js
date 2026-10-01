@@ -60,8 +60,10 @@ const ATTRIBUTES = [
   { name: "data-quelle", field: "source", key: "check.tooLong", values: { max: FIELD_MAX }, layout: true },
   { name: "data-textseite", field: "textSide", key: "check.side", allowed: () => layouts.SIDES, layout: true },
   { name: "data-textbreite", field: "textWidth", key: "check.width", allowed: () => layouts.WIDTHS, layout: true },
+  { name: "data-text-place", field: "textPlace", key: "check.place", allowed: () => layouts.PLACES, layout: true },
   { name: "data-columns", field: "columnMode", key: "check.columns", allowed: () => [layouts.COLUMN_SPLIT], layout: true },
   { name: "data-title-align", field: "titleAlign", key: "check.titleAlign", allowed: () => layouts.TITLE_ALIGNS },
+  { name: "data-text-fragment", field: "textFragment", key: "check.textFragment", allowed: () => [deck.TEXT_FRAGMENT_ON] },
   { name: "data-background-color", field: "background", key: "check.color" },
   { name: "data-background-gradient", field: "gradient", key: "check.gradient" },
   { name: "data-background-effect", field: "effect", key: "check.effect", allowed: () => effects.EFFECTS.map((e) => e.id) },
@@ -181,6 +183,12 @@ function checkAttrs(line, at, slide, images, add) {
       return add(at, "check.urlScheme", { value: p.value });
     }
     if (rule.field === "qrBackground" && p.value.trim() === qr.TRANSPARENT && slide.qrBackground === "") return;
+    // A flag holds a yes or a no in the model and has one spelling in the
+    // file: it is there or it is not. So "the value survived" means the
+    // file says that one value and the model came out yes.
+    if (rule.field === "textFragment") {
+      if (p.value.trim() === deck.TEXT_FRAGMENT_ON && slide.textFragment) return;
+    }
     add(at, rule.key, Object.assign({ name: p.name, value: p.value },
       rule.values || {}, rule.allowed ? { allowed: rule.allowed().join(", ") } : {}));
   });

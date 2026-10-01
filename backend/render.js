@@ -245,6 +245,13 @@ function slideHtml(slide, imageBase) {
   if (layouts.hasField(layout, "textWidth")) {
     attrs.push(`data-textbreite="${esc(layouts.onlyWidth(slide.textWidth, layout))}"`);
   }
+  // Where the text box stands on a full-bleed picture. On the <section>
+  // and as an attribute for the same reason as the side above: the
+  // arrangement is the stylesheet's business (slides.css), the renderer
+  // keeps putting out the same markup wherever the box ends up.
+  if (layouts.hasField(layout, "textPlace")) {
+    attrs.push(`data-text-place="${esc(layouts.onlyPlace(slide.textPlace))}"`);
+  }
   // Columns filled one by one rather than by the browser. On the <section>
   // because the arrangement -- grid instead of column-count, and the text
   // at the top of the slide -- is the stylesheet's business (slides.css),
@@ -277,12 +284,26 @@ function slideHtml(slide, imageBase) {
     ? ""
     : `<h${level} class="slide-title">${esc(slide.title)}</h${level}>`;
 
+  // The whole text box on a click, rather than one block of it at a time.
+  // A block says so for itself, with a class of its own out of the body
+  // (the .element comment above); the box around it cannot -- it is built
+  // here and the file has no line that points at it. So the slide says it,
+  // and this is where that is answered.
+  //
+  // reveal.js asks no more of it than the class: any element carrying
+  // `fragment` is a step, and a box is as good a step as a paragraph.
+  // What it buys over marking the blocks inside is the box ITSELF -- on a
+  // full-bleed image that box has a dark ground of its own (slides.css),
+  // and marking only its contents leaves an empty dark rectangle standing
+  // on the picture until the click comes.
+  const textBox = `slide-text${slide.textFragment ? " fragment" : ""}`;
+
   let inner;
   if (layout === "zitat") {
     inner =
       `<blockquote>${md(slide.content, imageBase) || "<p></p>"}</blockquote>` +
       (slide.source ? `<cite>${esc(slide.source)}</cite>` : "");
-    inner = `<div class="slide-text">${heading}${inner}</div>`;
+    inner = `<div class="${textBox}">${heading}${inner}</div>`;
   } else if (layouts.hasField(layout, "textSide")) {
     // The layouts whose heading sits OUTSIDE .slide-text -- video and qr.
     // It names the slide, not the text next to the player or the code, so
@@ -294,7 +315,7 @@ function slideHtml(slide, imageBase) {
     // that box is a share of the width, and an empty share would take the
     // room from the picture for nothing.
     const body = md(slide.content, imageBase);
-    inner = heading + (body ? `<div class="slide-text">${body}</div>` : "");
+    inner = heading + (body ? `<div class="${textBox}">${body}</div>` : "");
   } else if (split) {
     // One box per column, each holding its own text (layouts.js splits the
     // body). The heading stays a single element and runs across all of them
@@ -304,13 +325,13 @@ function slideHtml(slide, imageBase) {
     // A column with nothing in it still gets its box. It holds the column
     // open, so two texts beside an empty middle column stay where the
     // writer put them instead of sliding over.
-    inner = `<div class="slide-text">${heading}` +
+    inner = `<div class="${textBox}">${heading}` +
       layouts.splitColumns(slide.content, layouts.columnCount(layout))
         .map((part) => `<div class="slide-column">${md(part, imageBase)}</div>`)
         .join("") +
       `</div>`;
   } else {
-    inner = `<div class="slide-text">${heading}${md(slide.content, imageBase)}</div>`;
+    inner = `<div class="${textBox}">${heading}${md(slide.content, imageBase)}</div>`;
   }
 
   // The player. data-src rather than src: reveal.js loads it when the slide

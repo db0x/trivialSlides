@@ -599,6 +599,40 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   margin-bottom: 4px;
   line-height: 17px;
 }
+/* --- Where the text box stands on a picture ---------------------------- */
+/* A map of the slide rather than a list of nine words (views/editor.ejs).
+   Both the menu and the button that opens it draw the same thing: a frame
+   in the shape of a slide with one place marked. No icon file, because a
+   position is not a picture one can draw once -- it is nine, and they are
+   three rules of CSS. */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+}
+/* Named twice over on purpose: the bar clears the ground and the border of
+   every button in it (.toolbar button above), and these nine ARE the
+   picture -- a cell one cannot see is a cell nobody can aim at. */
+.menu-grid .place-cell {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.menu-grid .place-cell:hover { border-color: var(--accent); background: var(--paper); }
+.menu-grid .place-cell[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* The button in the bar wears an icon like every other one here; which of
+   the nine places is in force is a question the open menu answers, not the
+   bar. */
+.tool-place { --button-icon: url(../assets/toolbar/position.svg); }
+
 /* --- The slide's two tabs ---------------------------------------------- */
 /* One box, two halves: what the slide says, and what it looks like
    (views/editor.ejs).
@@ -869,7 +903,29 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="insertOrderedList"] { --button-icon: url(../assets/toolbar/md-ol.svg); }
 .tool-icon[data-command="strikeThrough"] { --button-icon: url(../assets/toolbar/md-strike.svg); }
 .tool-icon[data-command="link"] { --button-icon: url(../assets/toolbar/md-link.svg); }
-.tool-icon[data-command="fragment"] { --button-icon: url(../assets/toolbar/fragment.svg); }
+/* The icon is on the summary that opens the menu now, not on a button of
+   its own -- the thing it stands for comes in two kinds (views/editor.ejs). */
+.tool-fragment { --button-icon: url(../assets/toolbar/fragment.svg); }
+/* Its two rows are checkmarks, not one choice out of several: a slide may
+   have both. So the slot the other menus fill with an icon carries a tick
+   here, and nothing when the row is off. Drawn rather than brought in as a
+   file -- it is two lines, and the project keeps no icon it does not
+   need. */
+#fragment-menu .menu-item-icon {
+  position: relative;
+  background: none;
+}
+#fragment-menu .menu-item[aria-checked="true"] .menu-item-icon::after {
+  content: "";
+  position: absolute;
+  top: 0.05rem;
+  left: 0.3rem;
+  width: 0.3rem;
+  height: 0.6rem;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
 .tool-icon[data-command="align-left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
 .tool-icon[data-command="align-center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
 .tool-icon[data-command="align-right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
@@ -1242,13 +1298,76 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Both dots on one line, each with its word beside it -- a fieldset per
    dot left two large boxes almost empty. */
 .color-row { display: flex; flex-wrap: wrap; gap: 20px; }
+/* The word above the swatch, the way the gradient and the effect wear
+   theirs -- the same .field-label, so a column of choices lines up on one
+   left edge instead of one word standing beside its tile and the next two
+   above theirs. */
 .color-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
+  display: inline-block;
   cursor: pointer;
+}
+
+/* --- Colours and effects, in two groups -------------------------------- */
+/* What the writing takes, and what the ground takes (views/editor.ejs).
+   The heading is the ordinary field label with a line under it: enough to
+   gather three fields into one answer, not so much that the panel grows a
+   second kind of box inside the box it already is. */
+.color-group + .color-group { margin-top: 16px; }
+.group-label {
+  display: block;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text);
+}
+/* On its own line, like the gradient and the effect under it. */
+.color-group > .color-choice { display: block; margin-bottom: 10px; }
+/* And wearing the same tile those two wear -- 46 by 28 with the box's own
+   corner. Standing under one another, a circle among rectangles read as a
+   different KIND of choice than it is.
+
+   The swatch has to be told its size in so many words. Coloris gives it
+   `width: 30px; right: 0; top: 50%` of its own (coloris.css), and that
+   stylesheet is loaded AFTER this one -- so a rule naming one class, the
+   way the shared .clr-field rules above do, loses to it and leaves a
+   30-pixel block of colour in a 46-pixel tile with white beside it. Two
+   classes outweigh it whatever the order. */
+.color-choice .clr-field { width: 46px; height: 28px; }
+/* The colour is laid edge to edge, exactly as a gradient tile lays its
+   gradient: as the tile's GROUND, with the hairline painted over it. The
+   obvious arrangement -- colour inside, border around -- draws two arcs at
+   every corner, one a pixel inside the other, and a hairline standing on
+   white paper beside eight hairlines standing on their own colour reads as
+   a heavier line than theirs. One arc, one edge, and the swatch sits in
+   the row as one of them. */
+.color-choice .clr-field button {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: var(--radius);
+}
+/* The edge, over the colour. A pseudo-element of the field and not the
+   border of the input underneath, because the input is below the swatch
+   and anything it draws would be painted out by it. */
+.color-choice .clr-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+.color-choice .clr-field:hover::after { border-color: var(--accent); }
+/* Which leaves the input to hold the empty state and nothing else -- the
+   diagonal that says a slide has been given no colour of its own. */
+.color-choice .clr-field input.color-field {
+  border-color: transparent;
+  border-radius: var(--radius);
 }
 .clr-field {
   width: 1.75rem;

@@ -132,6 +132,7 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     videoPattern: video.PATTERN,
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
+    places: i18n.placesTranslated(layouts.PLACES, req.language),
     codeLanguages: code.LANGUAGES,
     emoji: i18n.emojiTranslated(emoji.GROUPS, req.language),
     codeStyles: code.STYLES,

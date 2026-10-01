@@ -123,11 +123,12 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="left" -->
+<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="center" -->
 
 ## Full-bleed image
 
 ⭐ The picture covers the whole slide, the text stays readable on top of it.
+<!-- .element: class="align-fill" -->
 
 ---
 

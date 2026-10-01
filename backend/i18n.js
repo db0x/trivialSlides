@@ -104,6 +104,14 @@ function textSidesTranslated(sides, language) {
   }));
 }
 
+// The nine places a text box may take on a full-bleed picture
+// (layouts.js) -- ids there, words here. The words are not written on the
+// buttons, which are a map rather than a list; they are what the tooltip
+// and a screen reader get.
+function placesTranslated(places, language) {
+  return places.map((id) => ({ id, name: translate(language, "textPlace." + id) }));
+}
+
 // The emoji groups (emoji.js): characters there, the word for the group
 // here. It travels to the page as JSON and the panel is built from it
 // (js/editor/index.js) -- 450 buttons in the markup would be 30 kB of
@@ -132,4 +140,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, emojiTranslated, COOKIE, DEFAULT };
+module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, placesTranslated, emojiTranslated, COOKIE, DEFAULT };

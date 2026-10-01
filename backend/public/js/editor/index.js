@@ -41,8 +41,12 @@ var el = {
   qrBackground: $("#qr-background"),
   qrTextColor: $("#qr-text-color"),
   videoNote: $("#video-note"),
+  fragmentMenu: $("#fragment-menu"),
+  fragmentButton: $("#fragment-button"),
   textSideMenu: $("#text-side-menu"),
   textSideButton: $("#text-side-button"),
+  textPlaceMenu: $("#text-place-menu"),
+  textPlaceButton: $("#text-place-button"),
   textWidthMenu: $("#text-width-menu"),
   textWidthButton: $("#text-width-button"),
   fieldImage: $(".field-image"),
@@ -210,6 +214,7 @@ function harvest() {
   // The bar shows the side as an icon, so the chosen one lives on the
   // button rather than in a field value.
   slide.textSide = el.textSideButton.dataset.side || "oben";
+  slide.textPlace = el.textPlaceButton.dataset.place || "center";
   slide.textWidth = el.textWidthButton.dataset.width || defaultWidth();
   // The chooser beside the heading keeps two things apart: what the slide
   // has CHOSEN (which may be nothing) and what the button SHOWS, which is
@@ -288,6 +293,8 @@ function showSlide() {
   // A slide that has never been arranged is arranged the way it has always
   // looked, so the button shows the same thing the slide does.
   showTextSide(slide.textSide || "oben");
+  showTextPlace(slide.textPlace || "center");
+  drawFragment();
   showTitleAlign(slide.titleAlign || "");
   showTextWidth(slide.textWidth || defaultWidth());
   showVideo();
@@ -306,10 +313,12 @@ function showSlide() {
   el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
   el.columnsSplit.checked = slide.columnMode === SPLIT;
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
+  el.textPlaceMenu.hidden = def.fields.indexOf("textPlace") === -1;
   el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
   // A menu left standing open over a layout that no longer has the button
   // would hang in the bar with nothing under it.
   if (el.textSideMenu.hidden) el.textSideMenu.open = false;
+  if (el.textPlaceMenu.hidden) el.textPlaceMenu.open = false;
   if (el.textWidthMenu.hidden) el.textWidthMenu.open = false;
   showImage(slide.image);
 
@@ -340,6 +349,10 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // "This paragraph" needs a paragraph, and in source mode there is none --
+  // only text. The slide's own text box is a different matter: it is an
+  // attribute of the slide and can be set from either mode.
+  $('.menu-item[data-fragment="block"]').disabled = sourceMode;
   // The colour is not a button but a field, so it is shut separately --
   // it acts on a selection in the rich-text field, and in source mode
   // there is none.
@@ -556,6 +569,33 @@ $$(".column-tab", el.columnTabs).forEach(function (tab) {
 el.sourceText.addEventListener("input", remember);
 el.source.addEventListener("input", remember);
 
+// --- Where the text box stands on a full-bleed picture -----------------
+// Nine places. The one in force is marked in the menu, and it also rides on
+// the button -- not to be seen there, but because that is where harvest()
+// reads it from, the way the side button next to it holds its side. The
+// words come from the menu entries, which the server has already put into
+// the page.
+function showTextPlace(place) {
+  el.textPlaceButton.dataset.place = place;
+  var chosen = null;
+  $$("#text-place-menu .place-cell").forEach(function (cell) {
+    var is = cell.dataset.place === place;
+    cell.setAttribute("aria-checked", is ? "true" : "false");
+    if (is) chosen = cell;
+  });
+  var name = el.textPlaceMenu.dataset.name + (chosen ? ": " + chosen.dataset.tip : "");
+  el.textPlaceButton.setAttribute("aria-label", name);
+  el.textPlaceButton.dataset.tip = name;
+}
+
+$$("#text-place-menu .place-cell").forEach(function (cell) {
+  cell.addEventListener("click", function () {
+    showTextPlace(cell.dataset.place);
+    el.textPlaceMenu.open = false;
+    remember();
+  });
+});
+
 // --- Where the text sits on a video slide ------------------------------
 // The bar has room for an icon and no more, so the name of the side has to
 // reach it as its label and its tooltip -- otherwise the button says
@@ -672,6 +712,50 @@ $$("#title-align-menu .menu-item").forEach(function (button) {
     showTitleAlign(button.dataset.align);
     el.titleAlignMenu.open = false;
     remember();
+  });
+});
+
+// --- Reveal on a click --------------------------------------------------
+// Two different things behind one icon (views/editor.ejs): one block of the
+// text, which is a class in the body, and the slide's whole text box, which
+// is an attribute of the slide. Checkmarks and not a choice -- a slide may
+// have both, and then it takes two clicks to show everything.
+function drawFragment() {
+  var slide = deck.slides[active];
+  mark('.menu-item[data-fragment="block"]',
+    !sourceMode && rt.fragmentHere(el.content, markedRange && markedRange.startContainer));
+  mark('.menu-item[data-fragment="text"]', !!(slide && slide.textFragment));
+}
+
+function mark(selector, on) {
+  var row = $(selector);
+  row.classList.toggle("is-active", on);
+  row.setAttribute("aria-checked", on ? "true" : "false");
+}
+
+// The caret is what "this paragraph" means, and opening a menu takes the
+// focus off it. So the range is written down on the way in -- the same
+// trick the colour tool plays further down -- and put back before the
+// command runs.
+el.fragmentButton.addEventListener("mousedown", rememberRange);
+el.fragmentMenu.addEventListener("toggle", function () {
+  if (el.fragmentMenu.open) drawFragment();
+});
+
+$$("#fragment-menu .menu-item").forEach(function (row) {
+  row.addEventListener("click", function () {
+    if (row.dataset.fragment === "text") {
+      var slide = deck.slides[active];
+      if (slide) slide.textFragment = !slide.textFragment;
+    } else if (!sourceMode && markedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(markedRange);
+      rt.befehl(el.content, "fragment");
+    }
+    el.fragmentMenu.open = false;
+    remember();
+    drawFragment();
   });
 });
 
