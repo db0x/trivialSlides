@@ -1462,6 +1462,18 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 
 .content-field .fragment { border-left: 3px solid var(--accent); padding-left: 8px; margin-left: -11px; }
+/* A group of blocks that arrives on one click (js/editor/richtext.js). It
+   needs no mark of its own: the group is a .fragment, so the bar above
+   already runs down the whole of it -- which is exactly what it means,
+   "all of this on one click". Only a group carrying some other class --
+   which a file may say and this field never writes -- has nothing to show
+   for itself, and gets a quiet line so that it is not invisible while
+   somebody types in it. */
+.content-field .slide-group:not(.fragment) {
+  border-left: 3px dashed var(--border);
+  padding-left: 8px;
+  margin-left: -11px;
+}
 /* A marked block stands in the field the way it will stand on the slide.
    That is the whole feedback the alignment buttons need -- no button state
    could say it as plainly as the text itself does. */

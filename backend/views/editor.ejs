@@ -315,6 +315,16 @@
                 <button type="button" class="menu-item" role="menuitemcheckbox"
                         aria-checked="false" data-fragment="text"><span
                         class="menu-item-icon" aria-hidden="true"></span><%= t('tool.fragmentText') %></button>
+                <!-- The third: several blocks on ONE click. Not a thing of
+                     its own in the markup but a NUMBER on each of them --
+                     reveal.js shows every fragment carrying the same
+                     data-fragment-index together (js/editor/richtext.js,
+                     render.js). Which is also the only thing that reaches
+                     into a list: two of four bullets cannot be wrapped in
+                     anything without becoming a second list. -->
+                <button type="button" class="menu-item" role="menuitemcheckbox"
+                        aria-checked="false" data-fragment="together"><span
+                        class="menu-item-icon" aria-hidden="true"></span><%= t('tool.fragmentGroup') %></button>
               </div>
             </details>
             <!-- Code is the one thing in this bar that the rich-text field

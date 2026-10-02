@@ -297,10 +297,14 @@ function splitCount(slide) {
 function harvestText(slide) {
   var count = splitCount(slide);
   var text = rt.htmlToMd(el.content);
-  if (!count) return text;
+  // The numbers that put several blocks on one click are settled here and
+  // nowhere else: they run across the WHOLE slide, and the field only ever
+  // holds one column of it (js/editor/richtext.js, normalizeSteps). A
+  // slide that needs none comes back without any.
+  if (!count) return rt.normalizeSteps([text])[0];
   var parts = splitColumns(slide.content, count);
   parts[Math.min(activeColumn, count - 1)] = text;
-  return joinColumns(parts);
+  return joinColumns(rt.normalizeSteps(parts));
 }
 
 // Can the rich-text field show this body, or does it have to be source?
@@ -768,15 +772,24 @@ $$("#title-align-menu .menu-item").forEach(function (button) {
 });
 
 // --- Reveal on a click --------------------------------------------------
-// Two different things behind one icon (views/editor.ejs): one block of the
-// text, which is a class in the body, and the slide's whole text box, which
-// is an attribute of the slide. Checkmarks and not a choice -- a slide may
-// have both, and then it takes two clicks to show everything.
+// Three different things behind one icon (views/editor.ejs): one block of
+// the text, which is a class in the body; the slide's whole text box,
+// which is an attribute of the slide; and several blocks on one click,
+// which is a number they share. Checkmarks and not a choice -- a slide may
+// have all three.
 function drawFragment() {
   var slide = deck.slides[active];
+  var node = markedRange && markedRange.startContainer;
+  // A block in a shared step is a fragment too -- that is what it is made
+  // of -- but saying so in both rows would read as two things being on
+  // when there is one. The step is the more precise answer, so it wins and
+  // the first row speaks only for a block that appears on a click of its
+  // OWN.
+  var zusammen = !sourceMode && rt.togetherHere(el.content, node);
   mark('.menu-item[data-fragment="block"]',
-    !sourceMode && rt.fragmentHere(el.content, markedRange && markedRange.startContainer));
+    !sourceMode && !zusammen && rt.fragmentHere(el.content, node));
   mark('.menu-item[data-fragment="text"]', !!(slide && slide.textFragment));
+  mark('.menu-item[data-fragment="together"]', zusammen);
 }
 
 function mark(selector, on) {
@@ -803,7 +816,7 @@ $$("#fragment-menu .menu-item").forEach(function (row) {
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(markedRange);
-      rt.befehl(el.content, "fragment");
+      rt.befehl(el.content, row.dataset.fragment === "together" ? "together" : "fragment");
     }
     el.fragmentMenu.open = false;
     remember();

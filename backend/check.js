@@ -32,6 +32,13 @@ const ATTR_LINE = /^\s*<!--\s*\.slide:\s*(.*?)\s*-->\s*$/;
 // once.
 const ATTR_LIKE = /<!--[^>]*\.slide\b/;
 const PAIR = /([a-z-]+)\s*=\s*"([^"]*)"/g;
+// The group comments (render.js). Written as this module writes everything
+// else: the shape that WORKS, and the shape that merely looks like it. A
+// group whose opening line is mistyped renders as nothing at all and takes
+// its closing line with it, which is a silence worth breaking.
+const GROUP_OPEN = /^\s*<!--\s*\.group:\s*class="[A-Za-z0-9 _-]+"\s*-->\s*$/;
+const GROUP_CLOSE = /^\s*<!--\s*\/\.group\s*-->\s*$/;
+const GROUP_LIKE = /<!--[^>]*\.group\b/;
 const HEAD_KEYS = ["titel", "theme", "transition"];
 // What deck.js cuts to length in normalize(): the deck's title, a slide's
 // heading, and the two one-line fields an attribute may carry.
@@ -144,6 +151,28 @@ function checkSlide(block, slide, isFirstSlide, images, add) {
     add(at(block.lines.indexOf(body.find((l) => /^#{1,6}(\s|$)/.test(l)))), "check.tooLong", { max: HEADING_MAX });
   }
   if (slide.content.length >= CONTENT_MAX) add(at(0), "check.tooLong", { max: CONTENT_MAX });
+
+  // The groups. One that is opened and never closed still shows its slide
+  // -- the renderer closes it at the end rather than losing the text -- but
+  // it reaches further than whoever wrote it meant, so it is said here. A
+  // closing line on its own does nothing at all.
+  let open = 0;
+  let openedAt = 0;
+  let fenced = false;
+  block.lines.forEach((line, i) => {
+    // Inside a code block a line like this is text somebody is showing,
+    // not a line this file acts on -- the same reading the renderer has.
+    if (/^\s{0,3}```/.test(line)) { fenced = !fenced; return; }
+    if (fenced) return;
+    if (GROUP_OPEN.test(line)) { if (!open) openedAt = i; open++; return; }
+    if (GROUP_CLOSE.test(line)) {
+      if (open) open--;
+      else add(at(i), "check.groupClose");
+      return;
+    }
+    if (GROUP_LIKE.test(line)) add(at(i), "check.groupBroken");
+  });
+  if (open) add(at(openedAt), "check.groupOpen");
 }
 
 function checkAttrs(line, at, slide, images, add) {

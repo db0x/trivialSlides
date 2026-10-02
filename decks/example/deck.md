@@ -74,9 +74,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 - Jupiter
 - Saturn
 - Uranus
-<!-- .element: class="fragment" -->
 - Neptune
-<!-- .element: class="fragment" -->
 
 ---
 
@@ -142,6 +140,8 @@ public int getAge() {
 }
 ```
 
+<!-- .group: class="fragment" -->
+
 getFactor()
 
 ```java hl=github
@@ -149,6 +149,8 @@ private int getFactor() {
     return 5;
 }
 ```
+
+<!-- /.group -->
 
 ---
 

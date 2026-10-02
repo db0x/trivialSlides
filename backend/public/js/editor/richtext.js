@@ -28,7 +28,38 @@ function elementLine(classes) {
 
 var FRAGMENT = elementLine(["fragment"]);
 
-var ELEMENT_LINE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
+// The number behind the classes is reveal.js' own data-fragment-index:
+// blocks carrying the SAME one arrive on the same click. It is the only
+// way to show two items of ONE list together -- a list cannot be cut in
+// half by a container, and two lists are no longer one list.
+var ELEMENT_LINE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"(?:\s+data-fragment-index="(\d{1,3})")?\s*-->$/;
+
+function elementLineWith(classes, index) {
+  return '<!-- .element: class="' + classes.join(" ") + '"'
+    + (index == null || index === "" ? "" : ' data-fragment-index="' + index + '"') + " -->";
+}
+
+// A GROUP of blocks that appears on one click (render.js holds the other
+// end of this pair). In the field it is a real <div> with the classes the
+// file gave it, so the blocks inside stay ordinary blocks one can type in
+// -- which is the whole reason this field knows about groups at all: a
+// slide with one used to go to source mode, and then a heading and a code
+// block cost the user the entire field.
+//
+// The class is kept WORD FOR WORD in a data attribute and written back
+// unchanged. The field itself only ever makes "fragment", but a file may
+// say "fragment fade-up" or anything else reveal.js knows, and a class
+// this field does not recognise must still survive a round trip -- losing
+// something is exactly what source mode is there to prevent.
+var GROUP_OPEN_RE = /^<!--\s*\.group:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
+var GROUP_CLOSE_RE = /^<!--\s*\/\.group\s*-->$/;
+var GROUP_CLASS = "slide-group";
+
+function groupOpenLine(classes) {
+  return '<!-- .group: class="' + classes + '" -->';
+}
+
+var GROUP_CLOSE_LINE = "<!-- /.group -->";
 
 // The classes of such a line -- or null if the line is not one, or carries
 // a class this field could not put back. A class it does not know would be
@@ -39,7 +70,11 @@ function markerClasses(line) {
   if (!t) return null;
   var classes = t[1].trim().split(/\s+/);
   var known = classes.every(function (c) { return MARKER_CLASSES.indexOf(c) !== -1; });
-  return known ? classes : null;
+  if (!known) return null;
+  // The number rides along on the list rather than in a second return
+  // value: every caller but one wants the classes alone.
+  classes.index = t[2] === undefined ? null : t[2];
+  return classes;
 }
 
 // Markdown the buttons cannot express. Anyone who has such a thing in
@@ -87,11 +122,17 @@ function isSimple(md) {
   if (!text.trim()) return true;
   var lines = text.split("\n");
   var imCode = false;
+  var group = 0;
   for (var i = 0; i < lines.length; i++) {
     var z = lines[i];
     if (ZAUN.test(z)) { imCode = !imCode; continue; }
     if (imCode) continue;
     if (z.trim() === "" || markerClasses(z)) continue;
+    if (GROUP_OPEN_RE.test(z.trim())) { group++; continue; }
+    // A closing line with nothing open is a typo the field cannot show --
+    // it would simply vanish on the way back, so the slide keeps its
+    // source. The same for a group nobody closed, checked at the end.
+    if (GROUP_CLOSE_RE.test(z.trim())) { if (!group) return false; group--; continue; }
     if (/^\s{0,3}(#{1,6}\s|>|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
     // Raw HTML, other than the fragment line above and the colour spans
     // this field writes itself. Those are taken out of the line first --
@@ -106,8 +147,11 @@ function isSimple(md) {
     if (/^\s*([-*_])\s*\1\s*\1/.test(z)) return false; // horizontal rule
   }
   // A fence that was opened and never closed is not a code block but a
-  // typo, and the field would swallow the rest of the slide into it.
-  return !imCode;
+  // typo, and the field would swallow the rest of the slide into it. The
+  // same goes for a group: the renderer closes it at the end of the slide,
+  // the field would close it where the text does -- so the two would not
+  // agree, and source mode is the honest answer.
+  return !imCode && !group;
 }
 
 // --- Code blocks -------------------------------------------------------
@@ -203,11 +247,26 @@ function mdToHtml(md) {
   }
   // The comment refers to the element written last -- so its classes are
   // attached to that one after the fact.
-  function attachMarkers(classes) {
+  function attachMarkers(classes, index) {
     var list = classes.join(" ");
+    var nummer = index == null ? "" : ' data-fragment-index="' + index + '"';
     for (var i = out.length - 1; i >= 0; i--) {
       if (/^<div class="code-block/.test(out[i])) {
-        out[i] = out[i].replace('class="code-block', 'class="code-block ' + list);
+        out[i] = out[i].replace('class="code-block', 'class="code-block ' + list).replace(/>$/, nummer + ">");
+        return;
+      }
+      // A group that has just closed: the comment belongs to the DIV, the
+      // same way the server reads it (render.js walks back over the
+      // closing tag, whatever tag that is).
+      if (out[i] === "</div>") {
+        var tief = 0;
+        for (var g = i; g >= 0; g--) {
+          if (out[g] === "</div>") tief++;
+          else if (/^<div class="/.test(out[g]) && !/^<div class="code-block/.test(out[g])) {
+            tief--;
+            if (!tief) { out[g] = out[g].replace(/class="([^"]*)"/, 'class="$1 ' + list + '"').replace(/>$/, nummer + ">"); return; }
+          }
+        }
         return;
       }
       // A closed list right before the comment: then the comment belongs to
@@ -218,14 +277,14 @@ function mdToHtml(md) {
       if (zu) {
         for (var j = i - 1; j >= 0; j--) {
           if (out[j] === "<" + zu[1] + ">") {
-            out[j] = "<" + zu[1] + ' class="' + list + '">';
+            out[j] = "<" + zu[1] + ' class="' + list + '"' + nummer + ">";
             return;
           }
         }
         return;
       }
       var t = /^<(p|li)>/.exec(out[i]);
-      if (t) { out[i] = "<" + t[1] + ' class="' + list + '">' + out[i].slice(t[0].length); return; }
+      if (t) { out[i] = "<" + t[1] + ' class="' + list + '"' + nummer + ">" + out[i].slice(t[0].length); return; }
     }
   }
 
@@ -253,13 +312,26 @@ function mdToHtml(md) {
       codeLines = [];
       return;
     }
+    var auf = GROUP_OPEN_RE.exec(line.trim());
+    if (auf) {
+      paragraphClose();
+      listClose();
+      out.push('<div class="' + GROUP_CLASS + " " + escHtml(auf[1]) + '" data-classes="' + escHtml(auf[1]) + '">');
+      return;
+    }
+    if (GROUP_CLOSE_RE.test(line.trim())) {
+      paragraphClose();
+      listClose();
+      out.push("</div>");
+      return;
+    }
     var marks = markerClasses(line);
     if (marks) {
       // Close the running paragraph first -- otherwise the classes land on
       // the paragraph BEFORE it. The list, by contrast, stays open: a
       // marker may well belong to a single item mid-list.
       paragraphClose();
-      attachMarkers(marks);
+      attachMarkers(marks, marks.index);
       return;
     }
     var ul = /^\s*[-*+]\s+(.*)$/.exec(line);
@@ -329,7 +401,11 @@ function htmlToMd(wurzel) {
   function marker(el) {
     if (!el.classList) return "";
     var found = MARKER_CLASSES.filter(function (c) { return el.classList.contains(c); });
-    return found.length ? "\n" + elementLine(found) : "";
+    if (!found.length) return "";
+    // Only a fragment can carry a number, and only then is it written: an
+    // alignment with a fragment index would be a line nobody can read.
+    var index = el.classList.contains("fragment") ? el.getAttribute("data-fragment-index") : null;
+    return "\n" + elementLineWith(found, index);
   }
   Array.prototype.forEach.call(wurzel.childNodes, function (k) {
     if (k.nodeType === 3) {
@@ -339,6 +415,27 @@ function htmlToMd(wurzel) {
     if (k.nodeType !== 1) return;
     if (k.classList && k.classList.contains("code-block")) {
       blocks.push(codeBlockZuMd(k) + marker(k));
+      return;
+    }
+    // A group: its own two lines around whatever stands in it, read by the
+    // same walk one level down. The classes come back exactly as the file
+    // wrote them -- what the field does not understand it has carried
+    // along untouched rather than dropped (data-classes, mdToHtml).
+    if (k.classList && k.classList.contains(GROUP_CLASS)) {
+      var inner = htmlToMd(k);
+      var classes = k.dataset.classes || "fragment";
+      // The opening line already says what the group carries, so marker()
+      // is not simply appended -- it would write those same classes a
+      // second time. What it may still have to say is a class the group
+      // picked up from an .element line of its own, which stands AFTER the
+      // closing line in the file and is read back onto the div
+      // (attachMarkers). Only those are written out again.
+      var own = classes.trim().split(/\s+/);
+      var extra = MARKER_CLASSES.filter(function (c) {
+        return k.classList.contains(c) && own.indexOf(c) === -1;
+      });
+      blocks.push(groupOpenLine(classes) + "\n\n" + inner + "\n\n" + GROUP_CLOSE_LINE
+        + (extra.length ? "\n" + elementLine(extra) : ""));
       return;
     }
     var tag = k.tagName.toLowerCase();
@@ -386,6 +483,10 @@ function befehl(field, name) {
   }
   if (name === "fragment") {
     fragmentToggle(field);
+    return;
+  }
+  if (name === "together") {
+    togetherToggle(field);
     return;
   }
   var align = /^align-(left|center|right|fill)$/.exec(name);
@@ -449,7 +550,130 @@ function blocksInSelection(field) {
 // in.
 function fragmentToggle(field) {
   var k = blockAt(field);
-  if (k) k.classList.toggle("fragment");
+  if (!k) return;
+  // Switched off, the block leaves its step as well: a number on something
+  // that is not a fragment any more means nothing, and leaving it behind
+  // would make the row that reads it say the wrong thing.
+  if (k.classList.contains("fragment")) k.removeAttribute("data-fragment-index");
+  k.classList.toggle("fragment");
+}
+
+// --- Several blocks on ONE click ---------------------------------------
+// Not a container: a number. reveal.js shows every fragment carrying the
+// same data-fragment-index on the same click, and that is the only thing
+// that reaches INTO a list -- two items of one list cannot be wrapped in
+// anything without becoming two lists, which is a different slide.
+//
+// The numbers written here are provisional: they only have to tell the
+// blocks of one step apart from the rest WITHIN this field. The field holds
+// one column, and a slide may have three -- so the final numbering is done
+// on the whole slide's text afterwards (normalizeSteps, called from
+// js/editor/index.js on the way out of the field).
+function fragmentsIn(field) {
+  return Array.prototype.filter.call(field.querySelectorAll("p, li, pre, .code-block, ." + GROUP_CLASS),
+    function (el) { return el.classList.contains("fragment"); });
+}
+
+function freeIndex(field) {
+  var hoechste = -1;
+  fragmentsIn(field).forEach(function (el) {
+    var n = parseInt(el.getAttribute("data-fragment-index"), 10);
+    if (!isNaN(n) && n > hoechste) hoechste = n;
+  });
+  return String(hoechste + 1);
+}
+
+// Puts what the selection covers on one click, or takes such a step apart
+// again -- the same press, the way the fragment and the alignment work.
+function togetherToggle(field) {
+  var blocks = blocksInSelection(field);
+  if (!blocks.length) return;
+
+  // Already one step: every block selected is a fragment and they all
+  // carry the same number. Then this takes the number off again and each
+  // of them goes back to a click of its own.
+  var first = blocks[0].getAttribute("data-fragment-index");
+  var same = first !== null && blocks.every(function (el) {
+    return el.classList.contains("fragment") && el.getAttribute("data-fragment-index") === first;
+  });
+  if (same) {
+    blocks.forEach(function (el) { el.removeAttribute("data-fragment-index"); });
+    return;
+  }
+
+  // One block alone cannot be a step: what it would mean is "appears on a
+  // click", which is the first row of this menu and not this one.
+  if (blocks.length < 2) return;
+  var nummer = freeIndex(field);
+  blocks.forEach(function (el) {
+    el.classList.add("fragment");
+    el.setAttribute("data-fragment-index", nummer);
+  });
+}
+
+// Whether the point stands in such a step -- a fragment that shares its
+// number with another one. Like fragmentHere() it only reads: a menu
+// asking what the state is must not change it.
+function togetherHere(field, node) {
+  var k = node;
+  if (!k) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return false;
+    k = sel.getRangeAt(0).startContainer;
+  }
+  while (k && k !== field && !(k.nodeType === 1 && k.getAttribute && k.getAttribute("data-fragment-index") !== null)) k = k.parentNode;
+  if (!k || k === field || !k.getAttribute) return false;
+  var mine = k.getAttribute("data-fragment-index");
+  if (mine === null) return false;
+  return fragmentsIn(field).filter(function (el) {
+    return el.getAttribute("data-fragment-index") === mine;
+  }).length > 1;
+}
+
+// The slide's final numbering, done on the TEXT rather than in the field:
+// the steps of a slide run across all its columns, and the field only ever
+// holds one of them.
+//
+// `parts` is one text per column (one for a slide that has none) and comes
+// back the same way. Two rules:
+//   - a marker's number is a grouping key, nothing else: markers sharing
+//     one within a column are one step, and the steps are numbered in the
+//     order they first appear.
+//   - if every step holds exactly ONE block, the numbers are dropped
+//     altogether. A slide that does not need them should not carry them,
+//     and without them reveal.js counts the fragments itself.
+function normalizeSteps(parts) {
+  var marks = [];        // { col, line, classes, key }
+  var texts = (parts || []).map(function (text) { return String(text == null ? "" : text).split("\n"); });
+
+  texts.forEach(function (lines, col) {
+    var imCode = false;
+    lines.forEach(function (line, i) {
+      if (ZAUN.test(line)) { imCode = !imCode; return; }
+      if (imCode) return;
+      var marker = markerClasses(line);
+      if (!marker || marker.indexOf("fragment") === -1) return;
+      marks.push({
+        col: col,
+        line: i,
+        classes: marker,
+        // Without a number the block is a step of its own, which is what
+        // the line number makes it.
+        key: col + ":" + (marker.index === null ? "x" + i : marker.index),
+      });
+    });
+  });
+
+  var steps = [];
+  marks.forEach(function (m) {
+    if (steps.indexOf(m.key) === -1) steps.push(m.key);
+  });
+  var grouped = steps.length < marks.length;
+
+  marks.forEach(function (m) {
+    texts[m.col][m.line] = elementLineWith(m.classes, grouped ? String(steps.indexOf(m.key)) : null);
+  });
+  return texts.map(function (lines) { return lines.join("\n"); });
 }
 
 // Whether the block at a given point waits for a click. The menu that
@@ -517,4 +741,4 @@ function farbe(field, value) {
   document.execCommand("foreColor", false, value || "currentColor");
 }
 
-export { isSimple, mdToHtml, htmlToMd, befehl, fragmentHere, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };
+export { isSimple, mdToHtml, htmlToMd, befehl, fragmentHere, togetherHere, normalizeSteps, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };

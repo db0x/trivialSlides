@@ -14,7 +14,17 @@ const qr = require("./qr");
 // nothing but letters, digits, spaces, hyphens and underscores. Anything
 // else is dropped like all other raw HTML, so there is no way to smuggle a
 // second attribute in through the quotes.
-const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
+// The number behind it is reveal.js' own data-fragment-index: fragments
+// carrying the SAME one arrive on the same click. That is the only way to
+// show two items of one list together -- a list cannot be cut in half by a
+// container, and two lists are not one list any more.
+//
+// Digits and nothing else, at most three of them, so the quotes cannot be
+// closed early here either. Written by the editor for EVERY fragment of a
+// slide or for none of it: reveal puts the ones without a number after the
+// ones with it (fragments.js, sort()), so half a slide numbered would
+// reorder the other half.
+const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"(?:\s+data-fragment-index="(\d{1,3})")?\s*-->$/;
 
 // The second, and only other, thing let through: a run of text in a colour
 // of its own. It is the one piece of formatting that has no Markdown of its
@@ -31,19 +41,51 @@ const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
 const COLOR_OPEN_RE = /^<span\s+style="color:\s*(#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)\s*;?"\s*>$/;
 const COLOR_CLOSE_RE = /^<\/span>$/;
 
+// The third: a GROUP of elements that behaves as one. A heading and the
+// code block under it appearing on a single click is the case it was
+// written for -- reveal.js' own fragment marker sits on one element, and
+// there is no element that holds both.
+//
+// So the file says so with a pair of comments and the renderer puts a
+// <div> around what lies between them. Not a <div> written out in the
+// file: raw HTML stays dropped, here as everywhere else, which is what
+// keeps a <script> impossible. The class is read with exactly the pattern
+// the fragment marker uses, so nothing but letters, digits, spaces,
+// hyphens and underscores fits through the quotes.
+//
+// It is this project's own, like <!-- .column -->, and it is written so
+// that it costs nothing elsewhere: a reveal.js that has never heard of it
+// drops both comments and shows the blocks straight away, which is the
+// honest fallback -- the slide says the same thing, it just says it all at
+// once.
+const GROUP_OPEN_RE = /^<!--\s*\.group:\s*class="([A-Za-z0-9 _-]+)"\s*-->$/;
+const GROUP_CLOSE_RE = /^<!--\s*\/\.group\s*-->$/;
+
 // Placeholder for the stretch between rendering and post-processing. Control
 // characters, because they cannot occur in a slide's text.
 const MARK_OPEN = "\u0001";
 const MARK_CLOSE = "\u0002";
 
-function brand(classes) {
-  return MARK_OPEN + classes + MARK_CLOSE;
+// The classes and, after a space, the fragment number -- one string,
+// because the marker travels through the finished markup as one piece.
+function brand(classes, index) {
+  return MARK_OPEN + classes + (index == null ? "" : " " + index) + MARK_CLOSE;
+}
+
+// And apart again. A number cannot be a class name, so the two need no
+// separator of their own -- the last word decides. Both ends of the marker
+// go through here: the one that walks the finished markup
+// (resolveFragments) and the one that catches a marker inside a list item
+// before the item is built.
+function unbrand(payload) {
+  const t = /^(.*?)(?:\s+(\d{1,3}))?$/.exec(payload);
+  return { classes: t[1], index: t[2] };
 }
 
 // Puts the class on the element that closes right before `ende`. Walks the
 // opening and closing tags backwards counting depth, so that a marker after
 // a nested list quiet lands on the outer one.
-function setClass(html, ende, classes) {
+function setClass(html, ende, classes, index) {
   const vor = html.slice(0, ende).replace(/\s+$/, "");
   const zu = /<\/([a-z][a-z0-9]*)>$/i.exec(vor);
   if (!zu) return null;
@@ -61,9 +103,10 @@ function setClass(html, ende, classes) {
       // carries its colour scheme there. A second class attribute would be
       // ignored by every browser, so the two are merged.
       const existing = /\sclass="([^"]*)"/i.exec(auf[0]);
+      const nummer = index == null ? "" : ` data-fragment-index="${esc(index)}"`;
       const replaced = existing
-        ? auf[0].replace(existing[0], ` class="${existing[1]} ${esc(classes)}"`)
-        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(classes)}"`);
+        ? auf[0].replace(existing[0], ` class="${existing[1]} ${esc(classes)}"${nummer}`)
+        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(classes)}"${nummer}`);
       return html.slice(0, auf.index) + replaced + html.slice(auf.index + auf[0].length);
     }
   }
@@ -79,10 +122,10 @@ function resolveFragments(html) {
     if (i < 0) return html;
     const j = html.indexOf(MARK_CLOSE, i);
     if (j < 0) return html.slice(0, i) + html.slice(i + 1);
-    const classes = html.slice(i + 1, j);
+    const { classes, index } = unbrand(html.slice(i + 1, j));
     const without = html.slice(0, i) + html.slice(j + 1);
     // Marker removed first, so the scan sees the element unobstructed.
-    html = setClass(without, i, classes) || without;
+    html = setClass(without, i, classes, index) || without;
   }
 }
 
@@ -91,7 +134,7 @@ function resolveFragments(html) {
 // talk -- without raw HTML a smuggled-in <script> is impossible to begin
 // with, and the editor does not offer HTML anyway. Anyone who does need it
 // uses reveal.js directly; the .md stays readable either way.
-function markdownRenderer(imageBase) {
+function markdownRenderer(imageBase, open) {
   const r = new marked.Renderer();
   // How many colour spans are open. marked hands the opening tag and the
   // closing one over as two separate pieces, so the pair has to be counted
@@ -101,7 +144,7 @@ function markdownRenderer(imageBase) {
   r.html = (raw) => {
     const text = String(raw).trim();
     const t = FRAGMENT_RE.exec(text);
-    if (t) return brand(t[1]);
+    if (t) return brand(t[1], t[2]);
     const color = COLOR_OPEN_RE.exec(text);
     if (color) {
       colored++;
@@ -110,6 +153,18 @@ function markdownRenderer(imageBase) {
     if (COLOR_CLOSE_RE.test(text) && colored > 0) {
       colored--;
       return "</span>";
+    }
+    const group = GROUP_OPEN_RE.exec(text);
+    if (group) {
+      open.groups++;
+      return `<div class="${esc(group[1])}">`;
+    }
+    // Counted like the colour spans above, and for the same reason: a
+    // closing line without an opening one would close an element this
+    // renderer never opened and tear the markup around it.
+    if (GROUP_CLOSE_RE.test(text) && open.groups > 0) {
+      open.groups--;
+      return "</div>";
     }
     return "";
   };
@@ -120,9 +175,10 @@ function markdownRenderer(imageBase) {
     const i = text.indexOf(MARK_OPEN);
     if (i < 0) return itemOrig(text, ...rest);
     const j = text.indexOf(MARK_CLOSE, i);
-    const classes = text.slice(i + 1, j);
+    const { classes, index } = unbrand(text.slice(i + 1, j));
     const without = text.slice(0, i) + text.slice(j + 1);
-    return itemOrig(without, ...rest).replace(/^<li/, `<li class="${esc(classes)}"`);
+    const nummer = index == null ? "" : ` data-fragment-index="${esc(index)}"`;
+    return itemOrig(without, ...rest).replace(/^<li/, `<li class="${esc(classes)}"${nummer}`);
   };
   // Code blocks. The fence says the language, and after it may state a
   // style for this one block (```java hl=github). Other renderers read the
@@ -163,8 +219,13 @@ function esc(s) {
 
 function md(text, imageBase) {
   if (!String(text || "").trim()) return "";
-  const html = marked.parse(String(text), { gfm: true, breaks: false, renderer: markdownRenderer(imageBase), mangle: false, headerIds: false });
-  return resolveFragments(html);
+  // A group that is opened and never closed is a typo, and the slide is
+  // worth more than the complaint: the missing ends are added here so the
+  // markup leaves this function whole either way. The source dialog says
+  // what happened (check.js).
+  const open = { groups: 0 };
+  const html = marked.parse(String(text), { gfm: true, breaks: false, renderer: markdownRenderer(imageBase, open), mangle: false, headerIds: false });
+  return resolveFragments(html + "</div>".repeat(open.groups));
 }
 
 // Dark ground or light one? The themes answer it -- each carries a rule
