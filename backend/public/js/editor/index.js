@@ -11,6 +11,7 @@ import { createPreview } from "./preview.js";
 import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
+import { drawLibrary } from "./library.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -199,6 +200,10 @@ window.trivialSlidesSave = function () {
 
 function remember() {
   harvest();
+  // Taking a picture off a slide is what makes it deletable, and the row
+  // saying so is right there on the next tab -- so it is redrawn with the
+  // model rather than only when the tab is opened again.
+  if (libraryPanel && !libraryPanel.hidden) libraryDraw();
   // Owed from the first keystroke, not from the first send: the word in the
   // header would otherwise appear a second late, which on a manual save is
   // exactly the second that matters.
@@ -1242,8 +1247,9 @@ colorFieldWire(el.qrColor, "qrColor");
 colorFieldWire(el.qrBackground, "qrBackground");
 colorFieldWire(el.qrTextColor, "qrTextColor");
 
-// --- The slide's two tabs ----------------------------------------------
-// What the slide says and what it looks like, one in front of the other
+// --- The form's tabs ---------------------------------------------------
+// What the slide says, what it looks like, and the deck's picture library,
+// one in front of the other
 // (views/editor.ejs). The chosen tab belongs to the person and not to the
 // slide, so it stays put while one slide after another is worked through
 // -- someone giving a whole deck its colours should not have to choose the
@@ -1264,6 +1270,10 @@ function tabShow(tab) {
     b.tabIndex = front ? 0 : -1;
     $("#" + b.dataset.panel).hidden = !front;
   });
+  // The library is a picture of the whole deck, so it is put together at
+  // the moment it is asked for rather than kept up to date behind a tab
+  // nobody is looking at.
+  if (!libraryPanel.hidden) libraryDraw();
 }
 
 $$(".tab").forEach(function (tab) {
@@ -1389,6 +1399,42 @@ el.imageRemove.addEventListener("click", function () {
   remember();
 });
 
+// --- The library -------------------------------------------------------
+// The third tab: every picture in the folder, and where it stands
+// (js/editor/library.js). Drawn on the way in and after anything that can
+// change the answer -- while it is behind another tab there is nobody to
+// draw it for.
+var libraryList = $("#library-list");
+var libraryEmpty = $("#library-empty");
+var libraryPanel = $("#panel-library");
+
+function libraryDraw() {
+  libraryEmpty.hidden = images.length > 0;
+  drawLibrary(libraryList, deck, images, BASE, libraryDelete);
+}
+
+// Only ever called for a picture the list has just shown as unused, and
+// the server asks the same question again of the SAVED file -- which is
+// the one that counts, since that is what the folder belongs to. With
+// autosave off the two can disagree for a moment, and then the answer is
+// to save first rather than to delete something a slide still points at.
+function libraryDelete(name) {
+  if (!window.confirm(t("library.deleteConfirm", { name: name }))) return;
+  fetch(BASE + "/assets/" + encodeURIComponent(name), { method: "DELETE", headers: schreibHead() })
+    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+    .then(function (a) {
+      if (a.ok && a.d.ok) {
+        images = a.d.images || images.filter(function (n) { return n !== name; });
+        libraryDraw();
+        return;
+      }
+      note(a.d && a.d.used && a.d.used.length
+        ? t("library.deleteUsed", { name: name, slides: a.d.used.join(", ") })
+        : t("library.deleteFailed", { name: name }));
+    })
+    .catch(function () { note(t("library.deleteFailed", { name: name })); });
+}
+
 $("#image-file").addEventListener("change", function (ev) {
   var files = ev.target.files;
   if (!files || !files.length) return;
@@ -1399,6 +1445,7 @@ $("#image-file").addEventListener("change", function (ev) {
     .then(function (d) {
       images = d.images || images;
       drawGallery();
+      if (!libraryPanel.hidden) libraryDraw();
       // A freshly uploaded image is almost always wanted right away.
       if (d.fresh && d.fresh.length) {
         harvest();

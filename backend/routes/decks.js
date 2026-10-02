@@ -276,6 +276,22 @@ router.post("/d/:slug/assets", sameOriginOnly, loadDeck, upload.array("image", 2
   res.json({ ok: true, fresh: names, images: storage.images(req.slug) });
 });
 
+// Deleting one, from the library (js/editor/library.js). Only a picture
+// that stands on no slide may go: the library offers the button to nobody
+// else, and this asks again -- against the SAVED file, which is what the
+// folder belongs to. With autosave off the two can disagree for a moment,
+// and the one that has the last word has to be the file, or a save a
+// minute later would put a slide back that points at nothing.
+router.delete("/d/:slug/assets/:name", sameOriginOnly, loadDeck, (req, res) => {
+  const name = req.params.name;
+  const uses = deck.imageUses(req.deck)[name] || [];
+  if (uses.length) return res.status(409).json({ ok: false, used: uses });
+  const p = storage.imagePath(req.slug, name);
+  if (!p || !fs.existsSync(p)) return res.status(404).json({ ok: false });
+  fs.unlinkSync(p);
+  res.json({ ok: true, images: storage.images(req.slug) });
+});
+
 // --- Publishing --------------------------------------------------------
 // The Markdown file itself. The way back into a reveal.js project of your
 // own, or into version control.

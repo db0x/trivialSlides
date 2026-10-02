@@ -186,17 +186,26 @@
    see layouts.js). The TRACK is what is sized, not the item: in a grid a
    narrower item would leave the rest of its column standing empty instead
    of handing it to the picture.
-   The text is the first column on image-rechts and the second on
-   image-links, hence the two sets. 50 is written as a pair of equal shares
+   The text is the first column on image-right and the second on
+   image-left, hence the two sets. 50 is written as a pair of equal shares
    rather than as a percentage, so the gap between them comes off both
    sides and the two really are the same width -- which is what this
-   layout has always looked like. */
+   layout has always looked like.
+
+   The list runs from a quarter to three quarters because the question is
+   asked from both ends: beside a picture that IS the point of the slide
+   the text takes a quarter, beside one that merely illustrates it the
+   text takes three. Past 75 the picture would be a strip. */
 .reveal .slides section.layout-image-right[data-textbreite="25"] { grid-template-columns: 25% 1fr; }
 .reveal .slides section.layout-image-right[data-textbreite="33"] { grid-template-columns: 33% 1fr; }
 .reveal .slides section.layout-image-right[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
+.reveal .slides section.layout-image-right[data-textbreite="66"] { grid-template-columns: 66% 1fr; }
+.reveal .slides section.layout-image-right[data-textbreite="75"] { grid-template-columns: 75% 1fr; }
 .reveal .slides section.layout-image-left[data-textbreite="25"] { grid-template-columns: 1fr 25%; }
 .reveal .slides section.layout-image-left[data-textbreite="33"] { grid-template-columns: 1fr 33%; }
 .reveal .slides section.layout-image-left[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
+.reveal .slides section.layout-image-left[data-textbreite="66"] { grid-template-columns: 1fr 66%; }
+.reveal .slides section.layout-image-left[data-textbreite="75"] { grid-template-columns: 1fr 75%; }
 
 /* --- Full-bleed image ------------------------------------------------- */
 /* The image is reveal.js' slide background; what is left here is the box
@@ -337,6 +346,8 @@
 .reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="25"] .slide-text { max-width: 25%; }
 .reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="33"] .slide-text { max-width: 33%; }
 .reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="50"] .slide-text { max-width: 50%; }
+.reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="66"] .slide-text { max-width: 66%; }
+.reveal .slides section:is(.layout-video, .layout-qr):is([data-textseite="links"], [data-textseite="rechts"])[data-textbreite="75"] .slide-text { max-width: 75%; }
 .reveal .layout-video .slide-video {
   position: relative;
   flex: 1 1 auto;

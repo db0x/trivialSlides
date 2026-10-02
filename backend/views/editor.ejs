@@ -174,8 +174,9 @@
       </label>
     </fieldset>
 
-    <!-- What the slide SAYS and what it LOOKS like, as two tabs over one
-         box. Two boxes under each other is what this was, with the second
+    <!-- What the slide SAYS, what it LOOKS like, and what the deck has in
+         its folder -- three tabs over one box. Two boxes under each other
+         is what the first two were, with the second
          folded away because it is reached for later -- and a box that is
          sometimes there and sometimes not is a different form every time
          one opens it. Tabs say the same thing without moving anything: one
@@ -195,6 +196,15 @@
         <button type="button" class="tab" id="tab-colors" role="tab"
                 aria-controls="panel-colors" aria-selected="false" tabindex="-1"
                 data-panel="panel-colors"><%= t('editor.colorsTab') %></button>
+        <!-- The third one is about the DECK and not about the slide in
+             front: every picture the folder holds, and which slides stand
+             on it. It sits here all the same, because this is where one is
+             when the question comes up -- a picture is chosen on a slide,
+             and the question of what else is lying about is one slide
+             later. -->
+        <button type="button" class="tab" id="tab-library" role="tab"
+                aria-controls="panel-library" aria-selected="false" tabindex="-1"
+                data-panel="panel-library"><%= t('editor.libraryTab') %></button>
       </div>
 
       <div id="panel-content" class="tab-panel" role="tabpanel"
@@ -381,7 +391,7 @@
                  above or below the player: there it has the full width and
                  the number would be a promise the slide does not keep. -->
             <!-- Two names, because the thing the text stands beside differs by
-                 layout: a picture on image-links/-rechts, a player on video.
+                 layout: a picture on image-left/-right, a player on video.
                  Both travel with the button and the page picks the fitting
                  one (js/editor/index.js) -- naming it after the layout on the
                  server would mean re-rendering the bar on every layout
@@ -541,6 +551,18 @@
             <p class="hint"><%= t('editor.effectNote') %></p>
           </div>
         </div>
+      </div>
+
+      <!-- Every picture in the deck's folder, with the slides it stands on
+           (js/editor/library.js). One that stands on none is dimmed and
+           carries the only button that can delete it -- a picture in use
+           has none, here or anywhere else: the way to be rid of it is to
+           take it off the slide first, which is a step one can see the
+           effect of. -->
+      <div id="panel-library" class="tab-panel" role="tabpanel"
+           aria-labelledby="tab-library" hidden>
+        <p id="library-empty" class="hint" hidden><%= t('library.empty') %></p>
+        <ul id="library-list" class="library"></ul>
       </div>
     </div>
   </section>

@@ -774,9 +774,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    bar. */
 .tool-place { --button-icon: url(../assets/toolbar/position.svg); }
 
-/* --- The slide's two tabs ---------------------------------------------- */
-/* One box, two halves: what the slide says, and what it looks like
-   (views/editor.ejs).
+/* --- The form's tabs --------------------------------------------------- */
+/* One box, three halves by now: what the slide says, what it looks like,
+   and the deck's own picture library (views/editor.ejs).
 
    The chooser is a strip along the top of the box, and it is deliberately
    the loudest thing in this column. Every other label here -- small grey
@@ -1481,7 +1481,21 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .source-field { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; white-space: pre; resize: none; }
 
 .image-row { display: flex; align-items: center; gap: 10px; }
-.image-preview { width: 120px; height: 72px; object-fit: cover; border: 1px solid var(--border); border-radius: var(--radius); }
+/* The whole picture, not a piece of it: this is the one place in the editor
+   that answers "which image is this, and what shape is it" -- and a square
+   one cropped to a wide box answers neither. So it is fitted INTO the box
+   and the box keeps its size, which is what holds the row steady whatever
+   is chosen. What the picture does not fill takes the surface's grey, so
+   the empty strip reads as the frame it is rather than as part of the
+   image -- which matters most for the pictures that are themselves white. */
+.image-preview {
+  width: 120px;
+  height: 72px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
 .image-buttons { display: flex; flex-direction: column; gap: 5px; }
 
 /* The colour choice is a single round dot in the chosen colour. Coloris
@@ -2192,6 +2206,82 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .gallery-image { padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: none; cursor: pointer; overflow: hidden; }
 .gallery-image:hover { border-color: var(--accent); }
 .gallery-image img { display: block; width: 100%; height: 84px; object-fit: cover; }
+
+/* --- The library ------------------------------------------------------- */
+/* One row per picture in the deck's folder: the picture itself, its name,
+   and the slides it stands on (js/editor/library.js).
+
+   A list and not a grid of tiles, although the gallery one tab away IS a
+   grid: there one is looking for a picture and the picture is the whole
+   question, here one is reading WHERE it is used, and a sentence beside a
+   thumbnail is a row. */
+.library { list-style: none; margin: 0; padding: 0; }
+.library-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+.library-row + .library-row { margin-top: 2px; }
+.library-row:hover { border-color: var(--border); background: var(--surface); }
+/* Fitted, not cropped, and on a ground of its own -- the same reasoning as
+   the preview in the image field: this is where one asks WHICH picture
+   this is, and half of one answers that badly. */
+.library-thumb {
+  flex: none;
+  width: 64px;
+  height: 40px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.library-words { display: flex; flex-direction: column; min-width: 0; }
+/* The one thing here that can outrun its column. Cut off at the end with
+   the whole of it in the tooltip (js/editor/library.js). */
+.library-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.library-where { font-size: 12px; color: var(--muted); }
+/* Dimmed, picture and name alike: "nothing on this deck points at me". Not
+   hidden and not struck through -- it is a perfectly good picture, it is
+   simply not in use, which is exactly the state one comes to this tab to
+   find. */
+.library-row.is-unused .library-thumb,
+.library-row.is-unused .library-name { opacity: 0.45; }
+.library-row.is-unused .library-where { font-style: italic; }
+/* Only an unused row has one, so it needs no "there is nothing to delete"
+   state. It wears the delete icon of a slide card and answers in the same
+   colour. */
+.library-delete {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.library-delete::before {
+  content: "";
+  width: 0.875rem;
+  height: 0.875rem;
+  background: currentColor;
+  -webkit-mask: url(../assets/delete.svg) center / contain no-repeat;
+  mask: url(../assets/delete.svg) center / contain no-repeat;
+}
+.library-delete:hover { border-color: var(--danger); color: var(--danger); }
 
 /* --- Opening a deck ---------------------------------------------------- */
 /* The editor assembling itself when a deck is opened: the cards in from the

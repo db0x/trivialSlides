@@ -92,9 +92,12 @@ const LAYOUTS = [
 // have to fill their share, and what the cap leaves over goes to the other
 // side.
 //
-// Three values and not a free number: what is on offer has to look right
+// A short list and not a free number: what is on offer has to look right
 // next to a picture, and a field taking any percentage would mostly offer
-// ways to make the slide worse.
+// ways to make the slide worse. Five of them, because the question is
+// asked from both ends -- a picture that is the point of the slide wants a
+// quarter of text beside it, and a picture that merely illustrates one
+// wants three quarters.
 //
 // Here rather than with the video (video.js), because by now three layouts
 // share it and none of them owns it.
@@ -146,7 +149,7 @@ function onlyPlace(value) {
   return PLACES.includes(s) ? s : PLACE_DEFAULT;
 }
 
-const WIDTHS = ["25", "33", "50"];
+const WIDTHS = ["25", "33", "50", "66", "75"];
 const WIDTH_DEFAULT = "33";
 
 function defaultWidth(id) {

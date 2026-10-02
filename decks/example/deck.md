@@ -105,7 +105,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="image-right" data-image="chart.svg" -->
+<!-- .slide: data-layout="image-right" data-image="chart.svg" data-textbreite="66" -->
 
 ## Image on the right
 
@@ -114,7 +114,7 @@ order — which column the image lands in is decided by the CSS alone.
 
 ---
 
-<!-- .slide: data-layout="image-left" data-image="chart.svg" data-title-align="right" -->
+<!-- .slide: data-layout="image-left" data-image="floppy-black.svg" data-textbreite="75" data-title-align="right" -->
 
 ## Image on the left
 
@@ -123,7 +123,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="image-full" data-image="1.svg" data-title-align="center" -->
+<!-- .slide: data-layout="image-full" data-image="background.svg" data-title-align="center" -->
 
 ## Full-bleed image
 

@@ -305,6 +305,46 @@ function serialize(deck) {
   return head.join("\n") + parts.join("\n\n") + "\n";
 }
 
+// --- Which slides an image stands on ------------------------------------
+// Two places can name one: the image FIELD of a slide (data-image, and the
+// background of a full-bleed slide, which is the same value), and an image
+// written into the body as Markdown. Both are counted, because deleting a
+// file that one of them points at leaves a hole on the slide either way.
+//
+// The name is matched the way the renderer resolves it (render.js,
+// imageUrl): the path in front is dropped, an absolute address belongs to
+// somebody else's server and is no business of this folder. Reference-style
+// Markdown images are not seen -- the editor never writes one, and a file
+// that carries one keeps its picture, it is only missing from this list.
+//
+// The twin of this lives in the browser (js/editor/library.js): the library
+// has to answer while the deck is being edited, which only the model in the
+// page knows. Both are named after each other so the pair stays findable.
+const BODY_IMAGE = /!\[[^\]]*\]\(\s*([^)\s]+)/g;
+
+function imageName(href) {
+  const s = String(href || "").trim();
+  if (!s || /^(https?:)?\/\//i.test(s) || s.startsWith("data:")) return "";
+  return s.replace(/^.*\//, "");
+}
+
+// name -> the numbers of the slides it stands on, counting from 1.
+function imageUses(model) {
+  const out = {};
+  const add = (name, nr) => {
+    if (!name) return;
+    if (!out[name]) out[name] = [];
+    if (out[name][out[name].length - 1] !== nr) out[name].push(nr);
+  };
+  ((model && model.slides) || []).forEach((slide, i) => {
+    add(imageName(slide.image), i + 1);
+    let hit;
+    BODY_IMAGE.lastIndex = 0;
+    while ((hit = BODY_IMAGE.exec(String(slide.content || "")))) add(imageName(hit[1]), i + 1);
+  });
+  return out;
+}
+
 function newSlide(layout) {
   return {
     id: "f" + Date.now().toString(36),
@@ -384,4 +424,4 @@ function normalize(raw) {
   };
 }
 
-module.exports = { parse, serialize, normalize, newSlide, isGradient, THEMES, TRANSITIONS, GRADIENT_PATTERN, GRADIENT_MAX, TEXT_FRAGMENT_ON: ON };
+module.exports = { parse, serialize, normalize, newSlide, imageUses, isGradient, THEMES, TRANSITIONS, GRADIENT_PATTERN, GRADIENT_MAX, TEXT_FRAGMENT_ON: ON };

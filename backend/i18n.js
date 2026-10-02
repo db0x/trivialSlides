@@ -66,6 +66,10 @@ const FOR_BROWSER = [
   // the server -- only the line in front of each one is built here
   // (js/editor/deck-source.js).
   "source.loading", "source.failed", "source.applyFailed", "source.line",
+  // The library's rows are built from the deck as it stands in the page,
+  // so every word in them is put together here (js/editor/library.js).
+  "library.unused", "library.usedOn", "library.delete",
+  "library.deleteConfirm", "library.deleteUsed", "library.deleteFailed",
 ];
 
 function forBrowser(language) {
