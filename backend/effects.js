@@ -16,6 +16,7 @@ const EFFECTS = [
   { id: "waves" },
   { id: "starfield" },
   { id: "blobs" },
+  { id: "stripes" },
 ];
 
 const ids = new Set(EFFECTS.map((e) => e.id));

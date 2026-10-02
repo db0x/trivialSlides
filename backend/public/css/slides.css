@@ -685,6 +685,58 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
   to { transform: rotate(360deg); }
 }
 
+/* Stripes, from a pen of its own and reproduced the same way: one diagonal
+   edge between two colours, laid down three times and slid left and right
+   at three speeds. Half transparent, so where two edges cross a third
+   colour appears -- that crossing IS the effect, and it is why one layer
+   would be a wiping bar and three are a slow weather.
+   The layers reach half a slide out to either side (left/right: -50%) so
+   that sliding by a quarter never pulls an edge into view; the carrier
+   clips what hangs over.
+   Its white ground belongs to it, as the waves' blue belongs to them: the
+   colours are chosen to be seen against white, and over a dark slide they
+   would be two muddy bands. */
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect {
+  background: #fff;
+}
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -50%;
+  right: -50%;
+  opacity: 0.5;
+  background-image: linear-gradient(-60deg, #6c3 50%, #09f 50%);
+  animation: slide-stripes 3s ease-in-out infinite alternate;
+}
+/* The second one runs the other way, the third one slower still: three
+   speeds that do not divide into one another, so the picture never
+   repeats itself where anybody is looking.
+
+   Each also stands somewhere else to begin with, and that offset is what
+   the picture falls back on wherever the animation does not run -- on
+   paper and for anybody who has asked for less movement. Running, the
+   keyframes overrule it; at rest it is the only thing keeping the three
+   layers from lying exactly on top of one another, which would make three
+   half-transparent edges into one opaque one. */
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect > span:nth-child(1) {
+  transform: translateX(-14%);
+}
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect > span:nth-child(2) {
+  animation-duration: 4s;
+  animation-direction: alternate-reverse;
+  transform: translateX(2%);
+}
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect > span:nth-child(3) {
+  animation-duration: 5s;
+  transform: translateX(16%);
+}
+
+@keyframes slide-stripes {
+  from { transform: translateX(-25%); }
+  to { transform: translateX(25%); }
+}
+
 /* Someone who has asked their system for less movement gets the picture
    without the motion: waves, stars and blobs stay, they just state quiet. A
    background is not worth a headache. */

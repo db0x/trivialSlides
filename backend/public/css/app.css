@@ -1735,6 +1735,17 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
     radial-gradient(circle at 64% 34%, #00f5d4 0 18%, transparent 19%);
 }
 
+/* The stripes as a quiet: the effect's own edge, standing still. Two of
+   the three layers, at the offset the slide has them at halfway through --
+   one edge would be a tile cut in half and say nothing about what makes
+   the effect, which is the crossing. */
+.effect-tile[data-effect="stripes"] {
+  background-color: #fff;
+  background-image:
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 42%, rgba(0, 153, 255, 0.5) 42%),
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 62%, rgba(0, 153, 255, 0.5) 62%);
+}
+
 .effect-none {
   background-image:
     linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px));

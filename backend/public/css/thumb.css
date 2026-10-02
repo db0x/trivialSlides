@@ -162,3 +162,19 @@ body {
 .reveal .slide-effect * {
   animation: none !important;
 }
+
+/* Which is fine for three of the four: blue water, a night sky, yellow
+   under the blobs -- one look at the card and one knows which slide it is.
+   The stripes' ground is WHITE, though, and white says nothing at all: the
+   whole effect is in the layers, and a card shows none of them.
+
+   So here, and only here, the ground wears the picture itself: the same
+   two edges the tile in the editor carries (css/app.css), at the offset
+   the three layers have halfway through. On the slide this rule is not in
+   force -- there the real layers lie over the ground and would be counting
+   the same edge twice. */
+.reveal .slide-background[data-background-effect="stripes"] > .slide-effect {
+  background-image:
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 42%, rgba(0, 153, 255, 0.5) 42%),
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 62%, rgba(0, 153, 255, 0.5) 62%);
+}

@@ -86,6 +86,9 @@
     waves: threeLayers,
     starfield: scatterStars,
     blobs: drawBlobs,
+    // The same three layers as the waves, for the same reason: one sliding
+    // band is a band, three at different speeds are weather.
+    stripes: threeLayers,
   };
 
   function transfer() {
