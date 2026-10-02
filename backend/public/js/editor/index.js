@@ -198,6 +198,13 @@ window.trivialSlidesSave = function () {
   return schmutzig ? saveNow() : Promise.resolve();
 };
 
+// And a page that is about to reload itself on purpose says so, so that the
+// browser's own warning stays out of it: what was typed is with the server
+// either way (saveNow above holds it there), and it comes back into the
+// field on the next load. The language switch is the one caller
+// (js/language.js); the overview has no such function and asks for none.
+window.trivialSlidesLeaving = function () { leaving = true; };
+
 function remember() {
   harvest();
   // Taking a picture off a slide is what makes it deletable, and the row
@@ -232,10 +239,66 @@ function structureChanged(newIndex) {
   saveNow().then(function () { preview.newLoad(active); });
 }
 
+// --- Leaving with something owed ---------------------------------------
+// Two warnings for one risk, and they divide the work: the browser's own
+// catches what this page never hears about -- the tab being closed, a
+// reload, an address typed over the one in the bar -- and cannot be
+// styled, cannot say what is owed and offers nothing but "leave" and
+// "stay". Every way out that the page DOES control is caught before it is
+// taken and asked in a dialog of our own (views/editor.ejs), where saving
+// is one of the answers and the usual one.
+var leaveDialog = $("#leave-dialog");
+// Set while a leaving of our own is under way, so the browser's warning
+// stays out of a departure that has just been agreed to.
+var leaving = false;
+
 window.addEventListener("beforeunload", function (ev) {
-  if (!schmutzig && !ungesichert) return;
+  if (leaving || (!schmutzig && !ungesichert)) return;
   ev.preventDefault();
   ev.returnValue = "";
+});
+
+function goTo(url) {
+  leaving = true;
+  window.location.href = url;
+}
+
+// A link that leaves this page: same window, same site, and not one of the
+// links that hand a file over or open the talk in a tab of its own --
+// those leave the editor standing where it is.
+function leavingLink(a) {
+  if (!a || !a.getAttribute("href")) return false;
+  if (a.target && a.target !== "_self") return false;
+  if (a.hasAttribute("download")) return false;
+  if (a.origin !== window.location.origin) return false;
+  return a.pathname !== window.location.pathname;
+}
+
+document.addEventListener("click", function (ev) {
+  if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+  var a = ev.target.closest && ev.target.closest("a[href]");
+  if (!leavingLink(a)) return;
+  // With autosave on there is nothing to ask about: what is owed is at most
+  // the delayed save, and that is flushed on the way out. The question
+  // belongs to the other case alone -- autosave off, where only the button
+  // writes the file.
+  if (autosaveOn || (!schmutzig && !ungesichert)) {
+    if (!schmutzig) return;
+    ev.preventDefault();
+    saveNow(true).then(function () { goTo(a.href); }, function () { goTo(a.href); });
+    return;
+  }
+  ev.preventDefault();
+  leaveDialog.returnValue = "stay";
+  leaveDialog.showModal();
+  leaveDialog.addEventListener("close", function einmal() {
+    leaveDialog.removeEventListener("close", einmal);
+    if (leaveDialog.returnValue === "save") {
+      saveNow(true).then(function () { goTo(a.href); }, function () { goTo(a.href); });
+    } else if (leaveDialog.returnValue === "leave") {
+      goTo(a.href);
+    }
+  });
 });
 
 // --- Fields <-> model --------------------------------------------------

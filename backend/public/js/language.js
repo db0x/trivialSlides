@@ -22,7 +22,13 @@
       .then(function () {
         return fetch(base + "/language/" + target, { method: "POST" });
       })
-      .then(function () { window.location.reload(); })
+      .then(function () {
+        // A reload this page asked for itself: the editor's warning about
+        // an unwritten file is for leaving, and nothing is left here --
+        // what was typed is with the server and comes back in a moment.
+        if (window.trivialSlidesLeaving) window.trivialSlidesLeaving();
+        window.location.reload();
+      })
       .catch(function () { button.disabled = false; });
   });
 })();

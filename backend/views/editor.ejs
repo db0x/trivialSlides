@@ -685,6 +685,28 @@
      reason the tooltips are ours: that one cannot be styled, it names the
      host ("localhost:8888 says"), and it looks like a visitor from another
      program. -->
+<!-- Leaving the editor with something the file does not have yet. The
+     browser has a warning of its own for this, but it fires on the way OUT
+     and cannot be styled, cannot say what is owed and offers nothing but
+     "leave" and "stay" -- so the ways out that this page itself controls
+     are caught before they are taken (js/editor/index.js) and asked here,
+     where saving is one of the answers. The browser's own stays behind it
+     for everything else: closing the tab, a reload, an address typed by
+     hand. -->
+<dialog id="leave-dialog" class="dialog dialog-schmal">
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('dialog.leaveTitle') %></h2>
+    <button class="button button-quiet" value="stay"><%= t('dialog.close') %></button>
+  </form>
+  <form method="dialog" class="dialog-content">
+    <p><%= t('dialog.leaveText') %></p>
+    <div class="dialog-fuss">
+      <button class="button" value="leave"><%= t('dialog.leaveAnyway') %></button>
+      <button class="button button-haupt" value="save" autofocus><%= t('dialog.leaveSave') %></button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="note-dialog" class="dialog dialog-schmal">
   <form method="dialog" class="dialog-head">
     <h2><%= t('dialog.noteTitle') %></h2>
