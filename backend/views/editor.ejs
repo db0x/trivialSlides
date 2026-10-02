@@ -7,6 +7,28 @@
 <!-- Only the editor has a preview to shape, so this one is not in the
      shared head either. -->
 <script src="<%= BASE %>/static/js/preview-format.js" defer></script>
+<!-- The same for the line between the form and the preview: nowhere else is
+     there anything to drag. -->
+<script src="<%= BASE %>/static/js/column-split.js" defer></script>
+<!-- And the same for the slide list's two scroll buttons. -->
+<script src="<%= BASE %>/static/js/slide-list-scroll.js" defer></script>
+
+<!-- The editor assembling itself when a deck is opened (app.css). Inline
+     and here rather than in a file of its own, for the same reason as the
+     theme above: a piece that is to fade in has to be invisible BEFORE the
+     first paint, and anything fetched afterwards arrives to find it already
+     on the screen. Nothing but the attribute is decided here -- what moves,
+     and how far, is the stylesheet's business, and which cards take part is
+     js/entrance.js'. A system asking for less movement is asked first and
+     gets no attribute at all, which leaves every one of those rules dead. -->
+<script>
+  try {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.documentElement.setAttribute("data-enter", "1");
+    }
+  } catch (e) { /* no matchMedia, no animation -- the page is the same page */ }
+</script>
+<script src="<%= BASE %>/static/js/entrance.js" defer></script>
 </head>
 <body class="side-editor">
 
@@ -102,16 +124,29 @@
 
 <main class="editor">
 
-  <!-- Left: the slides as a list. Reorder by dragging. -->
+  <!-- Left: the slides as a list. Reorder by dragging.
+
+       The list scrolls by its two buttons rather than by a bar beside it
+       (js/slide-list-scroll.js). They are only there when there is more
+       list than room, and because only the list itself scrolls now, the
+       word above it and the button under it stay where they are -- which
+       is what one wants of the button that adds a slide: it used to be at
+       the end of a column thirty cards long. -->
   <aside class="column slide-list">
     <span class="columns-head"><%= t('column.slides') %></span>
+    <button type="button" class="slides-step" data-dir="up" hidden
+            aria-controls="slide-list" aria-label="<%= t('editor.slidesUp') %>"
+            data-tip="<%= t('editor.slidesUp') %>"></button>
     <ol id="slide-list" class="slides"></ol>
+    <button type="button" class="slides-step" data-dir="down" hidden
+            aria-controls="slide-list" aria-label="<%= t('editor.slidesDown') %>"
+            data-tip="<%= t('editor.slidesDown') %>"></button>
     <button id="slide-new" class="button button-wide" type="button"><%= t('editor.slideNew') %></button>
   </aside>
 
   <!-- Middle: the form for the selected slide. Nowhere here is there any
        Markdown syntax -- that is the whole point of the exercise. -->
-  <section class="column form">
+  <section id="slide-form" class="column form">
     <fieldset class="fieldset">
       <legend><%= t('editor.structure') %></legend>
       <div id="layout-tiles" class="layout-tiles">
@@ -509,6 +544,23 @@
       </div>
     </div>
   </section>
+
+  <!-- The line between the form and the preview, to be taken hold of. Both
+       sides want room at different moments -- a long text wants the form
+       wide, a layout one is judging by eye wants the preview wide -- and
+       which of the two it is, only the person in front of the screen knows.
+       The form keeps a quarter of the width whatever happens (see
+       js/column-split.js), because below that the form stops being usable
+       at all rather than merely narrow.
+
+       A separator, not a button: it has a position, and arrow keys move it
+       for whoever is not holding a mouse. -->
+  <div id="column-split" class="column-split" role="separator"
+       tabindex="0" aria-orientation="vertical"
+       aria-controls="slide-form preview"
+       aria-valuemin="25" aria-valuemax="75"
+       aria-label="<%= t('column.split') %>"
+       data-tip="<%= t('column.splitHint') %>"></div>
 
   <!-- Right: real reveal.js, not a replica. What stands here is what
        stands on the wall later. -->

@@ -267,7 +267,7 @@ function slideHtml(slide, imageBase) {
 
   // A full-bleed image is a slide background in reveal.js -- that way
   // reveal handles the scaling and the transition.
-  if (layout === "bild-voll" && slide.image) {
+  if (layout === "image-full" && slide.image) {
     attrs.push(`data-background-image="${esc(imageUrl(slide.image, imageBase))}"`);
     attrs.push('data-background-size="cover"');
   }
@@ -275,7 +275,7 @@ function slideHtml(slide, imageBase) {
   // An empty heading is still a heading: it holds the space one takes, and
   // a slide that asked for it (deck.js) gets the element even with nothing
   // in it. Only a slide with no heading at all gets none.
-  const level = layout === "titel" || layout === "abschnitt" ? 1 : 2;
+  const level = layout === "title" || layout === "section" ? 1 : 2;
   // The class is the hook the heading's alignment hangs on (slides.css). It
   // has to be the element itself and not "the first h2 in the slide": a
   // hand-written body may carry a second heading of the same level, and
@@ -299,7 +299,7 @@ function slideHtml(slide, imageBase) {
   const textBox = `slide-text${slide.textFragment ? " fragment" : ""}`;
 
   let inner;
-  if (layout === "zitat") {
+  if (layout === "quote") {
     inner =
       `<blockquote>${md(slide.content, imageBase) || "<p></p>"}</blockquote>` +
       (slide.source ? `<cite>${esc(slide.source)}</cite>` : "");
@@ -375,11 +375,11 @@ function slideHtml(slide, imageBase) {
       `</div>`;
   }
 
-  if (layouts.hasField(layout, "image") && layout !== "bild-voll" && slide.image) {
+  if (layouts.hasField(layout, "image") && layout !== "image-full" && slide.image) {
     const image = `<div class="slide-image"><img src="${esc(imageUrl(slide.image, imageBase))}" alt=""></div>`;
     // Order in the markup = reading order; which side it appears on is
     // decided by the CSS grid columns.
-    inner = layout === "bild-links" ? image + inner : inner + image;
+    inner = layout === "image-left" ? image + inner : inner + image;
   }
 
   return `<section ${attrs.join(" ")}>\n${inner}\n</section>`;
@@ -406,7 +406,7 @@ function backgroundHtml(slide, imageBase) {
   // order reveal lays them in.
   if (slide.background) styles.push(`background-color: ${slide.background}`);
   if (slide.gradient) styles.push(`background-image: ${slide.gradient}`);
-  if (layout === "bild-voll" && slide.image) {
+  if (layout === "image-full" && slide.image) {
     // Single quotes inside: the whole list becomes one attribute below.
     styles.push(`background-image: url('${imageUrl(slide.image, imageBase)}')`);
     styles.push("background-size: cover");

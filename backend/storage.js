@@ -139,7 +139,7 @@ function create(title) {
     title: String(title || "").trim() || "New Vortrag",
     theme: "white",
     transition: "slide",
-    slides: [Object.assign(deck.newSlide("titel"), { title: String(title || "").trim() || "New Vortrag" })],
+    slides: [Object.assign(deck.newSlide("title"), { title: String(title || "").trim() || "New Vortrag" })],
   };
   save(slug, model);
   return slug;

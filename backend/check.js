@@ -152,7 +152,7 @@ function checkAttrs(line, at, slide, images, add) {
 
   // Everything in the comment that is not name="value". The reader's
   // pattern simply does not see it, so it says nothing -- and a
-  // data-layout=titel without quotation marks would take the slide's whole
+  // data-layout=title without quotation marks would take the slide's whole
   // arrangement with it in silence.
   const rest = written.reduce((text, p) => text.replace(`${p.name}="${p.value}"`, ""), inner)
     .replace(/^\.slide:/, "").trim();

@@ -4,7 +4,7 @@ theme: simple
 transition: convex
 ---
 
-<!-- .slide: data-layout="titel" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="title" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->
 
 # Example
 
@@ -13,7 +13,7 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 
 ---
 
-<!-- .slide: data-layout="abschnitt" data-background-color="#122233" -->
+<!-- .slide: data-layout="section" data-background-color="#122233" -->
 
 # Section divider
 
@@ -60,7 +60,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="spalten" data-columns="split" -->
+<!-- .slide: data-layout="columns" data-columns="split" -->
 
 ## Two columns
 
@@ -80,7 +80,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="spalten-drei" data-columns="split" data-title-align="center" -->
+<!-- .slide: data-layout="columns-three" data-columns="split" data-title-align="center" -->
 
 ## Three columns
 
@@ -105,7 +105,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="bild-rechts" data-image="chart.svg" -->
+<!-- .slide: data-layout="image-right" data-image="chart.svg" -->
 
 ## Image on the right
 
@@ -114,7 +114,7 @@ order — which column the image lands in is decided by the CSS alone.
 
 ---
 
-<!-- .slide: data-layout="bild-links" data-image="chart.svg" data-title-align="right" -->
+<!-- .slide: data-layout="image-left" data-image="chart.svg" data-title-align="right" -->
 
 ## Image on the left
 
@@ -123,7 +123,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 
 ---
 
-<!-- .slide: data-layout="bild-voll" data-image="1.svg" data-title-align="center" -->
+<!-- .slide: data-layout="image-full" data-image="1.svg" data-title-align="center" -->
 
 ## Full-bleed image
 
@@ -149,11 +149,10 @@ private int getFactor() {
     return 5;
 }
 ```
-<!-- .element: class="fragment" -->
 
 ---
 
-<!-- .slide: data-layout="zitat" data-quelle="Antoine de Saint-Exupéry" data-background-gradient="radial-gradient(circle at 50% 30%, #2b3a55 0%, #1b1f23 70%)" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="quote" data-quelle="Antoine de Saint-Exupéry" data-background-gradient="radial-gradient(circle at 50% 30%, #2b3a55 0%, #1b1f23 70%)" data-text-color="#ffffff" -->
 
 ## Quote
 

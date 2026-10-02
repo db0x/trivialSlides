@@ -11,13 +11,6 @@
 :root {
   --paper: #ffffff;
   --surface: #f4f5f7;
-  /* The tab in front, against the strip its neighbours stand on
-     (.tab-row). Its own token because the two palettes do not agree on
-     which direction "set apart" goes: in the light one it is the white of
-     the paper below, in the dark one it is DARKER than everything around
-     it -- a lighter tab there would read as the lit one rather than the
-     open one. */
-  --tab-front: #ffffff;
   --border: #d8dbe0;
   --text: #1c1f23;
   --muted: #666c75;
@@ -29,7 +22,6 @@
   /* The dark palette, not in use until one of the blocks below points at it. */
   --d-paper: #1b1e22;
   --d-surface: #15171a;
-  --d-tab-front: #101216;
   --d-border: #343a41;
   --d-text: #e7e9ec;
   --d-muted: #9aa1aa;
@@ -60,7 +52,6 @@
   :root:not([data-theme="light"]) {
     --paper: var(--d-paper);
     --surface: var(--d-surface);
-    --tab-front: var(--d-tab-front);
     --border: var(--d-border);
     --text: var(--d-text);
     --muted: var(--d-muted);
@@ -77,7 +68,6 @@
 :root[data-theme="dark"] {
   --paper: var(--d-paper);
   --surface: var(--d-surface);
-  --tab-front: var(--d-tab-front);
   --border: var(--d-border);
   --text: var(--d-text);
   --muted: var(--d-muted);
@@ -106,6 +96,24 @@ body {
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--text);
   background: var(--surface);
+  /* Nothing here is text to be taken away: the labels, the words on the
+     buttons and the headings of the boxes are the editor speaking, and a
+     blue bar through "Aufbau der Folie" is never anything but a drag that
+     went half a pixel wrong. What a deck SAYS is a different matter, and
+     that lives in the fields below, which take it back. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Everything one writes in. The three kinds are all there are: the fields
+   of the form, the content field, which is a contenteditable rather than a
+   textarea (js/editor/richtext.js), and the one row of the source dialog
+   that has been clicked open (js/editor/deck-source.js), which becomes a
+   textarea for as long as it is being edited. */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* --- Header ----------------------------------------------------------- */
@@ -407,13 +415,81 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .editor {
   display: grid;
-  grid-template-columns: 250px minmax(340px, 1fr) minmax(320px, 1.1fr);
+  /* The middle column is the only one whose width is anybody's business:
+     the slide list holds cards of a fixed size, and the preview takes what
+     is left. Until the separator has been dragged --form-width is not set
+     at all, so the fallback here is the layout as it has always been; from
+     then on it is a percentage of the editor's width, which is why nothing
+     has to be recomputed when the window changes size
+     (js/column-split.js). The 340px floor stays either way: under that the
+     form's own rows start to break. */
+  grid-template-columns:
+    250px
+    minmax(340px, var(--form-width, 1fr))
+    minmax(320px, 1.1fr);
   gap: 1px;
   background: var(--border);
   flex: 1;
   min-height: 0;
 }
 .column { background: var(--surface); overflow-y: auto; padding: 12px; }
+
+/* What one takes hold of to move the line between the form and the preview.
+   The line itself is NOT this element: it is the seam the grid gap leaves,
+   the same single pixel as between the slide list and the form, and it stays
+   that way -- a thicker rule between two of the three columns would be the
+   loudest thing on a surface that is deliberately quiet.
+
+   So this sits in the preview's own track (hence the explicit placement
+   below -- the two columns before it still place themselves) as an
+   invisible strip of six pixels straddling the seam, two of them over the
+   form and four over the preview. Shifted that way on purpose: the form's
+   scrollbar runs down its right edge and the preview's format menu starts
+   four pixels in, and neither is to lose any of its ground to a strip one
+   cannot even see.
+
+   What one DOES see is two marks, one either side of the seam, four pixels
+   off it and 32 of them tall: the seam alone says "two columns meet here",
+   the marks say "and this one can be moved". A pixel wide, like the seam --
+   anything more would be a handle, and a handle is more furniture than this
+   needs. */
+.column-split {
+  grid-column: 3;
+  grid-row: 1;
+  position: relative;
+  z-index: 2;
+  justify-self: start;
+  width: 6px;
+  margin-left: -2px;
+  cursor: col-resize;
+}
+.column-split::before, .column-split::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 1px;
+  height: 32px;
+  margin-top: -16px;
+  background: var(--border);
+}
+.column-split::before { left: -3px; }
+.column-split::after { right: 0; }
+/* Only the marks answer -- the seam stays the seam. */
+.column-split:hover::before, .column-split:hover::after,
+.column-split:focus-visible::before, .column-split:focus-visible::after,
+.column-split.is-dragging::before, .column-split.is-dragging::after {
+  background: var(--accent);
+}
+.column-split:focus-visible { outline: none; }
+.column.preview { grid-column: 3; grid-row: 1; }
+/* While the line is being dragged the pointer belongs to it alone. Without
+   this the preview's iframe swallows the move as soon as the mouse crosses
+   into it, and text in the form gets selected on the way. */
+/* The star is there for the fields: they are the one thing allowed to be
+   selected, and a drag that crosses one would otherwise paint it blue on
+   the way past. */
+.is-splitting, .is-splitting * { cursor: col-resize; user-select: none; }
+.is-splitting iframe { pointer-events: none; }
 
 /* --- Slide list ------------------------------------------------------- */
 /* A card IS the slide, and nothing but the slide: a picture of it, its
@@ -429,7 +505,68 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    heading was already there to be read on the picture itself. A second,
    smaller copy of it underneath answered nothing and cost the card a
    strip of its own. */
-.slides { list-style: none; margin: 0; padding: 0; }
+/* The column holds three things under each other and does not scroll
+   itself: the word, the list, and the button that adds a slide. Only the
+   list in the middle scrolls, which is what keeps that button on the
+   screen -- at the foot of a scrolling column it was thirty cards away. */
+.slide-list { display: flex; flex-direction: column; overflow: hidden; }
+.slides {
+  flex: 1;
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  /* No bar, by hand: this one list is scrolled by its two buttons, so the
+     bar beside it would be a second way of doing the same thing and would
+     take a strip off cards that are already only 226 pixels wide. The
+     overlay scrollbar everything else wears is kept off this column in
+     js/scrollbars.js; these two lines see to the browser's own. */
+  scrollbar-width: none;
+}
+.slides::-webkit-scrollbar { display: none; }
+
+/* The two buttons the list is scrolled by, above it and below it. Nothing
+   but an arrow on the column's own ground: they are furniture, not
+   actions, and the cards between them are the thing to be looked at. They
+   are there only while there is more list than room, and the one that can
+   go no further stays but goes quiet -- taking it away would move the list
+   under the mouse at the very moment one is clicking it
+   (js/slide-list-scroll.js). */
+.slides-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* The height of a control rather than of a line: this is something one
+     aims at with the mouse, over and over, while reading the cards beside
+     it -- and a strip that is only as tall as its arrow is one that has to
+     be aimed at carefully. The arrow inside stays small; what grows is the
+     ground it can be hit on. */
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.slides-step[hidden] { display: none; }
+.slides-step[data-dir="up"] { margin-bottom: 4px; --cards-icon: url(../assets/up.svg); }
+.slides-step[data-dir="down"] { margin-top: 4px; --cards-icon: url(../assets/dow.svg); }
+/* The icon files carry a fixed dark fill, so they are used as a mask and
+   take the button's colour -- same treatment as the buttons on a card. */
+.slides-step::before {
+  content: "";
+  width: 0.875rem;
+  height: 0.875rem;
+  background: currentColor;
+  -webkit-mask: var(--cards-icon) center / contain no-repeat;
+  mask: var(--cards-icon) center / contain no-repeat;
+}
+.slides-step:hover { color: var(--text); background: var(--paper); }
+.slides-step:disabled { opacity: 0.35; background: none; cursor: default; }
+.slides-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .slide-card {
   /* The shape of the screen the talk is meant for. The picture inside the
      frame is cut to the same shape, and the two have to agree -- see
@@ -646,9 +783,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    capitals floating above a border -- is made to be read once and then
    ignored, which is right for a label and wrong for a switch: half the
    form is behind this one, and something that can be overlooked will be.
-   So it gets the height of a control, type at reading size, a ground of
-   its own against the box below, and a bar in the accent colour under the
-   half in front. */
+   So it gets the height of a control, type at reading size, and a ground
+   of its own under the half in front.
+
+   The half in front is a BUTTON standing on the strip -- rounded on all
+   four corners, floating four pixels off every edge -- not a folder tab
+   grown into the box below it. Which is the editor's way everywhere else:
+   what can be pressed here looks pressable, and the strip then reads as
+   two buttons of which one is down, rather than as a filing cabinet. It
+   also costs the accent bar its job: a ground of its own, an outline and
+   full-strength type say "this one" clearly enough, and the bar on the
+   dividing line only tied the button back to the box it is standing on. */
 .tabbed {
   margin: 21px 0 14px;
   border: 1px solid var(--border);
@@ -662,15 +807,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tab-row {
   display: flex;
   gap: 2px;
-  padding: 0 6px;
+  /* The same four pixels on every side, so the button in front stands ON
+     the strip with air all round rather than sitting in a corner of it. */
+  padding: 4px;
   border-bottom: 1px solid var(--border);
   border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
   background: var(--surface);
 }
 .tab {
-  position: relative;
-  padding: 10px 12px;
+  padding: 6px 12px;
   border: 0;
+  border-radius: calc(var(--radius) - 2px);
   background: none;
   /* A button brings its own typeface; `font` takes it back in one word.
      It takes the line height with it, so the two that this strip's height
@@ -681,30 +828,22 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   color: var(--muted);
   cursor: pointer;
 }
-/* The bar sits ON the line that divides the strip from the box, which is
-   what ties the half in front to what is under it. Its own element rather
-   than a border, so that switching tabs moves no text by a pixel. */
-.tab::after {
-  content: "";
-  position: absolute;
-  right: 8px;
-  bottom: -1px;
-  left: 8px;
-  height: 2px;
-  border-radius: 1px;
-  background: transparent;
-}
+/* The one behind only brightens its type. A ground on hover as well and
+   the strip would answer every passing mouse with the very thing that is
+   supposed to mean "this one is open". */
 .tab:hover { color: var(--text); }
-/* Set apart twice over: by its ground and by the bar under it. The bar
-   alone was too quiet a thing to carry half a form. */
+/* The ground is --paper, the same as the box below: in both palettes that
+   is the step AWAY from the strip -- lighter in the light one, lighter in
+   the dark one too -- which is the one direction a raised button may go.
+   The ground and nothing else: an outline round it was a second line
+   saying what the ground already says, and two of them on a switch of two
+   words is more drawing than the thing is worth. */
 .tab[aria-selected="true"] {
-  background: var(--tab-front);
-  border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
+  background: var(--paper);
   color: var(--text);
   cursor: default;
 }
-.tab[aria-selected="true"]::after { background: var(--accent); }
-.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 /* The box is the wrapper now, so the panel is nothing but padding. */
 .tab-panel { padding: 10px 12px 12px; }
 
@@ -793,33 +932,33 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 .mini::before, .mini::after { content: ""; position: absolute; background: var(--muted); opacity: 0.55; }
 /* Title slide: bars centred */
-.mini-titel::before { left: 20%; right: 20%; top: 11px; height: 5px; }
-.mini-titel::after { left: 30%; right: 30%; top: 20px; height: 3px; opacity: 0.3; }
+.mini-title::before { left: 20%; right: 20%; top: 11px; height: 5px; }
+.mini-title::after { left: 30%; right: 30%; top: 20px; height: 3px; opacity: 0.3; }
 /* Section: filled area with a single bar */
-.mini-abschnitt { background: var(--muted); }
-.mini-abschnitt::before { left: 18%; right: 18%; top: 13px; height: 6px; background: var(--paper); opacity: 0.9; }
-.mini-abschnitt::after { display: none; }
+.mini-section { background: var(--muted); }
+.mini-section::before { left: 18%; right: 18%; top: 13px; height: 6px; background: var(--paper); opacity: 0.9; }
+.mini-section::after { display: none; }
 /* Text: heading plus lines */
 .mini-text::before { left: 8%; right: 45%; top: 6px; height: 4px; }
 .mini-text::after { left: 8%; right: 12%; top: 15px; height: 11px; opacity: 0.25; }
 /* Two columns */
-.mini-spalten::before { left: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
-.mini-spalten::after { right: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
+.mini-columns::before { left: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
+.mini-columns::after { right: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
 /* Three columns: the outer two are the pseudo-elements, the middle one is
    painted into the background -- an element has only two of the former. */
-.mini-spalten-drei {
+.mini-columns-three {
   background-image: linear-gradient(color-mix(in srgb, var(--muted) 25%, transparent) 0 100%);
   background-size: 26% 14px;
   background-position: 50% 12px;
   background-repeat: no-repeat;
 }
-.mini-spalten-drei::before { left: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
-.mini-spalten-drei::after { right: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
+.mini-columns-three::before { left: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
+.mini-columns-three::after { right: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
 /* Image right / left */
-.mini-bild-rechts::before { left: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
-.mini-bild-rechts::after { right: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
-.mini-bild-links::before { right: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
-.mini-bild-links::after { left: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
+.mini-image-right::before { left: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
+.mini-image-right::after { right: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
+.mini-image-left::before { right: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
+.mini-image-left::after { left: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
 /* Full-bleed image */
 /* Text on the left, a code on the right. The code is a real picture and
    not four blocks: the three finder squares are what a person recognises a
@@ -837,9 +976,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   mask: url(../assets/mini-qr.svg) center / contain no-repeat;
 }
 
-.mini-bild-voll { background: var(--muted); }
-.mini-bild-voll::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--paper); opacity: 0.9; }
-.mini-bild-voll::after { display: none; }
+.mini-image-full { background: var(--muted); }
+.mini-image-full::before { left: 8%; width: 55%; bottom: 5px; top: auto; height: 8px; background: var(--paper); opacity: 0.9; }
+.mini-image-full::after { display: none; }
 /* Video: a screen with a play triangle */
 .mini-video::before { left: 12%; right: 12%; top: 8px; height: 17px; opacity: 0.25; }
 .mini-video::after {
@@ -854,8 +993,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   opacity: 0.8;
 }
 /* Quote */
-.mini-zitat::before { left: 15%; right: 15%; top: 10px; height: 8px; opacity: 0.3; }
-.mini-zitat::after { left: 40%; right: 15%; top: 22px; height: 3px; }
+.mini-quote::before { left: 15%; right: 15%; top: 10px; height: 8px; opacity: 0.3; }
+.mini-quote::after { left: 40%; right: 15%; top: 22px; height: 3px; }
 
 /* Text tools */
 .toolbar {
@@ -2054,10 +2193,79 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .gallery-image:hover { border-color: var(--accent); }
 .gallery-image img { display: block; width: 100%; height: 84px; object-fit: cover; }
 
+/* --- Opening a deck ---------------------------------------------------- */
+/* The editor assembling itself when a deck is opened: the cards in from the
+   left one after another, the form up from below, the preview in from the
+   right. It is good for nothing at all -- the page is just as usable
+   without it -- except that a deck one opens twenty times a day may as well
+   arrive rather than merely be there.
+
+   Fast is the whole art of it. Everything is in place inside two thirds of
+   a second, no single piece takes longer than 280ms, and nothing waits on
+   anything else: this has to be over before anyone has decided to click.
+
+   It runs once, on the first paint. The gate is data-enter on <html>, set
+   by an inline script in the editor's head -- inline, because an element
+   that fades in has to be invisible BEFORE the first paint, and a file
+   fetched afterwards is already too late. That script asks about reduced
+   motion first, so a system set to less movement never gets the attribute
+   and every rule below is dead. js/entrance.js takes the attribute off
+   again once the last one has run, which is what keeps a card added half an
+   hour later from sliding in as well.
+
+   Only `from` is written in the keyframes: the end of every one of them is
+   the element's own resting style, said nowhere twice. `backwards` is what
+   holds that start state during the delay -- without it a card would show
+   itself, then disappear to begin. */
+@keyframes enter-from-left { from { opacity: 0; transform: translateX(-18px); } }
+@keyframes enter-from-right { from { opacity: 0; transform: translateX(18px); } }
+@keyframes enter-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes enter-drop { from { opacity: 0; transform: translateY(-8px); } }
+@keyframes enter-fade { from { opacity: 0; } }
+
+[data-enter] .head { animation: enter-drop 240ms ease-out backwards; }
+[data-enter] .columns-head { animation: enter-fade 240ms ease-out 60ms backwards; }
+
+/* The cards. Which of them take part, and in what order, is js/entrance.js'
+   business: only those standing in the visible part of the list do, because
+   a stagger running on down a list of eighty is a thing nobody sees and
+   everybody's processor pays for. */
+[data-enter] .slide-card.is-entering {
+  animation: enter-from-left 240ms ease-out backwards;
+  animation-delay: calc(var(--enter-index, 0) * 45ms);
+}
+/* The furniture of that column comes last, after the cards it belongs to. */
+[data-enter] .slides-step,
+[data-enter] #slide-new { animation: enter-fade 240ms ease-out 160ms backwards; }
+
+/* The two boxes of the form, one after the other. Descendants and not
+   children: the scrollbar this column wears moves everything inside it into
+   a viewport of its own (js/scrollbars.js), so the two boxes are a
+   generation further down than the markup reads. Each of them is the only
+   one of its kind in the page, which is what makes that safe. */
+[data-enter] .column.form .fieldset { animation: enter-rise 260ms ease-out 80ms backwards; }
+[data-enter] .column.form .tabbed { animation: enter-rise 260ms ease-out 140ms backwards; }
+
+/* The preview and the line in front of it arrive together -- the line sits
+   on the preview's edge, and a tenth of a second apart they would read as
+   two things rather than one. */
+[data-enter] .preview-frame,
+[data-enter] .preview-hint,
+[data-enter] .column-split { animation: enter-from-right 280ms ease-out 120ms backwards; }
+
 /* Narrow windows: the three columns become stacked areas. */
 @media (max-width: 1100px) {
   .side-editor { height: auto; overflow: visible; }
   .editor { grid-template-columns: 1fr; height: auto; }
   .column { overflow: visible; }
+  /* Stacked, the slide list is as long as it is and goes with the page --
+     so there is nothing left for its two buttons to do. */
+  .slide-list { display: block; overflow: visible; }
+  .slides { overflow: visible; }
+  .slides-step { display: none; }
+  /* Stacked, there are no two widths left to divide -- and the preview is
+     back to taking the row it is given. */
+  .column-split { display: none; }
+  .column.preview { grid-column: 1; grid-row: auto; }
   .head { flex-wrap: wrap; }
 }

@@ -23,13 +23,13 @@
 // Every layout has a title and a body, so those are not in the list.
 const LAYOUTS = [
   {
-    id: "titel",
+    id: "title",
     fields: [],
     // Centred by design, and so is its heading -- see TITLE_ALIGNS below.
     titleAlign: "center",
   },
   {
-    id: "abschnitt",
+    id: "section",
     fields: [],
     titleAlign: "center",
   },
@@ -38,29 +38,29 @@ const LAYOUTS = [
     fields: [],
   },
   {
-    id: "spalten",
+    id: "columns",
     fields: ["columnMode"],
     columns: 2,
   },
   {
-    id: "spalten-drei",
+    id: "columns-three",
     fields: ["columnMode"],
     columns: 3,
   },
   {
-    id: "bild-rechts",
+    id: "image-right",
     fields: ["image", "textWidth"],
     // Half and half, which is what this layout has always looked like.
     width: "50",
   },
   {
-    id: "bild-links",
+    id: "image-left",
     fields: ["image", "textWidth"],
     // Half and half, which is what this layout has always looked like.
     width: "50",
   },
   {
-    id: "bild-voll",
+    id: "image-full",
     fields: ["image", "textPlace"],
   },
   {
@@ -82,7 +82,7 @@ const LAYOUTS = [
     width: "50",
   },
   {
-    id: "zitat",
+    id: "quote",
     fields: ["source"],
   },
 ];

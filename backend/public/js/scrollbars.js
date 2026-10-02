@@ -21,7 +21,7 @@ var instanzen = [];
 
 function anhaengen(el) {
   if (!el) return;
-  instanzen.push(OverlayScrollbars(el, {
+  var options = {
     scrollbars: {
       theme: thema(),
       // Visible while scrolling and on hover, gone otherwise -- the point
@@ -29,7 +29,15 @@ function anhaengen(el) {
       autoHide: "leave",
       autoHideDelay: 700,
     },
-  }));
+  };
+  // The preview column scrolls up and down and never sideways: there is
+  // nothing beside a slide to scroll to. Said outright rather than left to
+  // the measurement, because the editor's opening brings the preview in
+  // from the right (app.css) -- eighteen pixels past the edge for a quarter
+  // of a second, which the library takes for content and then keeps a
+  // horizontal bar for, long after the pixels have gone.
+  if (el.classList.contains("preview")) options.overflow = { x: "hidden" };
+  instanzen.push(OverlayScrollbars(el, options));
 }
 
 // The page itself, the three editor columns, the two input frames, the
@@ -44,7 +52,12 @@ var sideScrolls = !document.body.classList.contains("side-editor");
 
 [
   sideScrolls ? document.body : null,
-  ...document.querySelectorAll(".column, .field-frame, .image-gallery, .deck-source, .emoji-panel, .menu-scroll"),
+  // Not the slide list: that column does not scroll itself any more, and
+  // the list inside it is scrolled by its own two buttons
+  // (js/slide-list-scroll.js). Attaching one here would also move the
+  // column's three children into a viewport of its own and take the flex
+  // layout they stand in with them.
+  ...document.querySelectorAll(".column:not(.slide-list), .field-frame, .image-gallery, .deck-source, .emoji-panel, .menu-scroll"),
 ].forEach(anhaengen);
 
 // The theme switch has to reach the scrollbars too, otherwise a dark

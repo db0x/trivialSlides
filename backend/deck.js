@@ -7,7 +7,7 @@
 //   theme: white
 //   ---
 //
-//   <!-- .slide: data-layout="titel" -->
+//   <!-- .slide: data-layout="title" -->
 //   # My talk
 //
 //   A subtitle
@@ -276,7 +276,7 @@ function parse(md) {
     title: oneLine(head.titel) || "",
     theme: THEMES.includes(head.theme) ? head.theme : "white",
     transition: TRANSITIONS.includes(head.transition) ? head.transition : "slide",
-    slides: slides.length ? slides : [newSlide("titel")],
+    slides: slides.length ? slides : [newSlide("title")],
   };
 }
 
@@ -288,7 +288,7 @@ function serialize(deck) {
     // Heading level by weight of the slide: title and section slides get
     // "#", everything else "##". Pure convention, for the case where the
     // file is rendered without our CSS.
-    const level = slide.layout === "titel" || slide.layout === "abschnitt" ? "#" : "##";
+    const level = slide.layout === "title" || slide.layout === "section" ? "#" : "##";
     const attrs = serializeAttrs(slide);
     const block = attrs ? [attrs] : [];
     // Written whenever the slide has a heading at all -- an empty one comes
@@ -341,7 +341,7 @@ function normalize(raw) {
     title: oneLine(deck.title).slice(0, 120),
     theme: THEMES.includes(deck.theme) ? deck.theme : "white",
     transition: TRANSITIONS.includes(deck.transition) ? deck.transition : "slide",
-    slides: (slides.length ? slides : [newSlide("titel")]).map((f, i) => {
+    slides: (slides.length ? slides : [newSlide("title")]).map((f, i) => {
       const layout = layouts.get(f && f.layout).id;
       return {
         id: "f" + i,

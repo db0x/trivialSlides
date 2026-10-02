@@ -78,15 +78,15 @@
 }
 
 /* --- Title slide and section divider ---------------------------------- */
-.reveal .slides section.layout-titel,
-.reveal .slides section.layout-abschnitt {
+.reveal .slides section.layout-title,
+.reveal .slides section.layout-section {
   text-align: center;
 }
-.reveal .layout-titel h1 { font-size: 2.1em; line-height: 1.1; margin-bottom: 0.4em; }
-.reveal .layout-titel .slide-text > p { font-size: 0.75em; opacity: 0.85; }
+.reveal .layout-title h1 { font-size: 2.1em; line-height: 1.1; margin-bottom: 0.4em; }
+.reveal .layout-title .slide-text > p { font-size: 0.75em; opacity: 0.85; }
 
-.reveal .layout-abschnitt h1 { font-size: 2.4em; line-height: 1.1; }
-.reveal .layout-abschnitt .slide-text > p { font-size: 0.7em; opacity: 0.8; }
+.reveal .layout-section h1 { font-size: 2.4em; line-height: 1.1; }
+.reveal .layout-section .slide-text > p { font-size: 0.7em; opacity: 0.8; }
 
 /* --- Columns ---------------------------------------------------------- */
 /* Two arrangements, and the slide says which one it is in: without
@@ -99,7 +99,7 @@
    all of it. No need to split the text -- in the .md the slide body stays a
    perfectly ordinary list or paragraph, and the same text can be moved
    between two columns and three by changing the layout alone. */
-.reveal :is(.layout-spalten, .layout-spalten-drei):not([data-columns="split"]) .slide-text {
+.reveal :is(.layout-columns, .layout-columns-three):not([data-columns="split"]) .slide-text {
   column-count: 2;
   column-gap: 1.2em;
 }
@@ -107,7 +107,7 @@
    theme's own size that is a handful of characters per line, so the type
    steps down with the column count -- three columns are for short points,
    which is what the layout's own help text says. */
-.reveal .layout-spalten-drei:not([data-columns="split"]) .slide-text {
+.reveal .layout-columns-three:not([data-columns="split"]) .slide-text {
   column-count: 3;
   /* Wider than the two-column gap, not narrower: the bullets of the next
      column would otherwise sit right against the longest line of the one
@@ -117,11 +117,11 @@
 }
 /* The step down in type follows the column WIDTH, not the arrangement, so
    it applies to both of them. */
-.reveal .layout-spalten-drei .slide-text { font-size: 0.85em; }
+.reveal .layout-columns-three .slide-text { font-size: 0.85em; }
 /* reveal indents lists by a fixed amount, which in a third of a slide is a
    sizeable part of the column. */
-.reveal .layout-spalten-drei .slide-text :is(ul, ol) { padding-left: 0.8em; }
-.reveal :is(.layout-spalten, .layout-spalten-drei):not([data-columns="split"]) .slide-text h2 {
+.reveal .layout-columns-three .slide-text :is(ul, ol) { padding-left: 0.8em; }
+.reveal :is(.layout-columns, .layout-columns-three):not([data-columns="split"]) .slide-text h2 {
   column-span: all;
 }
 
@@ -139,7 +139,7 @@
      centres it and nothing here argues with that. */
   align-items: start;
 }
-.reveal .slides section.layout-spalten-drei[data-columns="split"] .slide-text {
+.reveal .slides section.layout-columns-three[data-columns="split"] .slide-text {
   grid-template-columns: repeat(3, 1fr);
   column-gap: 1.6em;
 }
@@ -160,18 +160,18 @@
       would have no effect. Hence back to block here.
    2. The break rule applies to the individual list item, NOT to the list --
       otherwise you would have the same effect all over again. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text ul,
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text ol {
+.reveal :is(.layout-columns, .layout-columns-three) .slide-text ul,
+.reveal :is(.layout-columns, .layout-columns-three) .slide-text ol {
   display: block;
   width: 100%;
 }
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text li {
+.reveal :is(.layout-columns, .layout-columns-three) .slide-text li {
   break-inside: avoid;
 }
 
 /* --- Image beside text ------------------------------------------------ */
-.reveal .slides section.layout-bild-rechts,
-.reveal .slides section.layout-bild-links {
+.reveal .slides section.layout-image-right,
+.reveal .slides section.layout-image-left {
   display: grid !important;
   grid-template-columns: 1fr 1fr;
   align-items: center;
@@ -180,8 +180,8 @@
 /* The markup is always in reading order (text first, except for
    image-links). Column assignment is therefore done entirely in CSS, so
    that screen readers and sighted readers get the same order. */
-.reveal .layout-bild-links .slide-image { grid-column: 1; grid-row: 1; }
-.reveal .layout-bild-links .slide-text { grid-column: 2; grid-row: 1; }
+.reveal .layout-image-left .slide-image { grid-column: 1; grid-row: 1; }
+.reveal .layout-image-left .slide-text { grid-column: 2; grid-row: 1; }
 /* How much of the slide the text gets beside the picture (data-textbreite,
    see layouts.js). The TRACK is what is sized, not the item: in a grid a
    narrower item would leave the rest of its column standing empty instead
@@ -191,12 +191,12 @@
    rather than as a percentage, so the gap between them comes off both
    sides and the two really are the same width -- which is what this
    layout has always looked like. */
-.reveal .slides section.layout-bild-rechts[data-textbreite="25"] { grid-template-columns: 25% 1fr; }
-.reveal .slides section.layout-bild-rechts[data-textbreite="33"] { grid-template-columns: 33% 1fr; }
-.reveal .slides section.layout-bild-rechts[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
-.reveal .slides section.layout-bild-links[data-textbreite="25"] { grid-template-columns: 1fr 25%; }
-.reveal .slides section.layout-bild-links[data-textbreite="33"] { grid-template-columns: 1fr 33%; }
-.reveal .slides section.layout-bild-links[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
+.reveal .slides section.layout-image-right[data-textbreite="25"] { grid-template-columns: 25% 1fr; }
+.reveal .slides section.layout-image-right[data-textbreite="33"] { grid-template-columns: 33% 1fr; }
+.reveal .slides section.layout-image-right[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
+.reveal .slides section.layout-image-left[data-textbreite="25"] { grid-template-columns: 1fr 25%; }
+.reveal .slides section.layout-image-left[data-textbreite="33"] { grid-template-columns: 1fr 33%; }
+.reveal .slides section.layout-image-left[data-textbreite="50"] { grid-template-columns: 1fr 1fr; }
 
 /* --- Full-bleed image ------------------------------------------------- */
 /* The image is reveal.js' slide background; what is left here is the box
@@ -212,7 +212,7 @@
    plainly here because it took a measurement to find: without it the slide
    is only as tall as its text, and every vertical placement below is a
    line that does nothing. */
-.reveal .slides section.layout-bild-voll {
+.reveal .slides section.layout-image-full {
   display: grid !important;
   /* The padding has to count INSIDE the hundred per cent, or the slide
      comes out taller than the stage and the lower row of places falls off
@@ -237,21 +237,21 @@
 
    Written down first, then across -- which is the order place-items reads
    in. */
-.reveal .slides section.layout-bild-voll {
+.reveal .slides section.layout-image-full {
   grid-template: 1fr / 1fr;
   place-items: center;
 }
-.reveal .slides section.layout-bild-voll[data-text-place="top-left"] { place-items: start start; }
-.reveal .slides section.layout-bild-voll[data-text-place="top"] { place-items: start center; }
-.reveal .slides section.layout-bild-voll[data-text-place="top-right"] { place-items: start end; }
-.reveal .slides section.layout-bild-voll[data-text-place="left"] { place-items: center start; }
-.reveal .slides section.layout-bild-voll[data-text-place="center"] { place-items: center center; }
-.reveal .slides section.layout-bild-voll[data-text-place="right"] { place-items: center end; }
-.reveal .slides section.layout-bild-voll[data-text-place="bottom-left"] { place-items: end start; }
-.reveal .slides section.layout-bild-voll[data-text-place="bottom"] { place-items: end center; }
-.reveal .slides section.layout-bild-voll[data-text-place="bottom-right"] { place-items: end end; }
+.reveal .slides section.layout-image-full[data-text-place="top-left"] { place-items: start start; }
+.reveal .slides section.layout-image-full[data-text-place="top"] { place-items: start center; }
+.reveal .slides section.layout-image-full[data-text-place="top-right"] { place-items: start end; }
+.reveal .slides section.layout-image-full[data-text-place="left"] { place-items: center start; }
+.reveal .slides section.layout-image-full[data-text-place="center"] { place-items: center center; }
+.reveal .slides section.layout-image-full[data-text-place="right"] { place-items: center end; }
+.reveal .slides section.layout-image-full[data-text-place="bottom-left"] { place-items: end start; }
+.reveal .slides section.layout-image-full[data-text-place="bottom"] { place-items: end center; }
+.reveal .slides section.layout-image-full[data-text-place="bottom-right"] { place-items: end end; }
 
-.reveal .layout-bild-voll .slide-text {
+.reveal .layout-image-full .slide-text {
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   padding: 0.6em 0.8em;
@@ -259,8 +259,8 @@
   max-width: 70%;
   backdrop-filter: blur(3px);
 }
-.reveal .layout-bild-voll .slide-text h2,
-.reveal .layout-bild-voll .slide-text a { color: #fff; }
+.reveal .layout-image-full .slide-text h2,
+.reveal .layout-image-full .slide-text a { color: #fff; }
 
 /* --- Text beside something: video and QR -------------------------------
    Two layouts are built the same way: a heading, a body, and one box the
@@ -750,7 +750,7 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
 .reveal .slide-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
 
 /* Columns plus a table are a tight fit already -- one notch smaller. */
-.reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text table { font-size: 0.55em; }
+.reveal :is(.layout-columns, .layout-columns-three) .slide-text table { font-size: 0.55em; }
 
 /* --- Code --------------------------------------------------------------
    The colours come from the highlighter's own stylesheet (reveal.js'
@@ -823,28 +823,28 @@ body.is-preview .reveal .fragment {
 
    On the [data-layout]: a slide with vertical slides beneath it is wrapped
    in a <section> of its own in reveal.js -- the stack -- and that stack
-   carries no class at all (render.js). A plain section:not(.layout-zitat)
+   carries no class at all (render.js). A plain section:not(.layout-quote)
    therefore matches the STACK around a quote slide, and from there these
    rules reach down into the quote and shrink it. The quote slide would
    change its appearance because of what hangs beneath it, which is
    nonsense to anyone looking at it. Every slide carries data-layout and no
    stack does, so that attribute is what tells the two apart. */
-.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text blockquote {
+.reveal .slides section[data-layout]:not(.layout-quote) .slide-text blockquote {
   width: 100%;
   margin: 0.45em 0;
   padding: 0.35em 0.7em;
   font-size: 0.8em;
   line-height: 1.3;
 }
-.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text blockquote p {
+.reveal .slides section[data-layout]:not(.layout-quote) .slide-text blockquote p {
   margin: 0.25em 0;
 }
-.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text:has(blockquote:nth-of-type(3)) blockquote { font-size: 0.72em; }
-.reveal .slides section[data-layout]:not(.layout-zitat) .slide-text:has(blockquote:nth-of-type(5)) blockquote { font-size: 0.62em; }
+.reveal .slides section[data-layout]:not(.layout-quote) .slide-text:has(blockquote:nth-of-type(3)) blockquote { font-size: 0.72em; }
+.reveal .slides section[data-layout]:not(.layout-quote) .slide-text:has(blockquote:nth-of-type(5)) blockquote { font-size: 0.62em; }
 
 /* --- Quote ------------------------------------------------------------ */
-.reveal .slides section.layout-zitat { text-align: center; }
-.reveal .layout-zitat blockquote {
+.reveal .slides section.layout-quote { text-align: center; }
+.reveal .layout-quote blockquote {
   width: 100%;
   box-shadow: none;
   background: none;
@@ -855,15 +855,15 @@ body.is-preview .reveal .fragment {
   margin: 0 0 0.6em;
   quotes: "\201E" "\201C";
 }
-.reveal .layout-zitat blockquote p::before { content: open-quote; }
-.reveal .layout-zitat blockquote p::after { content: close-quote; }
-.reveal .layout-zitat cite {
+.reveal .layout-quote blockquote p::before { content: open-quote; }
+.reveal .layout-quote blockquote p::after { content: close-quote; }
+.reveal .layout-quote cite {
   display: block;
   font-size: 0.6em;
   font-style: normal;
   opacity: 0.75;
 }
-.reveal .layout-zitat cite::before { content: "\2014\00A0"; }
+.reveal .layout-quote cite::before { content: "\2014\00A0"; }
 
 /* Narrow windows (the preview in the editor is one): image and text
    stacked rather than side by side, otherwise both become unreadable. */
@@ -871,13 +871,13 @@ body.is-preview .reveal .fragment {
   /* [data-textbreite] carries no meaning here -- it is there to outweigh
      the rules that size the two columns, which name the attribute and
      would otherwise win. A media query adds no weight of its own. */
-  .reveal .slides section.layout-bild-rechts[data-textbreite],
-  .reveal .slides section.layout-bild-links[data-textbreite] {
+  .reveal .slides section.layout-image-right[data-textbreite],
+  .reveal .slides section.layout-image-left[data-textbreite] {
     grid-template-columns: 1fr;
   }
-  .reveal .layout-bild-links .slide-image,
-  .reveal .layout-bild-links .slide-text { grid-column: 1; grid-row: auto; }
-  .reveal :is(.layout-spalten, .layout-spalten-drei) .slide-text { column-count: 1; }
+  .reveal .layout-image-left .slide-image,
+  .reveal .layout-image-left .slide-text { grid-column: 1; grid-row: auto; }
+  .reveal :is(.layout-columns, .layout-columns-three) .slide-text { column-count: 1; }
 }
 
 /* --- Print view (PDF export) ------------------------------------------
@@ -892,11 +892,11 @@ body.is-preview .reveal .fragment {
    specific. Nothing more is needed: column assignment, centring and
    column typesetting are untouched by reveal.js when printing, so they
    apply there anyway. */
-html.reveal-print .reveal .slides section.layout-bild-rechts,
-html.reveal-print .reveal .slides section.layout-bild-links {
+html.reveal-print .reveal .slides section.layout-image-right,
+html.reveal-print .reveal .slides section.layout-image-left {
   display: grid !important;
 }
-html.reveal-print .reveal .slides section.layout-bild-voll {
+html.reveal-print .reveal .slides section.layout-image-full {
   display: grid !important;
 }
 /* The video layout needs it for the same reason, and needs it more since
