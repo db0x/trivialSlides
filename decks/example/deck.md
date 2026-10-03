@@ -2,9 +2,14 @@
 titel: Example
 theme: simple
 transition: convex
+footer-text: trivialSlides
+footer-logo: trivialslides.svg
+footer-logo-place: left
+footer-no-rule: 1
+footer-still: 1
 ---
 
-<!-- .slide: data-layout="title" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="title" data-no-footer="1" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->
 
 # Example
 
@@ -26,6 +31,7 @@ and *italic* text, and a [link](https://revealjs.com).
 
 - Lists work the way you expect
 - Every point is plain Markdown
+- TEST
 - This one only appears on click
 <!-- .element: class="fragment" -->
 
@@ -83,23 +89,35 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 ## Three columns
 
 - C
+<!-- .element: class="fragment" data-fragment-index="0" -->
 - C++
+<!-- .element: class="fragment" data-fragment-index="0" -->
 - C#
+<!-- .element: class="fragment" data-fragment-index="0" -->
 - Rust
+<!-- .element: class="fragment" data-fragment-index="0" -->
 - Go
+<!-- .element: class="fragment" data-fragment-index="0" -->
 
 <!-- .column -->
 
 - Java
+<!-- .element: class="fragment" data-fragment-index="1" -->
 - Kotlin
+<!-- .element: class="fragment" data-fragment-index="1" -->
 - Scala
+<!-- .element: class="fragment" data-fragment-index="1" -->
 - Groovy
+<!-- .element: class="fragment" data-fragment-index="1" -->
 
 <!-- .column -->
 
 - Basic
+<!-- .element: class="fragment" data-fragment-index="2" -->
 - VB
+<!-- .element: class="fragment" data-fragment-index="2" -->
 - JavaScript
+<!-- .element: class="fragment" data-fragment-index="2" -->
 
 ---
 
@@ -126,7 +144,7 @@ The same layout mirrored. Nothing about the slide's text changes, only its
 ## Full-bleed image
 
 ⭐ The picture covers the whole slide, the text stays readable on top of it.
-<!-- .element: class="align-center" -->
+<!-- .element: class="align-fill" -->
 
 ---
 
@@ -163,7 +181,7 @@ private int getFactor() {
 
 ----
 
-<!-- .slide: data-layout="qr" data-url="https://github.com/db0x/trivialSlides" data-qr-color="#ffffff" data-qr-background="#ffffff00" data-background-effect="starfield" data-text-color="#ffffff" -->
+<!-- .slide: data-layout="qr" data-url="https://github.com/db0x/trivialSlides" data-qr-color="#ffffff" data-qr-background="#ffffff00" data-no-footer="1" data-background-effect="starfield" data-text-color="#ffffff" -->
 
 ##
 

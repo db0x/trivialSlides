@@ -231,8 +231,11 @@
   box-sizing: border-box;
   min-height: 100% !important;
   /* The air between the box and the edge of the picture. In em, so it
-     follows the type the way the box's own padding does. */
-  padding: 1.2em !important;
+     follows the type the way the box's own padding does. Named rather than
+     written in, because a header or a footer on this layout has to keep
+     the same distance from the edge -- see the bands further down. */
+  --slide-air: 1.2em;
+  padding: var(--slide-air) !important;
 }
 /* Nine places. One cell spanning the whole picture (1fr by 1fr), and the
    box placed INSIDE it -- place-items, not place-content.
@@ -928,6 +931,316 @@ body.is-preview .reveal .fragment {
 }
 .reveal .layout-quote cite::before { content: "\2014\00A0"; }
 
+/* --- Header and footer -------------------------------------------------
+   The two strips that stand the same on every slide (bands.js). Three
+   cells each, left middle and right, with a logo and a line of text placed
+   in them (render.js) -- a grid of three equal columns and not a row with
+   space-between, because the middle cell has to stay in the middle of the
+   SLIDE, and space-between would put it in the middle of whatever the
+   other two leave over.
+
+   Out of the flow, and that is the point: a slide is a grid in three
+   layouts and a flex box in two more, each with a template of its own
+   (above). An absolutely positioned child is out of flow for every one of
+   them, so the strips cost those templates nothing and no layout had to be
+   rewritten for them.
+
+   What it costs instead is the rule below. "The edge of the slide" only
+   means the edge of the screen while the slide is as tall as the stage,
+   and a slide is normally only as tall as its text -- reveal.js centres
+   that box rather than filling the stage with it. So a slide carrying a
+   band is given the stage's height, and centres its own content in return.
+   The full-bleed layout above already does exactly this for its nine
+   places; this is the same move for the same reason. */
+/* The height of one strip, the air between it and the slide's text, and
+   how far the strip stands in from the edge.
+
+   On the stage and not on the slide, and in the stage's own pixels rather
+   than in em. Both for the same reason: a strip that is told to stand
+   still is lifted out of the slide and hung on the stage (js/slide-bands.js),
+   and from there it cannot see a slide's type size. In em it would be one
+   height inside a slide and another standing over it -- and on a slide
+   whose type was stepped down to make it fit (js/slide-fit.js) the room
+   kept free would shrink while the strip standing over it did not, and the
+   text would run under it.
+
+   34 and 10 are what 0.8em and 0.25em came to at the size the themes set
+   (40 to 42px), which is where these two numbers come from. */
+.reveal {
+  --band-height: 34px;
+  --band-air: 10px;
+  /* Flush with the edge, which is where the slide's own text stands too.
+     Only the full-bleed picture keeps its distance -- there the text has
+     one as well, and the two have to be the same one. */
+  --band-edge: 0px;
+}
+
+.reveal .slides section[data-bands] {
+  box-sizing: border-box;
+  /* reveal's centre mode -- which is how it ships and what this project
+     leaves it at -- writes min-height: 0 !important onto every slide
+     (.reveal.center .slides section). So this has to say !important too,
+     and it wins the tie on weight by being the later stylesheet. */
+  min-height: 100% !important;
+  /* Filling the stage leaves reveal's centring nothing to centre, so the
+     box centres its content itself.
+
+     Deliberately NOT by turning the slide into a flex box: reveal.js
+     writes `display: block` into the style attribute of the slide on
+     screen (see the top of this file), so that would have to say
+     !important -- and then it would fight the five layouts that bring a
+     display of their own, every one of them with an !important of its own
+     and the same weight. Two lines that nothing else in this stylesheet
+     sets do the same job without touching `display` at all:
+
+       align-content    centres what is in the box, for a plain block
+                        layout as much as for the grids -- the same
+                        property, said once, doing the same thing in both.
+       justify-content  the main axis of the two layouts that are a flex
+                        column, video and qr. On a block it means nothing
+                        and on those grids there is nothing left to
+                        distribute, so it costs the others nothing. */
+  align-content: center;
+  justify-content: center;
+}
+.reveal .slides section.layout-image-full[data-bands] { --band-edge: var(--slide-air); }
+
+/* The room the strips need, kept free of the slide's own text.
+
+   !important, and not gladly: the full-bleed layout states its padding
+   with one (above) and would otherwise put its text straight through the
+   header. Of two important rules of equal weight the later one wins, and
+   this is the later one -- so the one line serves both cases instead of
+   the layout needing a second rule of its own. */
+.reveal .slides section[data-bands~="header"] {
+  padding-top: calc(var(--band-edge) + var(--band-height) + var(--band-air)) !important;
+}
+.reveal .slides section[data-bands~="footer"] {
+  padding-bottom: calc(var(--band-edge) + var(--band-height) + var(--band-air)) !important;
+}
+
+.reveal .slide-band {
+  position: absolute;
+  left: var(--band-edge);
+  right: var(--band-edge);
+  height: var(--band-height);
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  /* No font-size here on purpose: the height above is in em and would
+     then be measured against the strip's own type rather than the slide's,
+     and the room kept free above would no longer be the room the strip
+     takes. The type sits on what is IN the strip instead. */
+  text-align: left;
+  /* The slide's own colour, whatever that is -- the theme's, or the one
+     the slide was given (render.js writes it onto the section). */
+  color: inherit;
+}
+.reveal .slide-band[data-band="header"] { top: var(--band-edge); }
+.reveal .slide-band[data-band="footer"] { bottom: var(--band-edge); }
+
+/* The hairline between the strip and the slide. It is what keeps a header
+   from reading as the slide's first line when both are the same colour --
+   which, the strip taking the slide's colour, they always are.
+
+   A pseudo-element rather than a border: a border would take part in the
+   strip's own height, and the height is what the room above was reserved
+   from. */
+.reveal .slide-band::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+.reveal .slide-band[data-band="header"]::after { bottom: 0; }
+.reveal .slide-band[data-band="footer"]::after { top: 0; }
+/* Unless the band says it would rather do without one. The room the strip
+   takes is unchanged by that -- a line is a hairline, and a slide must not
+   move its text by a pixel over whether one is drawn. */
+.reveal .slide-band[data-rule="none"]::after { display: none; }
+
+/* --- A strip that stays where it is ------------------------------------
+   A band that is not to travel with the slide (bands.js, still).
+
+   It cannot be held still where it stands: it sits in the <section>, and
+   reveal.js moves that box -- there is no counter-move for a slide that
+   rotates through a perspective. So where a presentation is running, ONE
+   copy of the strip is lifted out of the slides and hung on the stage
+   instead (js/slide-bands.js), and the copies inside the slides give way
+   to it. The stage does not move between slides, so neither does the
+   strip: it simply stands there while the slides change behind it.
+
+   Only there, and only then. On paper and on a card there is no movement
+   to stand out of, and the strip inside the slide is what gets drawn --
+   which is what keeps one renderer for all four views (render.js). The
+   class below is put on by that script and by nothing else, so a page it
+   does not run on carries on exactly as before. */
+.reveal.bands-standing .slides section .slide-band[data-still] { display: none; }
+
+.reveal .band-stand { display: none; }
+.reveal.bands-standing .band-stand {
+  display: block;
+  position: absolute;
+  inset: 0;
+  /* Over the slides, which are 10 and 11 to reveal.js. A strip is the
+     paper the talk is printed on, not a part of what is written on it. */
+  z-index: 12;
+  /* It is a copy of what the slides carry; nothing on it is to be
+     clicked, and it must not come between a hand and the slide. */
+  pointer-events: none;
+  /* Standing over every layout, it belongs to none, so it keeps its
+     distance from the edge nowhere -- the full-bleed picture's own inset
+     would make it jump inward on those slides, which is the one thing a
+     strip that stands still may not do. */
+  --band-edge: 0px;
+  /* The colour follows the slide underneath (the script copies it over).
+     A colour that changes is not a strip that moves, and between two
+     slides of the same colour -- which is most of them -- nothing happens
+     at all.
+
+     Slower than the fading, and eased at both ends. The slide behind it
+     takes eight tenths of a second to arrive, and a colour that has turned
+     over in two is a change one notices as a change; taken at half the
+     speed of the slide it simply happens while one is watching something
+     else. */
+  transition: opacity 0.18s ease-out, color 0.45s ease-in-out;
+}
+/* Away, because the slide underneath is one that sends this band off
+   (deck.js, data-no-footer). This is the only moment the strip fades at
+   all: it has to appear or disappear, and a quick ease is what that is
+   for. Out faster than in -- going it should not be watched, coming back
+   it should not startle. */
+.reveal.bands-standing .band-stand.is-away {
+  opacity: 0;
+  transition: opacity 0.12s ease-in;
+}
+/* In the overview the stage holds a grid of small slides, and a strip
+   lying across all of them would belong to none. */
+.reveal.overview .band-stand { display: none; }
+
+/* The three cells. Each one is a third of the slide and lays its contents
+   out in a row, so a logo with the name beside it reads as one mark. Which
+   third a piece lands in is the band's business (bands.js); where it sits
+   INSIDE its third is this stylesheet's, and it sits where the cell
+   stands: the left cell from the left edge, the middle one about its
+   middle, the right one against the right edge. */
+.reveal .band-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 0;
+  /* The three cells are as tall as the strip, and what is in them is
+     centred inside that. Deliberately not the other way round -- cells
+     sized by their content and centred in the strip: a cell with no
+     height of its own gives a picture inside it no height to measure a
+     cap against, and the logo would come out at whatever size the file
+     happens to have. */
+  height: 100%;
+}
+.reveal .band-cell[data-place="left"] { justify-content: flex-start; }
+.reveal .band-cell[data-place="center"] { justify-content: center; }
+.reveal .band-cell[data-place="right"] { justify-content: flex-end; }
+
+/* The whole strip in the middle of the slide rather than spread across it
+   (bands.js, center). The three cells stay exactly as they are and are
+   merely pulled together: each is as wide as what is in it, and the row of
+   them is centred. So the places go on saying something after all -- not
+   where a piece stands on the slide any more, but what stands left of
+   what, which is the order the cells are written in.
+
+   An empty cell is taken out here and only here: spread, it is what holds
+   the thirds apart, and pulled together it would be a gap in the middle of
+   a logo and its name. */
+.reveal .slide-band[data-center] {
+  display: flex;
+  justify-content: center;
+  gap: 0.5em;
+}
+.reveal .slide-band[data-center] .band-cell:empty { display: none; }
+/* And the cells keep their width here. Spread, each one is a third of the
+   slide and may be squeezed -- that is what min-width: 0 above is for, and
+   what lets a long line be cut. Pulled together there is no third to be a
+   share of: a cell that may shrink goes down to nothing, and a picture
+   capped at a hundred per cent of it goes with it. Measured, on a logo
+   that simply was not drawn. */
+.reveal .slide-band[data-center] .band-cell {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+/* The cap goes with it, for the same reason: a hundred per cent of a box
+   that is as wide as its contents says nothing. What keeps the strip
+   inside the slide is the line below. */
+.reveal .slide-band[data-center] .band-logo { max-width: none; }
+.reveal .slide-band[data-center] { overflow: hidden; }
+
+/* The words. Quieter and smaller than the slide's text: they are the same
+   on every slide, so they are read once and then have to stay out of the
+   way. One line, cut off rather than wrapped -- a strip is one line high,
+   and a second one would run into the slide. */
+.reveal .band-text {
+  /* In the stage's pixels like the strip's own height above, and for the
+     same reason: standing over the slides it has no slide to take an em
+     from. 16 is what 0.38em came to at the themes' own size. */
+  font-size: 16px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+/* The logo. As tall as the strip allows and as wide as it needs, and
+   stripped of what the themes give an image: reveal's own themes put a
+   frame, a shadow and a pale ground on every <img> on a slide, which on a
+   logo in a strip would be three marks around something the size of a
+   word. The same reset the pictures in the image layouts get (above). */
+.reveal .band-logo {
+  display: block;
+  /* The strip's height outright, and the width left to follow the
+     picture's proportions.
+
+     Not a max-height, although that is what it reads like. A great many
+     SVGs carry nothing but a viewBox -- no width, no height -- and such a
+     picture has a RATIO but no size of its own. Capped rather than sized,
+     it has nothing for the cap to measure, and it comes out as wide as the
+     box it stands in with the drawing letterboxed in the middle of it, or,
+     where that box is sized by its contents in turn, as nothing at all.
+     Measured, both ways round: a chart that filled a third of the slide,
+     and the same chart that vanished once the strip was gathered into the
+     middle.
+
+     Said as the strip says its own height, so both resolve against the
+     SLIDE's type -- the one measure a logo in a strip may be judged by.
+     And it makes every logo exactly as tall as the strip, which is what a
+     letterhead looks like. */
+  height: var(--band-height);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  opacity: 0.9;
+}
+
+/* On a full-bleed picture the strip stands on the photograph, so it takes
+   the same white the text box above it takes -- the picture underneath is
+   of unknown brightness, and black on it would be a gamble. The shadow is
+   what makes the line readable over a light patch without a box of its
+   own: a box the width of the slide would be a second picture. */
+.reveal .layout-image-full .slide-band {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+}
+/* And the hairline a little more of itself. A quarter of white over a
+   photograph of unknown brightness is nothing at all -- measured, on a
+   light one; over the themes' own grounds the same quarter is exactly
+   enough, which is why only this layout says otherwise. */
+.reveal .layout-image-full .slide-band::after { opacity: 0.5; }
+
 /* Narrow windows (the preview in the editor is one): image and text
    stacked rather than side by side, otherwise both become unreadable. */
 @media (max-width: 640px) {
@@ -969,4 +1282,35 @@ html.reveal-print .reveal .slides section.layout-image-full {
    the box into a row quiet apply. */
 html.reveal-print .reveal .slides section:is(.layout-video, .layout-qr) {
   display: flex !important;
+}
+/* A slide carrying a band fills its page, and starts at the top of it.
+
+   Both have to be said, and the reason is worth writing down because it
+   cost a measurement. Preparing the print view reveal.js measures every
+   slide's height WHILE the slides still stand in .slides -- which it has
+   just set to `height: auto` -- so `min-height: 100%` resolves against
+   nothing there and the slide measures as tall as its text. reveal then
+   centres the slide on the page by that measurement and writes the offset
+   into its style attribute. Only afterwards does the slide land in the
+   .pdf-page, where the hundred per cent suddenly has a height to be a
+   hundred per cent OF -- and the slide, now a whole page tall, hangs down
+   from an offset meant for a short one. The footer then sits below the
+   page, which clips it, and the header sits a third of the way down.
+
+   So on paper the height is said outright and the offset is taken back:
+   the page IS the slide, and `align-content` above centres the text in it
+   exactly as reveal's offset would have. */
+html.reveal-print .reveal .slides section[data-bands] {
+  top: 0 !important;
+  height: 100% !important;
+}
+/* And the room for the two bands, for the third time and for the same
+   reason: printing, reveal.js writes `padding: 0 !important` onto every
+   section with a selector heavier than the one above -- so on paper the
+   slide's text would run straight through the header and the footer. */
+html.reveal-print .reveal .slides section[data-bands~="header"] {
+  padding-top: calc(var(--band-edge) + var(--band-height) + var(--band-air)) !important;
+}
+html.reveal-print .reveal .slides section[data-bands~="footer"] {
+  padding-bottom: calc(var(--band-edge) + var(--band-height) + var(--band-air)) !important;
 }

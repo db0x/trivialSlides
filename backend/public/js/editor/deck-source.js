@@ -267,7 +267,10 @@ export function setupDeckSource(parts) {
   function redrawInPreview(fresh) {
     if (lastSlide == null || !fresh || !preview) return;
     if (!fresh.slides || !fresh.slides[lastSlide]) return;
-    preview.slideZeichnen(lastSlide, fresh.slides[lastSlide]);
+    // The whole deck goes along, not only the slide: the two bands that
+    // stand on every slide are in its head, and the text being typed in
+    // may have just changed them (js/editor/bands.js).
+    preview.slideZeichnen(lastSlide, fresh.slides[lastSlide], fresh);
   }
 
   var checkSoon = verzoegert(400, function () {

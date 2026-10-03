@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" version="1.1">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#444444; } .ColorScheme-Highlight { color:#4285f4; } .ColorScheme-NeutralText { color:#ff9800; } .ColorScheme-PositiveText { color:#4caf50; } .ColorScheme-NegativeText { color:#f44336; }
+  </style>
+ </defs>
+ <!-- The slide, as a frame: what the two strips stand on. Quiet, like the
+      dimmed half of the alignment icons beside it. (No double hyphen in
+      this comment, nor in the one below: an SVG is XML, and a pair of them
+      inside a comment makes the whole file unparsable, which in a mask
+      shows as a button with nothing on it.) -->
+ <path style="opacity:0.35;fill:currentColor" class="ColorScheme-Text" d="M 3,4 C 2.4477153,4 2,4.4477153 2,5 v 12 c 0,0.552285 0.4477153,1 1,1 h 16 c 0.552285,0 1,-0.447715 1,-1 V 5 C 20,4.4477153 19.552285,4 19,4 Z m 0.5,1.5 h 15 v 11 h -15 z"/>
+ <!-- The header along the top edge, the footer along the bottom, each
+      reaching in from its own side, which is what the two bands do. -->
+ <path style="fill:currentColor" class="ColorScheme-Text" d="m 4.5,6.75 h 8 v 1.75 h -8 z"/>
+ <path style="fill:currentColor" class="ColorScheme-Text" d="m 9.5,13.5 h 8 v 1.75 h -8 z"/>
+</svg>

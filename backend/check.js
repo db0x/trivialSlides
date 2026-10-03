@@ -21,6 +21,7 @@
 const deck = require("./deck");
 const source = require("./source");
 const layouts = require("./layouts");
+const bands = require("./bands");
 const effects = require("./effects");
 const qr = require("./qr");
 
@@ -39,7 +40,13 @@ const PAIR = /([a-z-]+)\s*=\s*"([^"]*)"/g;
 const GROUP_OPEN = /^\s*<!--\s*\.group:\s*class="[A-Za-z0-9 _-]+"\s*-->\s*$/;
 const GROUP_CLOSE = /^\s*<!--\s*\/\.group\s*-->\s*$/;
 const GROUP_LIKE = /<!--[^>]*\.group\b/;
+// The three lines serialize() always writes. A head that is missing one of
+// them gets it back with a value nobody chose, which is worth saying.
 const HEAD_KEYS = ["titel", "theme", "transition"];
+// What the two bands may add (bands.js). Optional, every one of them: a
+// deck without bands has nothing to say about them and its head is the
+// three lines above and no more -- so a missing one is not a finding here.
+const BAND_KEYS = bands.headKeys();
 // What deck.js cuts to length in normalize(): the deck's title, a slide's
 // heading, and the two one-line fields an attribute may carry.
 const TITLE_MAX = 120;
@@ -71,12 +78,21 @@ const ATTRIBUTES = [
   { name: "data-columns", field: "columnMode", key: "check.columns", allowed: () => [layouts.COLUMN_SPLIT], layout: true },
   { name: "data-title-align", field: "titleAlign", key: "check.titleAlign", allowed: () => layouts.TITLE_ALIGNS },
   { name: "data-text-fragment", field: "textFragment", key: "check.textFragment", allowed: () => [deck.TEXT_FRAGMENT_ON] },
+  // The two bands a slide can send away, built from the same table the
+  // renderer reads (bands.js) rather than written out a second time.
+  ...bands.BANDS.map((name) => ({
+    name: bands.HIDDEN[name].attribute, field: bands.HIDDEN[name].field,
+    key: "check.bandFlag", allowed: () => [deck.TEXT_FRAGMENT_ON],
+  })),
   { name: "data-background-color", field: "background", key: "check.color" },
   { name: "data-background-gradient", field: "gradient", key: "check.gradient" },
   { name: "data-background-effect", field: "effect", key: "check.effect", allowed: () => effects.EFFECTS.map((e) => e.id) },
   { name: "data-text-color", field: "textColor", key: "check.color" },
 ];
 const byName = new Map(ATTRIBUTES.map((a) => [a.name, a]));
+// The attributes whose value is a yes or a no: the text waiting for a
+// click, and the two bands a slide can send away.
+const FLAGS = ["textFragment"].concat(bands.BANDS.map((n) => bands.HIDDEN[n].field));
 
 function pairs(inner) {
   const out = [];
@@ -87,7 +103,9 @@ function pairs(inner) {
 }
 
 // --- The head ----------------------------------------------------------
-function checkHead(block, model, add) {
+// images: the names in the deck's folder, for the one value here that
+// names a file -- a band's logo (bands.js).
+function checkHead(block, model, images, add) {
   if (!block) return add(1, "check.headMissing");
   block.lines.forEach((line, i) => {
     const at = i + 1;
@@ -97,6 +115,7 @@ function checkHead(block, model, add) {
     if (!hit) return add(at, "check.headLine");
     const key = hit[1].toLowerCase();
     const value = hit[2].trim();
+    if (BAND_KEYS.includes(key)) return checkBandLine(key, value, at, model, images, add);
     if (!HEAD_KEYS.includes(key)) return add(at, "check.headKey", { key: hit[1] });
     // What the file says against what came out of it. Only these three
     // fields, and each one differs for exactly one reason.
@@ -118,6 +137,47 @@ function checkHead(block, model, add) {
     .filter(Boolean).map((k) => k.toLowerCase()));
   HEAD_KEYS.filter((k) => !written.has(k))
     .forEach((k) => add(1, "check.headKeyMissing", { key: k }));
+  // The band keys are deliberately NOT in that list: a deck without bands
+  // says nothing about them and saving writes nothing about them either
+  // (bands.js, toHead).
+}
+
+// One line of a band. Four shapes, and each of them is wrong for exactly
+// one reason -- the same reasoning the attributes below are judged by:
+// what the file says against what bands.js made of it.
+function checkBandLine(key, value, at, model, images, add) {
+  const which = key.indexOf("footer") === 0 ? "footer" : "header";
+  const band = model[which] || {};
+  const k = bands.keys(which);
+  if (key === k.text) {
+    if (band.text !== value) add(at, "check.bandTooLong", { max: bands.TEXT_MAX });
+    return;
+  }
+  if (key === k.logo) {
+    if (band.logo !== value) return add(at, "check.bandTooLong", { max: bands.LOGO_MAX });
+    // The one value nothing else can judge: whether the picture is in the
+    // folder. Asked here, where the answer is at hand -- otherwise the
+    // band would come out empty and nobody would know why.
+    if (images && !images.includes(band.logo)) add(at, "check.bandLogo", { value: band.logo });
+    return;
+  }
+  // The two flags the band carries as a whole. One spelling each, and the
+  // key is simply absent on a band that does not say it -- so "the value
+  // survived" means the file says that one value and the model came out
+  // yes, exactly as it does for a slide's own flags below.
+  const flag = bands.FLAGS.find((f) => key === k[f]);
+  if (flag) {
+    if (!(value === bands.ON && band[flag])) {
+      add(at, "check.bandHeadFlag", { value, allowed: bands.ON });
+    }
+    return;
+  }
+  // A place that is not one of the three comes back as the default, and
+  // the band then stands somewhere nobody asked for.
+  const place = key === k.textPlace ? band.textPlace : band.logoPlace;
+  if (place !== value) {
+    add(at, "check.bandPlace", { name: key, value, allowed: bands.PLACES.join(", ") });
+  }
 }
 
 // --- One slide ---------------------------------------------------------
@@ -214,9 +274,11 @@ function checkAttrs(line, at, slide, images, add) {
     if (rule.field === "qrBackground" && p.value.trim() === qr.TRANSPARENT && slide.qrBackground === "") return;
     // A flag holds a yes or a no in the model and has one spelling in the
     // file: it is there or it is not. So "the value survived" means the
-    // file says that one value and the model came out yes.
-    if (rule.field === "textFragment") {
-      if (p.value.trim() === deck.TEXT_FRAGMENT_ON && slide.textFragment) return;
+    // file says that one value and the model came out yes. Three of them
+    // by now: the text waiting for a click, and the two bands a slide can
+    // send away (deck.js).
+    if (FLAGS.includes(rule.field)) {
+      if (p.value.trim() === deck.TEXT_FRAGMENT_ON && slide[rule.field]) return;
     }
     add(at, rule.key, Object.assign({ name: p.name, value: p.value },
       rule.values || {}, rule.allowed ? { allowed: rule.allowed().join(", ") } : {}));
@@ -276,7 +338,7 @@ function check(text, images) {
   });
 
   const head = blocks[0] && blocks[0].head ? blocks[0] : null;
-  checkHead(head, model, add);
+  checkHead(head, model, Array.isArray(images) ? images : null, add);
 
   // parse() throws empty blocks away, so the slides of the model line up
   // with the blocks that hold something -- and only with those. Which

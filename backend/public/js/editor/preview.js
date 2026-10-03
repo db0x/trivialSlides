@@ -64,11 +64,19 @@ export function createPreview(iframe, base) {
     showSlide: function (index) {
       sende({ kind: "gehezu", index: index });
     },
-    slideZeichnen: function (index, slide) {
+    // deck: only its two bands are read from it. They belong to the deck
+    // and not to the slide, and the editor may be a keystroke ahead of the
+    // server with them -- so they travel with the slide rather than being
+    // looked up over there (routes/decks.js, js/editor/bands.js).
+    slideZeichnen: function (index, slide, deck) {
       return fetch(base + "/slide.html", {
         method: "POST",
         headers: schreibHead({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ slide: slide }),
+        body: JSON.stringify({
+          slide: slide,
+          header: deck && deck.header,
+          footer: deck && deck.footer,
+        }),
       })
         .then(function (r) { return r.json(); })
         .then(function (d) { sende({ kind: "slide", index: index, html: d.html }); });

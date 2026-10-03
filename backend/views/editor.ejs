@@ -119,6 +119,14 @@
        away (js/editor/deck-source.js). -->
   <button type="button" id="deck-source-open" class="button button-icon header-source"
           data-tip="<%= t('header.deckSource') %>" aria-label="<%= t('header.deckSource') %>"></button>
+  <!-- The two strips that stand on every slide (partials/bands.ejs). Here
+       and not in the settings menu beside it: they belong to the DECK, like
+       the theme and the transition at the other end of this header, and
+       they are looked at again while a talk is being written -- a colour
+       changed, a logo swapped -- rather than set once per browser, which is
+       what that menu is for. -->
+  <button type="button" id="bands-open" class="button button-icon header-bands"
+          data-tip="<%= t('header.bands') %>" aria-label="<%= t('header.bands') %>"></button>
   <%- include("partials/settings") %>
 </header>
 
@@ -172,6 +180,30 @@
         <input type="checkbox" id="slide-columns-split" class="switch">
         <span><%= t('editor.columnsSplit') %></span>
       </label>
+
+      <!-- Whether this one slide shows the deck's two strips. Here, with
+           the layout, and not among the colours: a band takes a line off
+           the top and the bottom of the slide, which is a question about
+           what the slide is built of.
+
+           Each switch is only there while the deck HAS that band -- a
+           switch for something that does not exist would be a promise the
+           slide cannot keep (js/editor/index.js). Worded the positive way
+           round, "show it", although the file says the opposite
+           (data-no-header): what a reader wants to know standing in front
+           of the slide is whether the line is on it. -->
+      <div id="slide-bands" class="slide-bands" hidden>
+        <span class="field-label"><%= t('editor.bandsOn') %></span>
+        <label class="switch-line" data-band="header" hidden>
+          <input type="checkbox" id="slide-header-on" class="switch">
+          <span><%= t('editor.noHeader') %></span>
+        </label>
+        <label class="switch-line" data-band="footer" hidden>
+          <input type="checkbox" id="slide-footer-on" class="switch">
+          <span><%= t('editor.noFooter') %></span>
+        </label>
+        <p class="hint"><%= t('editor.bandsHint') %></p>
+      </div>
     </fieldset>
 
     <!-- What the slide SAYS, what it LOOKS like, and what the deck has in
@@ -789,6 +821,7 @@
 </script>
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
 <%- include("partials/prefs") %>
+<%- include("partials/bands") %>
 
 </body>
 </html>

@@ -12,6 +12,7 @@ import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
 import { drawLibrary } from "./library.js";
+import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -91,6 +92,9 @@ var el = {
   columnTabs: $("#column-tabs"),
   columnsSplit: $("#slide-columns-split"),
   fieldColumns: $(".field-columns"),
+  slideBands: $("#slide-bands"),
+  headerOn: $("#slide-header-on"),
+  footerOn: $("#slide-footer-on"),
   presentDirect: $(".present-direct"),
   presentMenu: $(".present-menu"),
   presentFromCurrent: $("#present-from-current"),
@@ -228,7 +232,10 @@ function remember() {
 }
 
 var previewSoon = verzoegert(350, function () {
-  preview.slideZeichnen(active, deck.slides[active]);
+  // The bands travel with the slide: they belong to the deck, and the
+  // server would otherwise draw the strips as they stood at the last save
+  // (routes/decks.js, js/editor/bands.js).
+  preview.slideZeichnen(active, deck.slides[active], deck);
 });
 
 // Structural changes: save first, then rebuild the preview completely --
@@ -431,6 +438,7 @@ function showSlide() {
   el.fieldQrColors.hidden = def.fields.indexOf("qrColor") === -1;
   el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
   el.columnsSplit.checked = slide.columnMode === SPLIT;
+  drawSlideBands(slide);
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
   el.textPlaceMenu.hidden = def.fields.indexOf("textPlace") === -1;
   el.textWidthMenu.hidden = def.fields.indexOf("textWidth") === -1;
@@ -505,6 +513,35 @@ function drawColumnTabs(parts, count) {
     tab.setAttribute("aria-selected", here ? "true" : "false");
   });
 }
+
+// --- The deck's bands, on this one slide -------------------------------
+// A switch per band the DECK has something in, and none for a band it has
+// not: a switch for a line that does not exist would be a promise the
+// slide cannot keep. Worded the positive way round -- "show it" -- while
+// the file says the opposite (deck.js, data-no-header): in front of the
+// slide the question is whether the line is on it.
+function drawSlideBands(slide) {
+  var any = false;
+  $$(".switch-line[data-band]", el.slideBands).forEach(function (line) {
+    var name = line.dataset.band;
+    var there = !bandEmpty(deck[name]);
+    line.hidden = !there;
+    if (there) any = true;
+    $(".switch", line).checked = !slide[HIDDEN_FIELD[name]];
+  });
+  el.slideBands.hidden = !any;
+}
+
+[el.headerOn, el.footerOn].forEach(function (box, i) {
+  box.addEventListener("change", function () {
+    harvest();
+    deck.slides[active][i === 0 ? "noHeader" : "noFooter"] = !box.checked;
+    // A line appearing or going takes room off the slide, so the whole
+    // slide is redrawn rather than only its text -- and the card in the
+    // list has to be fetched again, which the save does.
+    remember();
+  });
+});
 
 // --- The layout, once there is text ------------------------------------
 // A slide that already says something keeps its layout. Switching it is
@@ -1426,12 +1463,38 @@ el.effectTiles.addEventListener("click", function (ev) {
 });
 
 // --- Images ------------------------------------------------------------
+// One picker, two callers by now: the picture of the slide in front, and
+// the logo of one of the deck's two bands (js/editor/bands.js). So whoever
+// opened it says what is to happen with the choice, instead of the gallery
+// knowing a slide.
 var imageDialog = $("#image-dialog");
+var imageWanted = null;
+
+function askForImage(onPick) {
+  imageWanted = onPick;
+  drawGallery();
+  imageDialog.showModal();
+}
+
+// What the picker does when nobody said otherwise: the picture goes onto
+// the slide being edited.
+function pickForSlide(name) {
+  harvest();
+  deck.slides[active].image = name;
+  showImage(name);
+  remember();
+}
+
+// The address a picture in this deck's folder has. One place for it: the
+// form shows it, the library shows it and so does the band dialog.
+function imageUrl(name) {
+  return BASE + "/assets/" + encodeURIComponent(name);
+}
 
 function showImage(name) {
   el.imagePreview.hidden = !name;
   el.imageRemove.hidden = !name;
-  if (name) el.imagePreview.src = BASE + "/assets/" + encodeURIComponent(name);
+  if (name) el.imagePreview.src = imageUrl(name);
 }
 
 function drawGallery() {
@@ -1445,7 +1508,7 @@ function drawGallery() {
     b.dataset.name = name;
     b.dataset.tip = name;
     var img = document.createElement("img");
-    img.src = BASE + "/assets/" + encodeURIComponent(name);
+    img.src = imageUrl(name);
     img.alt = name;
     img.loading = "lazy";
     b.appendChild(img);
@@ -1454,18 +1517,14 @@ function drawGallery() {
 }
 
 $("#image-choose").addEventListener("click", function () {
-  drawGallery();
-  imageDialog.showModal();
+  askForImage(pickForSlide);
 });
 
 $("#image-gallery").addEventListener("click", function (ev) {
   var b = ev.target.closest(".gallery-image");
   if (!b) return;
-  harvest();
-  deck.slides[active].image = b.dataset.name;
-  showImage(b.dataset.name);
   imageDialog.close();
-  remember();
+  (imageWanted || pickForSlide)(b.dataset.name);
 });
 
 el.imageRemove.addEventListener("click", function () {
@@ -1504,6 +1563,17 @@ function libraryDelete(name) {
         libraryDraw();
         return;
       }
+      // The server names both ways of being in use, and they are two
+      // different sentences: a picture on three slides is taken off those
+      // slides, a band's logo is taken out of the band.
+      var inBand = a.d && a.d.bands && a.d.bands.length;
+      if (inBand) {
+        note(t("library.deleteUsedBand", {
+          name: name,
+          bands: a.d.bands.map(function (which) { return t("bands." + which); }).join(", "),
+        }));
+        return;
+      }
       note(a.d && a.d.used && a.d.used.length
         ? t("library.deleteUsed", { name: name, slides: a.d.used.join(", ") })
         : t("library.deleteFailed", { name: name }));
@@ -1522,17 +1592,39 @@ $("#image-file").addEventListener("change", function (ev) {
       images = d.images || images;
       drawGallery();
       if (!libraryPanel.hidden) libraryDraw();
-      // A freshly uploaded image is almost always wanted right away.
+      // A freshly uploaded image is almost always wanted right away -- by
+      // whoever opened the picker, which may be a band rather than the
+      // slide (askForImage above).
       if (d.fresh && d.fresh.length) {
-        harvest();
-        deck.slides[active].image = d.fresh[0];
-        showImage(d.fresh[0]);
         imageDialog.close();
-        remember();
+        (imageWanted || pickForSlide)(d.fresh[0]);
       }
     })
     .catch(function (e) { console.error(e); note(t("message.imageError")); });
   ev.target.value = "";
+});
+
+// --- The deck's two bands ----------------------------------------------
+// The dialog behind the button in the header (js/editor/bands.js). It
+// works on the model and hands the three things back that only this file
+// can do: save, rebuild the preview, open the picture picker.
+setupBands({
+  read: function () { return deck; },
+  // The usual path of every change in this editor: into the model, then
+  // the delayed save and the slide in the preview redrawn. The strips
+  // stand on every slide, but only the one being looked at is behind the
+  // dialog -- the rest are settled on the way out.
+  changed: function () {
+    remember();
+    // The switches in the form appear with the band and go with it: a deck
+    // whose footer has just been emptied has nothing left to hide.
+    drawSlideBands(deck.slides[active] || {});
+  },
+  // A band changed, so every slide looks different: the whole preview is
+  // rebuilt and every card in the list fetched again.
+  closed: function () { structureChanged(); },
+  chooseLogo: askForImage,
+  imageUrl: imageUrl,
 });
 
 // --- F5 starts the talk ------------------------------------------------

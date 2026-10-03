@@ -298,6 +298,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    its members. */
 .header-source { --button-icon: url(../assets/toolbar/code.svg); }
 .head > .header-source { margin-left: 0; }
+/* The deck's two strips (partials/bands.ejs). Same reasoning as the line
+   above: it stands inside the right-hand group and must not take a second
+   auto margin, which would split the free space and tear the group apart. */
+.header-bands { --button-icon: url(../assets/bands.svg); }
+.head > .header-bands { margin-left: 0; }
 /* Presenting is either the plain button -- which the rule above already
    pushes to the right edge -- or, where there is a choice, a menu around
    it. Inside the <details> that rule no longer reaches the button, so the
@@ -897,6 +902,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tool-align[data-align=""] .menu-item-icon { background: none; }
 /* Hangs from the right edge of the field, which is where the button is. */
 .title-align .menu-content { min-width: 0; white-space: nowrap; }
+
+/* Where a band's text or its logo stands (partials/bands.ejs). Built like
+   the alignment chooser above and wearing the same three icons: the
+   vocabulary really is the same one -- left, middle, right -- and a second
+   set of icons for it would only be a second way of saying it. The class
+   is its own all the same, because what is chosen here is a PLACE in a
+   strip and not the alignment of a paragraph. */
+.tool-band-place[data-place="left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
+.tool-band-place[data-place="center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
+.tool-band-place[data-place="right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
+.band-place .menu-content { min-width: 0; white-space: nowrap; }
 input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; }
 .hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 
@@ -2223,6 +2239,60 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* The last word of the dialog, and the smallest: it applies to everything
    above it. */
 .prefs-scope { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+/* --- Header and footer ------------------------------------------------ */
+/* The dialog behind the button in the editor's header (partials/bands.ejs,
+   js/editor/bands.js). One box per band, and inside it the three things a
+   band holds. Almost everything here is already in the form -- a field
+   with a chooser at its end, the small grey box label -- so what is left
+   is the logo's row. */
+/* The boxes keep the form's own spacing: a .fieldset carries 21px above it
+   for the small grey word that hangs over its top border, and a margin of
+   its own here would pull that word down onto the box before it. */
+/* The logo: what is chosen, and the two buttons plus the place chooser
+   beside it. One row, because that is what it is -- a picture with its
+   handles -- and the chooser at the far end, where the text's own chooser
+   stands one line above it. */
+.band-logo-row { display: flex; align-items: center; gap: 8px; }
+.band-logo-preview {
+  width: 72px;
+  height: 32px;
+  /* The logo keeps its proportions inside that box: it is a mark, and a
+     mark squeezed to a different shape is a different mark. The chequer is
+     the only ground that shows a see-through PNG for what it is. */
+  object-fit: contain;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(45deg, var(--surface) 25%, transparent 25%, transparent 75%, var(--surface) 75%) 0 0 / 10px 10px,
+    linear-gradient(45deg, var(--surface) 25%, transparent 25%, transparent 75%, var(--surface) 75%) 5px 5px / 10px 10px,
+    var(--paper);
+}
+/* "No logo" stands exactly where the picture would, so the row does not
+   jump when one is chosen. */
+.band-logo-none { margin: 0; }
+/* The chooser goes to the right-hand end of the row, away from the two
+   buttons it is not one of. */
+.band-logo-row .band-place { margin-left: auto; }
+.band-logo-row .band-place > summary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.band-logo-row .band-place > summary:hover { border-color: var(--accent); }
+.band-logo-row .band-place[open] > summary { border-color: var(--accent); color: var(--accent); }
+
+/* The two switches at the foot of each band's box: the dividing line and
+   whether the strip is gathered into the middle. Off the logo row above
+   them, which is a row of controls rather than a question. */
+.band-flag { margin-top: 10px; }
+
+/* The two switches in the form that send a band away on one slide
+   (views/editor.ejs). A block of its own under the layout tiles, off them
+   the way the columns switch is. */
+.slide-bands { margin-top: 10px; }
+.slide-bands .switch-line + .switch-line { margin-top: 6px; }
+
 .dialog-fuss { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .upload { display: inline-block; margin-bottom: 12px; }
 .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }

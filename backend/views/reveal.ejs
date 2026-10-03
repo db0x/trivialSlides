@@ -24,6 +24,10 @@
 <script src="<%= BASE %>/reveal-plugin/highlight/highlight.js"></script>
 <script src="<%= BASE %>/static/js/slide-effects.js"></script>
 <script src="<%= BASE %>/static/js/slide-video.js"></script>
+<!-- Takes a header or a footer out of the slide's transition, where the
+     band asked for it (js/slide-bands.js). Not in views/thumb.ejs: a card
+     is one slide standing still and has no transition to stand out of. -->
+<script src="<%= BASE %>/static/js/slide-bands.js"></script>
 <script src="<%= BASE %>/static/js/slide-fit.js"></script>
 <!-- Which keys the presenter's spare button sends. Set in the editor's
      settings dialog, stored per browser, read here. This page has a head of
@@ -271,6 +275,11 @@
         // whether it quiet fits is exactly what changed.
         window.slideFit(fresh);
         if (indices[n.index]) Reveal.slide(indices[n.index][0], indices[n.index][1]);
+        // Last of all: a strip standing still over the slides has to be
+        // told too -- the slide just redrawn may have switched one off --
+        // and it reads which slide is on screen off the document, which
+        // is only settled once the line above has run (js/slide-bands.js).
+        if (window.slideBands) window.slideBands();
       }
     });
   }

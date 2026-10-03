@@ -17,6 +17,7 @@ const REVEAL_DIR = path.join(__dirname, "node_modules", "reveal.js", "dist");
 const SLIDES_CSS = path.join(__dirname, "public", "css", "slides.css");
 const EFFECTS_JS = path.join(__dirname, "public", "js", "slide-effects.js");
 const VIDEO_JS = path.join(__dirname, "public", "js", "slide-video.js");
+const BANDS_JS = path.join(__dirname, "public", "js", "slide-bands.js");
 const FIT_JS = path.join(__dirname, "public", "js", "slide-fit.js");
 const HIGHLIGHT_JS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "highlight.js");
 const HIGHLIGHT_CSS = path.join(REVEAL_DIR, "..", "plugin", "highlight", "monokai.css");
@@ -181,6 +182,10 @@ ${hasCode ? `<script>${read(HIGHLIGHT_JS)}</script>` : ""}
      document that needs a second file next to it. -->
 <script>${read(EFFECTS_JS)}</script>
 <script>${read(VIDEO_JS)}</script>
+<!-- A header or a footer that is not to travel with the slide. It does
+     nothing at all while printing, which is the other thing this document
+     is used for (js/slide-bands.js). -->
+<script>${read(BANDS_JS)}</script>
 <!-- Steps the type down on a slide holding more than fits, the same file
      and therefore the same result as in the editor and on the wall. -->
 <script>${read(FIT_JS)}</script>

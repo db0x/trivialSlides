@@ -1,0 +1,110 @@
+<!-- The two strips that stand the same on every slide: a header along the
+     top edge and a footer along the bottom (backend/bands.js).
+
+     A dialog and not a fourth tab in the form: this belongs to the DECK,
+     like the theme and the transition in the header above it, and the
+     three tabs over there are about the slide in front. It is also a thing
+     one sets once at the start of a talk and then works under, which is
+     exactly what the other dialogs in this editor are for.
+
+     What a band holds is deliberately short -- a line of text, a picture
+     out of the deck's own folder, and where each of the two stands.
+     Anything longer is a slide, and this editor already has eleven ways of
+     making one.
+
+     Driven by js/editor/bands.js. The fields carry no logic in their ids:
+     the band's name sits on the box and the field's name on the field, so
+     a third band would be one line in bands.js on the server and nothing
+     here at all. -->
+<dialog id="bands-dialog" class="dialog">
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('bands.title') %></h2>
+    <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+  </form>
+  <div class="dialog-content">
+    <% bands.forEach(function (which) { %>
+      <fieldset class="fieldset band-box" data-band="<%= which %>">
+        <legend><%= t('bands.' + which) %></legend>
+
+        <!-- The words. One line, and the chooser beside it says which third
+             of the strip they stand in -- the same shape the heading and its
+             alignment have in the form (views/editor.ejs). -->
+        <div class="field">
+          <label class="field-label" for="band-<%= which %>-text"><%= t('bands.text') %></label>
+          <div class="field-row">
+            <input id="band-<%= which %>-text" data-band-field="text"
+                   maxlength="<%= bandTextMax %>"
+                   placeholder="<%= t('bands.textPlaceholder') %>">
+            <details class="menu band-place" data-band-field="textPlace"
+                     data-name="<%= t('bands.textPlace') %>">
+              <summary class="button-icon tool-band-place" data-place="left"
+                       data-tip="<%= t('bands.textPlace') %>"
+                       aria-label="<%= t('bands.textPlace') %>"></summary>
+              <div class="menu-content" role="menu">
+                <% bandPlaces.forEach(function (pl) { %>
+                  <button type="button" class="menu-item tool-band-place" role="menuitemradio"
+                          aria-checked="false" data-place="<%= pl.id %>"><span
+                          class="menu-item-icon" aria-hidden="true"></span><%= pl.name %></button>
+                <% }); %>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- The logo, out of the deck's own folder: the same picker the
+             slides use (#image-dialog), so a picture uploaded for a slide
+             is already here and one uploaded here is already there. The
+             library counts it as used, and because it stands on every slide
+             it is named there by the band rather than by a list of slide
+             numbers (backend/deck.js, imageUses). -->
+        <div class="field">
+          <span class="field-label"><%= t('bands.logo') %></span>
+          <div class="band-logo-row">
+            <img class="band-logo-preview" alt="" hidden>
+            <span class="band-logo-none hint"><%= t('bands.logoNone') %></span>
+            <button type="button" class="button button-small" data-band-action="choose"><%= t('bands.logoChoose') %></button>
+            <button type="button" class="button button-small button-quiet" data-band-action="remove" hidden><%= t('bands.logoRemove') %></button>
+            <details class="menu band-place" data-band-field="logoPlace"
+                     data-name="<%= t('bands.logoPlace') %>">
+              <summary class="button-icon tool-band-place" data-place="right"
+                       data-tip="<%= t('bands.logoPlace') %>"
+                       aria-label="<%= t('bands.logoPlace') %>"></summary>
+              <div class="menu-content" role="menu">
+                <% bandPlaces.forEach(function (pl) { %>
+                  <button type="button" class="menu-item tool-band-place" role="menuitemradio"
+                          aria-checked="false" data-place="<%= pl.id %>"><span
+                          class="menu-item-icon" aria-hidden="true"></span><%= pl.name %></button>
+                <% }); %>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- The two things said about the strip as a whole rather than
+             about one of its pieces (backend/bands.js). Both are worded
+             the positive way round -- "show it", "centre it" -- while the
+             file says the opposite of each (header-no-rule, and nothing at
+             all for the spread arrangement): in front of the slide the
+             question is what one sees, not what has been taken away.
+
+             Switches and not a menu, because neither is a choice between
+             things: the line is there or it is not, and the strip is
+             spread or it is gathered. -->
+        <label class="switch-line band-flag" data-tip="<%= t('bands.ruleHint') %>">
+          <input type="checkbox" class="switch" data-band-flag="noRule" data-band-invert>
+          <span><%= t('bands.rule') %></span>
+        </label>
+        <label class="switch-line band-flag" data-tip="<%= t('bands.centerHint') %>">
+          <input type="checkbox" class="switch" data-band-flag="center">
+          <span><%= t('bands.center') %></span>
+        </label>
+        <label class="switch-line band-flag" data-tip="<%= t('bands.stillHint') %>">
+          <input type="checkbox" class="switch" data-band-flag="still">
+          <span><%= t('bands.still') %></span>
+        </label>
+      </fieldset>
+    <% }); %>
+
+    <p class="hint prefs-scope"><%= t('bands.note') %></p>
+  </div>
+</dialog>

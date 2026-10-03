@@ -9,6 +9,7 @@ const deck = require("../deck");
 const document = require("../document");
 const pdf = require("../pdf");
 const layouts = require("../layouts");
+const bands = require("../bands");
 const render = require("../render");
 const gradients = require("../gradients");
 const effects = require("../effects");
@@ -133,6 +134,11 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
     places: i18n.placesTranslated(layouts.PLACES, req.language),
+    // The two strips that stand on every slide, for the dialog that
+    // manages them (bands.js, partials/bands.ejs).
+    bands: bands.BANDS,
+    bandPlaces: i18n.bandPlacesTranslated(bands.PLACES, req.language),
+    bandTextMax: bands.TEXT_MAX,
     codeLanguages: code.LANGUAGES,
     emoji: i18n.emojiTranslated(emoji.GROUPS, req.language),
     codeStyles: code.STYLES,
@@ -173,9 +179,20 @@ router.put("/d/:slug/deck.json", sameOriginOnly, loadDeck, (req, res) => {
 
 // A single slide as HTML -- so that after every keystroke the preview
 // redraws only what is needed instead of reloading the whole deck.
+// The bands travel with the slide rather than being read off the deck the
+// server holds: they belong to the DECK, and the editor may be a keystroke
+// ahead of the server with them -- so the slide would come back with the
+// strip it had a moment ago (bands.js, js/editor/index.js).
 router.post("/d/:slug/slide.html", sameOriginOnly, loadDeck, (req, res) => {
-  const slide = deck.normalize({ slides: [req.body && req.body.slide] }).slides[0];
-  res.json({ html: render.slideHtml(slide, imageBase(req.slug)) });
+  const model = deck.normalize({
+    header: req.body && req.body.header,
+    footer: req.body && req.body.footer,
+    slides: [req.body && req.body.slide],
+  });
+  res.json({
+    html: render.slideHtml(model.slides[0], imageBase(req.slug),
+      { header: model.header, footer: model.footer }),
+  });
 });
 
 // A single slide as a picture standing still -- what a card in the
@@ -191,7 +208,8 @@ router.get("/d/:slug/thumb/:index", loadDeck, (req, res) => {
   if (!slide) return res.status(404).end();
   res.render("thumb", {
     deck: req.deck,
-    slide: render.slideHtml(slide, imageBase(req.slug)),
+    slide: render.slideHtml(slide, imageBase(req.slug),
+      { header: req.deck.header, footer: req.deck.footer }),
     background: render.backgroundHtml(slide, imageBase(req.slug)),
   });
 });
@@ -277,15 +295,21 @@ router.post("/d/:slug/assets", sameOriginOnly, loadDeck, upload.array("image", 2
 });
 
 // Deleting one, from the library (js/editor/library.js). Only a picture
-// that stands on no slide may go: the library offers the button to nobody
-// else, and this asks again -- against the SAVED file, which is what the
-// folder belongs to. With autosave off the two can disagree for a moment,
-// and the one that has the last word has to be the file, or a save a
-// minute later would put a slide back that points at nothing.
+// nothing points at may go -- no slide and neither of the deck's two
+// bands: the library offers the button to nobody else, and this asks
+// again -- against the SAVED file, which is what the folder belongs to.
+// With autosave off the two can disagree for a moment, and the one that
+// has the last word has to be the file, or a save a minute later would put
+// a slide back that points at nothing.
 router.delete("/d/:slug/assets/:name", sameOriginOnly, loadDeck, (req, res) => {
   const name = req.params.name;
-  const uses = deck.imageUses(req.deck)[name] || [];
-  if (uses.length) return res.status(409).json({ ok: false, used: uses });
+  const use = deck.imageUses(req.deck)[name];
+  // Two ways of being in use and they read differently in the library: a
+  // picture on slide three and seven, and the logo of a band, which stands
+  // on the whole deck at once (deck.js, imageUses).
+  if (deck.imageUsed(use)) {
+    return res.status(409).json({ ok: false, used: use.slides, bands: use.bands });
+  }
   const p = storage.imagePath(req.slug, name);
   if (!p || !fs.existsSync(p)) return res.status(404).json({ ok: false });
   fs.unlinkSync(p);

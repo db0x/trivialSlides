@@ -3,6 +3,7 @@
 // preview cannot look different from the finished talk.
 const { marked } = require("marked");
 const layouts = require("./layouts");
+const bands = require("./bands");
 const code = require("./code");
 const video = require("./video");
 const qr = require("./qr");
@@ -251,6 +252,64 @@ function contrastClass(color) {
   return brightness < DARK_BELOW ? "has-dark-background" : "has-light-background";
 }
 
+// --- The bands ---------------------------------------------------------
+// The two strips that are the same on every slide: a header along the top
+// and a footer along the bottom (bands.js). They are drawn INTO every
+// <section> rather than once over the deck, and that is the whole point of
+// them working everywhere: the editor's preview redraws single slides, a
+// card in the slide list is one slide on a page of its own, and reveal.js'
+// print view puts every slide on a page of its own as well. A strip laid
+// once over the presentation would be in none of those three.
+//
+// What it costs is that the logo's address appears once per slide, and in
+// the standalone document that address is the picture itself
+// (document.js) -- the same price the same picture on five slides has
+// always paid there.
+//
+// Three cells, left, middle and right, and the two pieces placed in them
+// (slides.css). Both in one cell is a case worth having: a logo with the
+// name beside it is a letterhead, and it is what one reaches for first.
+//
+// The two flags the band carries as a whole are written onto the strip and
+// nowhere else, because both of them are the stylesheet's business: whether
+// there is a hairline between the strip and the slide, and whether the
+// three cells spread across the slide or are pulled together into the
+// middle of it. The markup is the SAME either way -- always three cells,
+// always in reading order -- so the places keep saying what stands left of
+// what even once there are no thirds left to stand in.
+function bandHtml(band, name, imageBase) {
+  if (bands.isEmpty(band)) return "";
+  const cells = { left: "", center: "", right: "" };
+  // The logo first, so a logo and a text sharing a cell read as a mark
+  // with words beside it rather than the other way round.
+  if (band.logo) {
+    cells[band.logoPlace] += `<img class="band-logo" src="${esc(imageUrl(band.logo, imageBase))}" alt="">`;
+  }
+  if (band.text) cells[band.textPlace] += `<span class="band-text">${esc(band.text)}</span>`;
+  // Every cell is written, empty ones included: they are what holds the
+  // three columns apart, so a text in the middle stays in the middle
+  // whatever stands beside it.
+  const inner = ["left", "center", "right"]
+    .map((place) => `<span class="band-cell" data-place="${place}">${cells[place]}</span>`)
+    .join("");
+  const flags = (band.center ? ' data-center=""' : "")
+    + (band.noRule ? ' data-rule="none"' : "")
+    // Read by the stylesheet AND by the one script that belongs to the
+    // bands (js/slide-bands.js), which is what takes the strip out of
+    // sight while the slide moves under it.
+    + (band.still ? ' data-still=""' : "");
+  return `<div class="slide-band" data-band="${name}"${flags}>${inner}</div>`;
+}
+
+// Which of the two bands this slide really shows: one the deck has
+// something in, and that the slide has not sent away (deck.js, noHeader /
+// noFooter).
+function bandsOn(slide, deckBands) {
+  const on = deckBands || {};
+  return bands.BANDS.filter((name) =>
+    !bands.isEmpty(on[name]) && !slide[bands.HIDDEN[name].field]);
+}
+
 // --- a single slide ----------------------------------------------------
 // Always the same shape: <section> carries the layout class and the reveal
 // attributes, inside it a .slide-text with title and body and -- depending
@@ -259,7 +318,11 @@ function contrastClass(color) {
 // so that it can stay at the top while the text moves around the player. The arrangement is done
 // entirely by the CSS (public/css/slides.css), not by this module. A layout
 // can therefore be redesigned without touching the renderer.
-function slideHtml(slide, imageBase) {
+// deckBands: the deck's two bands ({ header, footer }, see bands.js). They
+// belong to the deck and not to the slide, so they are handed in rather
+// than read off it -- which is what lets the editor's preview draw a
+// single slide and still show the strips around it.
+function slideHtml(slide, imageBase, deckBands) {
   const layout = layouts.get(slide.layout).id;
   // Whether the slide's own colour runs against the theme's, so the theme
   // can put its type on the right side of it. reveal.js marks the slide
@@ -325,6 +388,13 @@ function slideHtml(slide, imageBase) {
   const split = layouts.hasField(layout, "columnMode")
     && slide.columnMode === layouts.COLUMN_SPLIT;
   if (split) attrs.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+
+  // Which bands this slide carries, named on the <section> so the
+  // stylesheet can keep the room they need free (slides.css). A slide
+  // without any gets no attribute, which is what leaves every deck written
+  // before the bands existed untouched down to the markup.
+  const bandsHere = bandsOn(slide, deckBands);
+  if (bandsHere.length) attrs.push(`data-bands="${bandsHere.join(" ")}"`);
 
   // A full-bleed image is a slide background in reveal.js -- that way
   // reveal handles the scaling and the transition.
@@ -443,7 +513,15 @@ function slideHtml(slide, imageBase) {
     inner = layout === "image-left" ? image + inner : inner + image;
   }
 
-  return `<section ${attrs.join(" ")}>\n${inner}\n</section>`;
+  // The strips go last in the markup and are lifted to the slide's edges
+  // by the stylesheet. Last because they are not what the slide says: a
+  // screen reader reaches the heading and the text first and hears the
+  // company name afterwards, which is the order one would read them in.
+  const strips = bandsHere
+    .map((name) => bandHtml(deckBands[name], name, imageBase))
+    .join("");
+
+  return `<section ${attrs.join(" ")}>\n${inner}${strips}\n</section>`;
 }
 
 // --- the ground a slide stands on --------------------------------------
@@ -497,11 +575,12 @@ function slideGroups(slides) {
 // imageBase: URL prefix the image file name is appended to. A route in the
 // editor and the presentation, the "images/" subfolder in the export.
 function slidesHtml(deck, imageBase) {
+  const deckBands = { header: deck.header, footer: deck.footer };
   return slideGroups(deck.slides)
     .map((group) =>
       group.length === 1
-        ? slideHtml(group[0], imageBase)
-        : `<section>\n${group.map((f) => slideHtml(f, imageBase)).join("\n")}\n</section>`
+        ? slideHtml(group[0], imageBase, deckBands)
+        : `<section>\n${group.map((f) => slideHtml(f, imageBase, deckBands)).join("\n")}\n</section>`
     )
     .join("\n");
 }

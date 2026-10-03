@@ -5,6 +5,7 @@
 //   ---                      <- header (only at the very start of the file)
 //   titel: My talk
 //   theme: white
+//   footer-text: ACME Corp   <- the strips that stand on every slide
 //   ---
 //
 //   <!-- .slide: data-layout="title" -->
@@ -23,6 +24,7 @@
 // round trip preserves everything we do not understand ourselves (see
 // content: the rest of the slide passes through untouched).
 const layouts = require("./layouts");
+const bands = require("./bands");
 const effects = require("./effects");
 const video = require("./video");
 const qr = require("./qr");
@@ -76,8 +78,10 @@ function onlyColor(value) {
 }
 
 // --- Header (frontmatter) ----------------------------------------------
-// Deliberately NOT a YAML parser: the header has exactly three flat fields.
-// A YAML dependency would only need constraining again right away.
+// Deliberately NOT a YAML parser: every field of the header is one flat
+// line -- the three the deck has always had, plus the handful the two bands
+// bring (bands.js). A YAML dependency would only need constraining again
+// right away.
 function parseHead(lines) {
   const head = {};
   if (lines[0] !== undefined && lines[0].trim() === "---") {
@@ -136,6 +140,13 @@ function parseAttrs(line) {
     // Whether the text waits for a click. Also no ifField: every layout
     // has a text box, and reveal.js makes a fragment of it (render.js).
     textFragment: attrs["data-text-fragment"] === ON,
+    // Whether this one slide stands without the deck's bands (bands.js).
+    // No ifField either: a band crosses every layout, so hiding it is a
+    // question every slide can be asked. Written the negative way round
+    // because that is what the slide decides: the deck says what the band
+    // IS, the slide says only that it does not want it.
+    noHeader: attrs["data-no-header"] === ON,
+    noFooter: attrs["data-no-footer"] === ON,
     background: onlyColor(attrs["data-background-color"]),
     textColor: onlyColor(attrs["data-text-color"]),
     // A gradient someone wrote by hand passes through as it stands, as
@@ -189,6 +200,10 @@ function serializeAttrs(slide, immer) {
   // keeps a deck that has never been asked looking untouched in the file.
   if (slide.titleAlign) parts.push(`data-title-align="${slide.titleAlign}"`);
   if (slide.textFragment) parts.push(`data-text-fragment="${ON}"`);
+  // Nothing is written on a slide that shows the bands -- which is every
+  // slide of every deck written before they existed.
+  if (slide.noHeader) parts.push(`data-no-header="${ON}"`);
+  if (slide.noFooter) parts.push(`data-no-footer="${ON}"`);
   if (slide.background) parts.push(`data-background-color="${slide.background}"`);
   if (slide.gradient) parts.push(`data-background-gradient="${slide.gradient}"`);
   if (slide.effect) parts.push(`data-background-effect="${slide.effect}"`);
@@ -230,7 +245,7 @@ const ON = "1";
 
 function parseSlide(text, vertical) {
   const lines = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), textPlace: "", columnMode: "", titleAlign: "", textFragment: false, background: "", textColor: "", gradient: "", effect: "" };
+  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), textPlace: "", columnMode: "", titleAlign: "", textFragment: false, noHeader: false, noFooter: false, background: "", textColor: "", gradient: "", effect: "" };
   let i = 0;
   while (i < lines.length && lines[i].trim() === "") i++;
   if (i < lines.length && ATTR_LINE.test(lines[i])) {
@@ -276,13 +291,24 @@ function parse(md) {
     title: oneLine(head.titel) || "",
     theme: THEMES.includes(head.theme) ? head.theme : "white",
     transition: TRANSITIONS.includes(head.transition) ? head.transition : "slide",
+    // The strips that stand on every slide. Always both, even when the
+    // file says nothing about them: an empty band draws nothing and writes
+    // nothing (bands.js), so the model may hold the pair without the file
+    // ever mentioning it.
+    header: bands.fromHead(head, "header"),
+    footer: bands.fromHead(head, "footer"),
     slides: slides.length ? slides : [newSlide("title")],
   };
 }
 
 // --- Model -> file -----------------------------------------------------
 function serialize(deck) {
-  const head = ["---", `titel: ${oneLine(deck.title)}`, `theme: ${deck.theme}`, `transition: ${deck.transition}`, "---", "", ""];
+  const head = ["---", `titel: ${oneLine(deck.title)}`, `theme: ${deck.theme}`, `transition: ${deck.transition}`]
+    // After the three that have always been there, so a file opened in a
+    // text editor still begins the way it did. A band that says nothing
+    // adds no line at all (bands.js).
+    .concat(bands.toHead(deck.header, "header"), bands.toHead(deck.footer, "footer"))
+    .concat(["---", "", ""]);
   const parts = [];
   (deck.slides || []).forEach((slide, i) => {
     // Heading level by weight of the slide: title and section slides get
@@ -305,11 +331,13 @@ function serialize(deck) {
   return head.join("\n") + parts.join("\n\n") + "\n";
 }
 
-// --- Which slides an image stands on ------------------------------------
-// Two places can name one: the image FIELD of a slide (data-image, and the
-// background of a full-bleed slide, which is the same value), and an image
-// written into the body as Markdown. Both are counted, because deleting a
-// file that one of them points at leaves a hole on the slide either way.
+// --- Where an image stands ----------------------------------------------
+// Three places can name one: the image FIELD of a slide (data-image, and
+// the background of a full-bleed slide, which is the same value), an image
+// written into the body as Markdown, and the logo of one of the deck's two
+// bands (bands.js), which stands on every slide at once. All three are
+// counted, because deleting a file that any of them points at leaves a
+// hole either way.
 //
 // The name is matched the way the renderer resolves it (render.js,
 // imageUrl): the path in front is dropped, an absolute address belongs to
@@ -328,14 +356,26 @@ function imageName(href) {
   return s.replace(/^.*\//, "");
 }
 
-// name -> the numbers of the slides it stands on, counting from 1.
+// name -> where it stands: { slides, bands }. The slides are numbers
+// counting from 1, the bands are the names of the two bands ("header",
+// "footer"). Two lists rather than one, because the two read differently
+// in the library: "slide 3, 7" names places in the deck, a band names the
+// whole of it.
 function imageUses(model) {
   const out = {};
+  const place = (name) => {
+    if (!out[name]) out[name] = { slides: [], bands: [] };
+    return out[name];
+  };
   const add = (name, nr) => {
     if (!name) return;
-    if (!out[name]) out[name] = [];
-    if (out[name][out[name].length - 1] !== nr) out[name].push(nr);
+    const on = place(name).slides;
+    if (on[on.length - 1] !== nr) on.push(nr);
   };
+  bands.BANDS.forEach((which) => {
+    const logo = imageName((model && model[which] && model[which].logo) || "");
+    if (logo) place(logo).bands.push(which);
+  });
   ((model && model.slides) || []).forEach((slide, i) => {
     add(imageName(slide.image), i + 1);
     let hit;
@@ -343,6 +383,12 @@ function imageUses(model) {
     while ((hit = BODY_IMAGE.exec(String(slide.content || "")))) add(imageName(hit[1]), i + 1);
   });
   return out;
+}
+
+// Whether anything at all points at a picture -- asked of one entry of the
+// sum above, where a name that is not in it at all answers no as well.
+function imageUsed(use) {
+  return !!(use && (use.slides.length || use.bands.length));
 }
 
 function newSlide(layout) {
@@ -365,6 +411,8 @@ function newSlide(layout) {
     columnMode: "",
     titleAlign: "",
     textFragment: false,
+    noHeader: false,
+    noFooter: false,
     background: "",
     textColor: "",
     gradient: "",
@@ -381,6 +429,8 @@ function normalize(raw) {
     title: oneLine(deck.title).slice(0, 120),
     theme: THEMES.includes(deck.theme) ? deck.theme : "white",
     transition: TRANSITIONS.includes(deck.transition) ? deck.transition : "slide",
+    header: bands.normalize(deck.header),
+    footer: bands.normalize(deck.footer),
     slides: (slides.length ? slides : [newSlide("title")]).map((f, i) => {
       const layout = layouts.get(f && f.layout).id;
       return {
@@ -412,6 +462,8 @@ function normalize(raw) {
         columnMode: layouts.hasField(layout, "columnMode") ? layouts.onlyColumnMode(f && f.columnMode) : "",
         titleAlign: layouts.onlyTitleAlign(f && f.titleAlign),
         textFragment: !!(f && f.textFragment),
+        noHeader: !!(f && f.noHeader),
+        noFooter: !!(f && f.noFooter),
         background: onlyColor(f && f.background),
         textColor: onlyColor(f && f.textColor),
         // Not truncated but dropped when it does not fit: half a gradient
@@ -424,4 +476,4 @@ function normalize(raw) {
   };
 }
 
-module.exports = { parse, serialize, normalize, newSlide, imageUses, isGradient, THEMES, TRANSITIONS, GRADIENT_PATTERN, GRADIENT_MAX, TEXT_FRAGMENT_ON: ON };
+module.exports = { parse, serialize, normalize, newSlide, imageUses, imageUsed, isGradient, THEMES, TRANSITIONS, GRADIENT_PATTERN, GRADIENT_MAX, TEXT_FRAGMENT_ON: ON };

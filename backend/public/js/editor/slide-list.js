@@ -167,7 +167,11 @@ function setThumb(li, deck, slide, index, saved) {
 var NO_TITLE = "\u0000";
 
 function mark(deck, slide) {
-  var parts = [deck.theme];
+  // The deck's share of what a card shows: its theme, and the two strips
+  // that stand on every slide (js/editor/bands.js). Both belong in here --
+  // a footer given a new word changes every picture in the list, and
+  // without the word in the mark not one of them would be fetched again.
+  var parts = [deck.theme, bandMark(deck.header), bandMark(deck.footer)];
   Object.keys(slide).sort().forEach(function (key) {
     var value = slide[key];
     if (key === "title") return parts.push("title=" + (value == null ? NO_TITLE : value));
@@ -175,6 +179,20 @@ function mark(deck, slide) {
     parts.push(key + "=" + value);
   });
   return hash(parts.join("\n"));
+}
+
+// A band in one short string, read in a fixed order for the same reason
+// the slide's fields are: the model comes back from the server built
+// afresh on every save, and a field in another position must not make
+// every picture in the list look new.
+function bandMark(band) {
+  if (!band) return "";
+  // Everything that changes what a card SHOWS, and nothing else: whether
+  // the strip travels with the slide through a transition is left out on
+  // purpose. A card is one slide standing still, so that one would fetch
+  // every picture in the list again to draw exactly the same thing.
+  return [band.text, band.logo, band.textPlace, band.logoPlace,
+    band.noRule, band.center].join("|");
 }
 
 // Not a checksum and not meant to be one: enough that two different slides

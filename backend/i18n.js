@@ -70,6 +70,10 @@ const FOR_BROWSER = [
   // so every word in them is put together here (js/editor/library.js).
   "library.unused", "library.usedOn", "library.delete",
   "library.deleteConfirm", "library.deleteUsed", "library.deleteFailed",
+  "library.deleteUsedBand",
+  // A picture may be the logo of one of the two bands, and then the
+  // library names the band rather than a list of slides (bands.js).
+  "bands.header", "bands.footer",
 ];
 
 function forBrowser(language) {
@@ -108,6 +112,13 @@ function textSidesTranslated(sides, language) {
   }));
 }
 
+// The three places a band's text or logo may stand in (bands.js) -- ids
+// there, words here. The same shape as the places above, because the
+// editor's menus are built from both the same way.
+function bandPlacesTranslated(places, language) {
+  return places.map((id) => ({ id, name: translate(language, "bandPlace." + id) }));
+}
+
 // The nine places a text box may take on a full-bleed picture
 // (layouts.js) -- ids there, words here. The words are not written on the
 // buttons, which are a map rather than a list; they are what the tooltip
@@ -144,4 +155,4 @@ function middleware(req, res, next) {
   next();
 }
 
-module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, placesTranslated, emojiTranslated, COOKIE, DEFAULT };
+module.exports = { middleware, translate, languages, forBrowser, layoutsTranslated, gradientsTranslated, effectsTranslated, textSidesTranslated, placesTranslated, bandPlacesTranslated, emojiTranslated, COOKIE, DEFAULT };
