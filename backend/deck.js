@@ -245,7 +245,16 @@ const ON = "1";
 
 function parseSlide(text, vertical) {
   const lines = text.split("\n");
-  let attrs = { layout: layouts.DEFAULT_LAYOUT, image: "", source: "", video: "", textSide: layouts.defaultSide(layouts.DEFAULT_LAYOUT), url: "", qrColor: "", qrBackground: "", qrTextColor: "", textWidth: layouts.defaultWidth(layouts.DEFAULT_LAYOUT), textPlace: "", columnMode: "", titleAlign: "", textFragment: false, noHeader: false, noFooter: false, background: "", textColor: "", gradient: "", effect: "" };
+  // A slide with no attribute line at all gets what parseAttrs makes of an
+  // empty one, rather than a list written out a second time here. That is
+  // not tidiness: the two lists HAD drifted apart, and this one handed a
+  // plain text slide a text side and a text width that its layout has no
+  // field for. normalize() cleared them again on the way to the server,
+  // so the slide came back looking different for no reason -- and the
+  // editor's slide list, which tells one picture from another by exactly
+  // such a comparison (js/editor/slide-list.js, mark), fetched those cards
+  // afresh after the first save of every session.
+  let attrs = parseAttrs("");
   let i = 0;
   while (i < lines.length && lines[i].trim() === "") i++;
   if (i < lines.length && ATTR_LINE.test(lines[i])) {

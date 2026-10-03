@@ -1944,12 +1944,14 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   overflow: hidden;
   min-width: 340px;
   min-height: 220px;
-  /* It is dragged around now, so it should look like something lying on
-     the page rather than set into it. */
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28);
 }
-/* Moved aside, this dialog is meant to be worked in WHILE the preview
-   behind it is watched -- and the usual veil would leave that preview
+/* --- A dialog that stands beside the preview --------------------------- */
+/* Two of them: the deck as Markdown and the deck's two bands. Both are
+   dragged aside and worked in WHILE the preview behind them is watched
+   (js/editor/dialog-aside.js), and both want the same two things of a
+   <dialog> that neither gets by itself.
+
+   The first is a lighter veil -- the usual one would leave the preview
    under 45% of black. Light enough to see the page through, dark enough to
    say that everything under it is out of reach for now. The page stays
    inert either way; the form and the file must not be written at once.
@@ -1962,10 +1964,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    what is excluded is not painted. Where the rectangle is can only be
    known while the page is running, so it arrives as four custom
    properties on the dialog; a backdrop inherits from the element it
-   belongs to (js/editor/deck-source.js). Zero by default, which cuts
+   belongs to (js/editor/dialog-aside.js). Zero by default, which cuts
    nothing -- so a browser that never runs the script gets the whole veil
    rather than none of it. */
-#deck-source-dialog::backdrop {
+.dialog-aside::backdrop {
   background: rgba(0, 0, 0, 0.12);
   -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
   mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
@@ -1980,8 +1982,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 /* The head is the handle. Its buttons keep the arrow -- a drag that began
    on "Apply" would be a press that never arrives. */
-#deck-source-dialog .dialog-head { cursor: move; user-select: none; }
-#deck-source-dialog .dialog-head button { cursor: pointer; }
+.dialog-aside .dialog-head { cursor: move; user-select: none; }
+.dialog-aside .dialog-head button { cursor: pointer; }
+/* Lying on the page rather than set into it, because it is moved about. */
+.dialog-aside { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.28); }
 /* The source lies on the quieter surface rather than on the dialog's own
    paper -- which leaves the paper free to mean something: the one block
    the mouse is over. Both tokens turn over with the palette, so in the

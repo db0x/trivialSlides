@@ -87,8 +87,20 @@
     function follow() {
       var slide = current();
       stands.forEach(function (stand) {
-        var here = !!(slide && slide.querySelector('.slide-band[data-band="' + stand.name + '"]'));
+        var band = slide && slide.querySelector('.slide-band[data-band="' + stand.name + '"]');
+        var here = !!band;
         var layout = slide && slide.dataset.layout ? " layout-" + slide.dataset.layout : "";
+        // What the strip SAYS, taken from the slide afresh. On the wall
+        // this never changes -- a band is the same on every slide, which
+        // is the whole premise -- and the comparison costs nothing. In the
+        // editor it is the point: the dialog that holds the band is worked
+        // in while the preview is watched, and the preview answers by
+        // redrawing the one slide (js/editor/bands.js). Without this the
+        // standing copy would still be showing what was typed a minute
+        // ago.
+        if (band && stand.holder.firstChild.outerHTML !== band.outerHTML) {
+          stand.holder.replaceChild(band.cloneNode(true), stand.holder.firstChild);
+        }
         // Written rather than added to, so the layout of the slide before
         // goes with it. Only reveal's own state classes are left out:
         // present and past say where a SLIDE is in the talk, and the strip

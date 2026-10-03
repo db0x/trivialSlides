@@ -12,11 +12,16 @@
      Anything longer is a slide, and this editor already has eleven ways of
      making one.
 
+     It is dragged aside like the source dialog, and the preview behind it
+     is kept out of its veil (js/editor/dialog-aside.js): what one writes
+     in here shows on every slide, so one wants to watch a slide while
+     writing it. Where it was put is remembered per browser.
+
      Driven by js/editor/bands.js. The fields carry no logic in their ids:
      the band's name sits on the box and the field's name on the field, so
      a third band would be one line in bands.js on the server and nothing
      here at all. -->
-<dialog id="bands-dialog" class="dialog">
+<dialog id="bands-dialog" class="dialog dialog-aside">
   <form method="dialog" class="dialog-head">
     <h2><%= t('bands.title') %></h2>
     <button class="button button-quiet" value="close"><%= t('dialog.close') %></button>

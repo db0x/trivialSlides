@@ -18,6 +18,7 @@
 // so applying is a deliberate act; what runs while typing is the check
 // (check.js), and until it is quiet, applying stays shut.
 import { $, $$, t, schreibHead, verzoegert } from "./base.js";
+import { setupAside } from "./dialog-aside.js";
 
 // An object rather than five arguments in a row: base is the deck's
 // address, flush settles what the delayed save still owes, adopt hands a
@@ -321,8 +322,7 @@ export function setupDeckSource(parts) {
     showFindings([]);
     drawButtons();
     dialog.showModal();
-    restore();
-    clearPreview();
+    aside.opened();
     Promise.resolve(flush())
       .then(function () { return fetch(base + "/source.html"); })
       .then(function (r) {
@@ -368,118 +368,16 @@ export function setupDeckSource(parts) {
     render(saved);
   });
 
-  // --- The hole in the veil ---------------------------------------------
-  // Where the preview stands, written down for the backdrop to cut out of
-  // itself (app.css). A colour judged through a veil is judged wrongly,
-  // and judging colours is what the preview is for.
-  //
-  // Measured rather than assumed, and measured again whenever it can have
-  // moved: the frame changes shape with the format chooser beside it, and
-  // with the window.
-  function clearPreview() {
-    if (!frame) return;
-    var box = frame.getBoundingClientRect();
-    dialog.style.setProperty("--clear-x", Math.round(box.left) + "px");
-    dialog.style.setProperty("--clear-y", Math.round(box.top) + "px");
-    dialog.style.setProperty("--clear-w", Math.round(box.width) + "px");
-    dialog.style.setProperty("--clear-h", Math.round(box.height) + "px");
-  }
-
-  if (frame && window.ResizeObserver) new ResizeObserver(clearPreview).observe(frame);
-  window.addEventListener("resize", clearPreview);
-
-  // --- Where the dialog stands, and how big -----------------------------
-  // A dialog the browser centres sits over the very preview it is meant to
-  // be watched beside. So it can be dragged by its head and pulled at its
-  // corner, and where it was put is remembered per browser, like the other
-  // things that are set once and then forgotten (js/theme.js and
-  // neighbours).
-  var BOX = "trivialslides:source-box";
-  var GRIP = 18;   // the corner the browser puts its resizer in
-
-  function keep() {
-    var box = dialog.getBoundingClientRect();
-    try {
-      localStorage.setItem(BOX, JSON.stringify({
-        left: Math.round(box.left), top: Math.round(box.top),
-        width: Math.round(box.width), height: Math.round(box.height),
-      }));
-    } catch (e) { /* private window, storage blocked */ }
-  }
-
-  function between(value, low, high) {
-    return Math.max(low, Math.min(value, high));
-  }
-
-  // Taking the dialog over from the browser: from here on it is placed by
-  // hand, so the centring margin has to go and the height has to be a
-  // number -- a max-height would otherwise refuse every pull past it.
-  function takeOver() {
-    if (dialog.dataset.placed) return;
-    var box = dialog.getBoundingClientRect();
-    dialog.dataset.placed = "1";
-    dialog.style.margin = "0";
-    dialog.style.maxHeight = "none";
-    dialog.style.left = box.left + "px";
-    dialog.style.top = box.top + "px";
-    dialog.style.width = box.width + "px";
-    dialog.style.height = box.height + "px";
-  }
-
-  // Back where it was last left, as far as the window still allows: a box
-  // remembered on a wide screen must not put the dialog off a narrow one.
-  function restore() {
-    var box;
-    try { box = JSON.parse(localStorage.getItem(BOX)); } catch (e) { box = null; }
-    if (!box) return;
-    var width = Math.min(box.width, window.innerWidth - 16);
-    var height = Math.min(box.height, window.innerHeight - 16);
-    dialog.dataset.placed = "1";
-    dialog.style.margin = "0";
-    dialog.style.maxHeight = "none";
-    dialog.style.width = width + "px";
-    dialog.style.height = height + "px";
-    dialog.style.left = between(box.left, 0, window.innerWidth - width) + "px";
-    dialog.style.top = between(box.top, 0, window.innerHeight - height) + "px";
-  }
-
-  // Pulling at the corner is the browser's own resizer (CSS resize) -- all
-  // this does is get out of its way in time and write down the result.
-  var grabbed = null;
-  dialog.addEventListener("pointerdown", function (ev) {
-    var box = dialog.getBoundingClientRect();
-    if (ev.clientX < box.right - GRIP || ev.clientY < box.bottom - GRIP) return;
-    takeOver();
-    grabbed = [dialog.offsetWidth, dialog.offsetHeight];
-  });
-  window.addEventListener("pointerup", function () {
-    if (!grabbed) return;
-    if (dialog.offsetWidth !== grabbed[0] || dialog.offsetHeight !== grabbed[1]) keep();
-    grabbed = null;
-  });
-
-  // Dragging by the head. Not from the buttons in it -- a drag that began
-  // on "Apply" would be a press that never arrives.
-  var carry = null;
-  var head = $(".dialog-head", dialog);
-  head.addEventListener("pointerdown", function (ev) {
-    if (ev.button !== 0 || ev.target.closest("button, input, a, textarea")) return;
-    takeOver();
-    var box = dialog.getBoundingClientRect();
-    carry = { x: ev.clientX - box.left, y: ev.clientY - box.top, w: box.width, h: box.height };
-    head.setPointerCapture(ev.pointerId);
-    ev.preventDefault();
-  });
-  head.addEventListener("pointermove", function (ev) {
-    if (!carry) return;
-    dialog.style.left = between(ev.clientX - carry.x, 0, window.innerWidth - carry.w) + "px";
-    dialog.style.top = between(ev.clientY - carry.y, 0, window.innerHeight - carry.h) + "px";
-  });
-  head.addEventListener("pointerup", function (ev) {
-    if (!carry) return;
-    carry = null;
-    head.releasePointerCapture(ev.pointerId);
-    keep();
+  // --- Standing beside the preview --------------------------------------
+  // Dragged by its head, pulled at its corner, put back where it was left,
+  // and the preview kept out of its veil -- all of it the same for the
+  // other dialog that is worked in while the preview is watched
+  // (js/editor/dialog-aside.js). Pullable, because what this one shows is
+  // a file and how much of it one can see is the whole point.
+  var aside = setupAside(dialog, {
+    key: "trivialslides:source-box",
+    frame: frame,
+    resizable: true,
   });
 
   // Escape closes a dialog, and here it would close it over unapplied

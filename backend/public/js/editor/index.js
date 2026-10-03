@@ -33,6 +33,11 @@ var sourceMode = false; // shows the current slide as Markdown
 var schmutzig = false;
 var ungesichert = false;
 var autosaveOn = window.autosave ? window.autosave.read() : true;
+// Whether the dialog for the deck's two bands is open. It is the one place
+// in this editor where a change touches every slide at once, which is the
+// one case the slide list's pictures must not be redrawn for -- see
+// saveNow() below.
+var bandsOpen = false;
 
 var el = {
   list: $("#slide-list"),
@@ -158,7 +163,13 @@ function saveNow(toFile) {
       // the list moves and only a slide that really looks different is
       // fetched again (js/editor/slide-list.js).
       drawList(el.list, deck, active, layoutsById);
-      drawPictures(el.list, deck);
+      // Except while the bands are being written. A header or a footer
+      // stands on EVERY slide, so every card in the list really does look
+      // different after every keystroke in that dialog -- and every card
+      // is a page in a frame, so all of them would blink, once a second,
+      // for as long as one types. They are worth exactly one round, and
+      // that round is on the way out (js/editor/bands.js).
+      if (!bandsOpen) drawPictures(el.list, deck);
       drawSaveState();
     })
     .catch(function (e) {
@@ -1620,11 +1631,24 @@ setupBands({
     // whose footer has just been emptied has nothing left to hide.
     drawSlideBands(deck.slides[active] || {});
   },
+  opened: function () { bandsOpen = true; },
   // A band changed, so every slide looks different: the whole preview is
-  // rebuilt and every card in the list fetched again.
-  closed: function () { structureChanged(); },
+  // rebuilt and every card in the list fetched again -- once, here, rather
+  // than after every keystroke while the dialog stood open.
+  // untouched: the dialog was only looked into. The flag still has to come
+  // off -- the pictures are held back by it -- but there is nothing to
+  // save and nothing to rebuild.
+  closed: function (untouched) {
+    bandsOpen = false;
+    if (untouched) return;
+    structureChanged();
+  },
   chooseLogo: askForImage,
   imageUrl: imageUrl,
+  // The box the preview stands in. The dialog is dragged aside and this
+  // is the one piece of the page its veil is kept off -- the same as for
+  // the source dialog below.
+  frame: $(".preview-frame"),
 });
 
 // --- F5 starts the talk ------------------------------------------------

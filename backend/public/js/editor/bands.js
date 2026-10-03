@@ -11,6 +11,7 @@
 // dialog never fetches and never saves by itself; otherwise there would be
 // a second way to the server beside the one in index.js.
 import { $, $$ } from "./base.js";
+import { setupAside } from "./dialog-aside.js";
 
 // Both ends of one word: the file writes "no header" on a slide, the form
 // asks whether the header is shown. Said here, once, so the two cannot
@@ -145,6 +146,20 @@ export function setupBands(options) {
     });
   });
 
+  // --- Standing beside the preview --------------------------------------
+  // Dragged by its head and put back where it was left, with the preview
+  // kept out of its veil (js/editor/dialog-aside.js). Both matter more
+  // here than anywhere else in this editor: what is written in this dialog
+  // stands on EVERY slide, so one writes it while watching a slide.
+  //
+  // Not pullable at the corner, unlike the source dialog: this one holds a
+  // handful of fields and a wider box would only make them wider.
+  var aside = setupAside(dialog, {
+    key: "trivialslides:bands-box",
+    frame: options.frame,
+    resizable: false,
+  });
+
   // --- Opening and closing ---------------------------------------------
   openButton.addEventListener("click", function () {
     // Drawn on the way in and not on every save: the server normalises
@@ -154,6 +169,11 @@ export function setupBands(options) {
     draw();
     touched = false;
     dialog.showModal();
+    aside.opened();
+    // The editor stops redrawing the pictures in its slide list while this
+    // stands open: a band is on every slide, so every one of them would be
+    // fetched again after every keystroke (js/editor/index.js).
+    options.opened();
   });
 
   // A band stands on every slide, so a change to one changes all of them.
@@ -163,9 +183,14 @@ export function setupBands(options) {
   // preview is rebuilt, which is also what settles the pictures in the
   // slide list.
   dialog.addEventListener("close", function () {
-    if (!touched) return;
+    // Said on the way out whatever happened: the editor holds back the
+    // pictures in its slide list while this is open, and a dialog that was
+    // merely looked into must not leave them held back for good. Which
+    // round of work follows is options.closed's own business -- it does
+    // nothing at all if nothing was touched.
+    if (!touched) { options.closed(true); return; }
     touched = false;
-    options.closed();
+    options.closed(false);
   });
 
   return { draw: draw };
