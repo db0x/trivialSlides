@@ -257,17 +257,54 @@ const DEFAULT_LAYOUT = "text";
 
 const byId = new Map(LAYOUTS.map((l) => [l.id, l]));
 
+// --- The names these layouts used to have -------------------------------
+// This project wrote its layout ids in German until they were renamed with
+// everything else that is code. A deck written before that says
+// data-layout="bild-voll", and without this it would be an unknown name --
+// which falls back to "text", and a text slide has no field for an image.
+// The slide would not merely lose its arrangement, it would lose its
+// PICTURE, and the next save would make that permanent.
+//
+// So the old names are still read. Nothing writes them: serialize puts the
+// current id down, so a deck repairs itself the first time it is saved,
+// and this table only ever has to grow if something is renamed again.
+//
+// The three attributes that are still German are a different matter and
+// stay as they are -- data-quelle, data-textseite, data-textbreite are the
+// keys in the FILE, and the file format does not change because the code
+// around it is in English.
+const RENAMED = {
+  titel: "title",
+  abschnitt: "section",
+  spalten: "columns",
+  "spalten-drei": "columns-three",
+  "bild-rechts": "image-right",
+  "bild-links": "image-left",
+  "bild-voll": "image-full",
+  zitat: "quote",
+};
+
+// What a name used to belong to, or "" -- for the check, which has to tell
+// a name that is merely OLD from one that is wrong: the first is rewritten
+// on saving and costs nothing, the second costs the slide its arrangement
+// (check.js).
+function renamedTo(id) {
+  const old = String(id || "");
+  return Object.prototype.hasOwnProperty.call(RENAMED, old) ? RENAMED[old] : "";
+}
+
 // Unknown layout names (hand-written Markdown, an older deck) fall back to
 // "text" instead of swallowing the slide.
 function get(id) {
-  return byId.get(String(id || "")) || byId.get(DEFAULT_LAYOUT);
+  const name = String(id || "");
+  return byId.get(name) || byId.get(renamedTo(name)) || byId.get(DEFAULT_LAYOUT);
 }
 
 function hasField(id, field) {
   return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, get, hasField,
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, get, hasField,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
   WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
   COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,

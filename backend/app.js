@@ -11,6 +11,7 @@ const path = require("path");
 const express = require("express");
 const { BASE, PORT, PUBLIC_URL, VERSION } = require("./config");
 const pdf = require("./pdf");
+const ai = require("./ai");
 const storage = require("./storage");
 const i18n = require("./i18n");
 
@@ -73,5 +74,13 @@ app.listen(PORT, () => {
   // whoever clicks "PDF". Everything else keeps working without it.
   if (!pdf.browserPath()) {
     console.log("Note: no browser found, so PDF export is unavailable. Set BROWSER_PATH if yours lives elsewhere.");
+  }
+  // The same courtesy for the one feature that needs a key: said once at
+  // startup rather than discovered by looking for a button that is not
+  // there. Without it the editor is exactly what it has always been.
+  if (ai.available()) {
+    console.log(`Building a deck from a prompt is available: ${ai.describe()}.`);
+  } else {
+    console.log(`Note: building a deck from a prompt is unavailable -- ${ai.missing()}. Everything else is unaffected.`);
   }
 });

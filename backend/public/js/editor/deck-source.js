@@ -388,4 +388,67 @@ export function setupDeckSource(parts) {
   dialog.addEventListener("cancel", function (ev) {
     if (dirty) ev.preventDefault();
   });
+
+  // --- A file that is not on disk ---------------------------------------
+  // A deck a model has just written (js/editor/ai.js) is shown here and
+  // nowhere else, and that is the whole safety of that feature: it arrives
+  // as TEXT, in the view that colours it, cuts it into slides and runs the
+  // check over it -- and it leaves through the same button as one's own
+  // typing, which saves nothing while anything is wrong.
+  //
+  // It is shown as UNAPPLIED work, which is what it is. So "Discard" is
+  // what throws the suggestion away, and it goes back to the saved file --
+  // which is why that file is fetched first even though nobody is going to
+  // look at it. Two requests after half a minute of writing is nothing.
+  function show(text) {
+    say(t("source.loading"));
+    dirty = false;
+    showFindings([]);
+    drawButtons();
+    if (!dialog.open) {
+      dialog.showModal();
+      aside.opened();
+    }
+    return Promise.resolve(flush())
+      .then(function () { return fetch(base + "/source.html"); })
+      .then(function (r) {
+        if (!r.ok) throw new Error("Status " + r.status);
+        return r.text();
+      })
+      .then(function (html) {
+        saved = html;
+        return fetch(base + "/source.html", {
+          method: "POST",
+          headers: schreibHead({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ text: text }),
+        });
+      })
+      .then(function (r) {
+        if (!r.ok) throw new Error("Status " + r.status);
+        return r.json();
+      })
+      .then(function (answer) {
+        // Markup from our own server, where the text was escaped
+        // (source.js) -- the same path the saved file takes above.
+        render(answer.html);
+        // Unapplied from this moment: the buttons to apply it and to throw
+        // it away are the point of showing it at all.
+        dirty = true;
+        drawButtons();
+        return ask(false);
+      })
+      .then(function (answer) {
+        showFindings(answer.findings);
+        recolour(answer.blocks);
+        drawButtons();
+        return answer.findings;
+      })
+      .catch(function (e) {
+        console.error(e);
+        say(t("source.failed"), "is-error");
+        return [];
+      });
+  }
+
+  return { show: show };
 }

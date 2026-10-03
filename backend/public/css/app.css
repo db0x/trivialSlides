@@ -2297,6 +2297,95 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .slide-bands { margin-top: 10px; }
 .slide-bands .switch-line + .switch-line { margin-top: 6px; }
 
+/* --- A deck from a prompt (partials/ai.ejs) ---------------------------- */
+/* Same place in the header as the file and the strips: the third thing
+   there that works on the whole deck. Same no-second-margin rule as its
+   two neighbours, or the group on the right tears apart. */
+.header-ai { --button-icon: url(../assets/ai.svg); }
+.head > .header-ai { margin-left: 0; }
+
+/* The other way to start a talk, beside the plus on the overview
+   (views/index.ejs). The same circle as its neighbour, with the same mask
+   treatment -- the icon file has a fill of its own and would otherwise
+   stay dark grey against the dark palette. */
+.deck-compose-zeichen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.deck-compose-zeichen::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: url(../assets/ai.svg) center / contain no-repeat;
+  mask: url(../assets/ai.svg) center / contain no-repeat;
+}
+
+/* The dialog that builds one. Wider than the narrow one beside it, because
+   the material goes in here and a field one pastes a page of notes into
+   should not be a slot. */
+#ai-new-dialog { width: min(680px, 94vw); }
+
+/* The files brought along. The two buttons are <label>s around a hidden
+   file input -- which is what makes a file picker look like the rest of
+   this editor instead of like 1998. */
+.ai-files-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-files {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.ai-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+/* The name takes the room, the button sits at the end -- and a long file
+   name is cut rather than pushing the button off the dialog. */
+.ai-files li > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The file as it is being written. Monospace and small, because this is a
+   file and not prose, and bounded in height: it grows for half a minute,
+   and a dialog that grew with it would walk off the screen. It scrolls
+   itself to the last line (js/editor/ai.js) -- what is being written is the
+   only interesting part of it. */
+.ai-stream {
+  max-height: 180px;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  /* A file's lines are long and this box is narrow: wrapped, so nothing
+     has to be scrolled sideways to be read. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+.ai-state { margin: 10px 0 0; min-height: 1.2em; font-size: 13px; color: var(--muted); }
+.ai-state.is-error { color: var(--danger); }
+
 .dialog-fuss { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .upload { display: inline-block; margin-bottom: 12px; }
 .image-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }

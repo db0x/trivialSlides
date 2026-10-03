@@ -1,0 +1,83 @@
+<!-- A deck built from material, on the page where decks begin.
+     (backend/ai.js, js/overview-ai.js)
+
+     Here and not in the editor, because that is where it belongs: building
+     a talk out of notes is an act of CREATING one, like the button it
+     stands beside -- not something one does from inside a talk that
+     already exists. The editor keeps the other half of the job, which is
+     changing a deck that is already there.
+
+     The order of events is the reason this is a dialog that goes on
+     working rather than a form that posts: the deck is created first, so
+     that there is something to write into and somewhere to send the
+     answer; then the model writes for half a minute, which the plain form
+     beside it would have to spend as a white page.
+
+     Rendered only where a key is configured. -->
+<dialog id="ai-new-dialog" class="dialog">
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('ai.newTitle') %></h2>
+    <span class="dialog-head-buttons">
+      <button type="button" id="ai-new-start" class="button button-haupt"><%= t('ai.start') %></button>
+      <button type="button" id="ai-new-stop" class="button" hidden><%= t('ai.cancel') %></button>
+      <button id="ai-new-close" class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+    </span>
+  </form>
+  <div class="dialog-content">
+
+    <div class="field">
+      <label class="field-label" for="ai-new-name"><%= t('dialog.title') %></label>
+      <input id="ai-new-name" maxlength="120" autocomplete="off"
+             placeholder="<%= t('ai.newNamePlaceholder') %>">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="ai-new-prompt"><%= t('ai.prompt') %></label>
+      <textarea id="ai-new-prompt" rows="3" maxlength="<%= aiPromptMax %>"
+                placeholder="<%= t('ai.promptPlaceholder') %>"></textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="ai-new-material"><%= t('ai.material') %></label>
+      <textarea id="ai-new-material" rows="10" maxlength="<%= aiMaterialMax %>"
+                placeholder="<%= t('ai.materialPlaceholder') %>"></textarea>
+      <p class="hint"><%= t('ai.materialHint') %></p>
+    </div>
+
+    <!-- The two kinds of file somebody has when they start a talk, and
+         they are treated as the different things they are.
+
+         A PICTURE belongs on a slide. It goes into the deck's folder, the
+         model is told its name, and it is SHOWN the picture as well, so it
+         can put the screenshot of the dashboard on the slide about the
+         dashboard rather than guessing from a file name
+         (backend/ai.js, LOOK_MAX).
+
+         A PDF is source. Nothing of it is kept: its text is pulled out on
+         the server and lands in the material field above, where it can be
+         read and shortened before any of it is sent
+         (backend/pdf-text.js). -->
+    <div class="field">
+      <span class="field-label"><%= t('ai.files') %></span>
+      <div class="ai-files-row">
+        <label class="button button-small">
+          <%= t('ai.addPictures') %>
+          <input id="ai-new-pictures" type="file" accept="image/*" multiple hidden>
+        </label>
+        <% if (aiPdf) { %>
+          <label class="button button-small">
+            <%= t('ai.addPdf') %>
+            <input id="ai-new-pdf" type="file" accept="application/pdf" multiple hidden>
+          </label>
+        <% } %>
+      </div>
+      <ul id="ai-new-files" class="ai-files" data-look-max="<%= aiLookMax %>" hidden></ul>
+      <p class="hint"><%= t('ai.filesHint', { n: aiLookMax }) %></p>
+    </div>
+
+    <pre id="ai-new-stream" class="ai-stream" hidden aria-live="off"></pre>
+    <p id="ai-new-state" class="ai-state" role="status"></p>
+
+    <p class="hint prefs-scope"><%= t('ai.newNote') %></p>
+  </div>
+</dialog>

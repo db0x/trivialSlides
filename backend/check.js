@@ -268,6 +268,14 @@ function checkAttrs(line, at, slide, images, add) {
     // What the file says against what deck.js made of it. Equal means the
     // value survived; anything else was dropped, repaired or cut.
     if (String(slide[rule.field]) === p.value.trim()) return;
+    // Except for a layout that merely carries the name it had before this
+    // project renamed its ids (layouts.js). Nothing is lost there -- the
+    // slide is read as what it always was and saving writes the current
+    // name -- so this is worth saying, but not in the words used for a
+    // name that is simply wrong.
+    if (rule.field === "layout" && layouts.renamedTo(p.value.trim()) === slide.layout) {
+      return add(at, "check.layoutRenamed", { value: p.value.trim(), name: slide.layout });
+    }
     if (rule.field === "url" && slide.url === "https://" + p.value.trim()) {
       return add(at, "check.urlScheme", { value: p.value });
     }
@@ -354,4 +362,9 @@ function check(text, images) {
   return findings.sort((a, b) => a.line - b.line);
 }
 
-module.exports = { check };
+// The two tables travel on to ai-format.js, which writes the format out as
+// a document for a model: ATTRIBUTES is the only complete list of what the
+// reader understands, and FLAGS says which of them are a yes or a no. Named
+// a second time over there, that document would be wrong the first time a
+// layout gains a field -- and nothing would say so.
+module.exports = { check, ATTRIBUTES, FLAGS };
