@@ -6,7 +6,6 @@ footer-text: trivialSlides
 footer-logo: trivialslides.svg
 footer-logo-place: left
 footer-no-rule: 1
-footer-still: 1
 ---
 
 <!-- .slide: data-layout="title" data-no-footer="1" data-background-gradient="linear-gradient(160deg, #0b3d4c 0%, #2b3a55 100%)" data-text-color="#ffffff" -->

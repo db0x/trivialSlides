@@ -328,7 +328,5 @@
   "bands.rule": "Show the dividing line",
   "bands.ruleHint": "The hairline between the band and the slide. Off, only the line goes — the room the band takes stays the same.",
   "bands.center": "Centre the whole band",
-  "bands.centerHint": "Logo and text stand together in the middle of the slide instead of each in its own third. The two places then say what stands left of what.",
-  "bands.still": "Keep still through the transition",
-  "bands.stillHint": "The band otherwise travels with the slide through its transition. Keeping it still means it is taken out of sight while the slide moves and faded back in quickly afterwards — it sits in the box that moves and cannot stand still any other way. With the transition set to “none” the switch changes nothing."
+  "bands.centerHint": "Logo and text stand together in the middle of the slide instead of each in its own third. The two places then say what stands left of what."
 }

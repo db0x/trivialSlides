@@ -293,11 +293,7 @@ function bandHtml(band, name, imageBase) {
     .map((place) => `<span class="band-cell" data-place="${place}">${cells[place]}</span>`)
     .join("");
   const flags = (band.center ? ' data-center=""' : "")
-    + (band.noRule ? ' data-rule="none"' : "")
-    // Read by the stylesheet AND by the one script that belongs to the
-    // bands (js/slide-bands.js), which is what takes the strip out of
-    // sight while the slide moves under it.
-    + (band.still ? ' data-still=""' : "");
+    + (band.noRule ? ' data-rule="none"' : "");
   return `<div class="slide-band" data-band="${name}"${flags}>${inner}</div>`;
 }
 

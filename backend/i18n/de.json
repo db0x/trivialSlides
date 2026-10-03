@@ -328,7 +328,5 @@
   "bands.rule": "Trennlinie zeigen",
   "bands.ruleHint": "Die Haarlinie zwischen der Zeile und der Folie. Aus verschwindet nur die Linie — der Platz, den die Zeile nimmt, bleibt derselbe.",
   "bands.center": "Ganze Leiste zentrieren",
-  "bands.centerHint": "Logo und Text stehen zusammen in der Mitte der Folie statt jedes in seinem Drittel. Die beiden Plätze sagen dann, was links von was steht.",
-  "bands.still": "Beim Übergang stehen lassen",
-  "bands.stillHint": "Die Zeile wandert sonst mit der Folie durch den Übergang. Stehen lassen heißt: für die Dauer des Übergangs ausgeblendet und danach schnell wieder eingeblendet — sie liegt in der Folie, die sich bewegt, und kann nicht anders stehen bleiben. Bei Übergang „none“ ändert der Schalter nichts."
+  "bands.centerHint": "Logo und Text stehen zusammen in der Mitte der Folie statt jedes in seinem Drittel. Die beiden Plätze sagen dann, was links von was steht."
 }

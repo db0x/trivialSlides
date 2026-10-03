@@ -7,8 +7,8 @@
 // What a band holds is deliberately short: a line of text, a picture out
 // of the deck's own folder, where each of the two stands, and two things
 // about the strip as a whole -- whether it is parted from the slide by a
-// line, and whether its pieces spread across the slide or stand together
-// in the middle of it. Anything more and it would be a slide of its own --
+// line, and whether its pieces spread across it or stand together in the
+// middle. Anything more and it would be a slide of its own --
 // which this project already has, and which is where a sentence that needs
 // formatting belongs.
 //
@@ -48,15 +48,18 @@ const LOGO_PLACE_DEFAULT = "right";
 //           not places any more but an order: what stands left of what
 //           (slides.css keeps the three cells and merely pulls them
 //           together, so nothing in the markup changes).
-//   still   the strip does not travel with the slide through its
-//           transition. It cannot stand still where it is -- it sits in
-//           the box reveal.js moves -- so it is taken out of sight for as
-//           long as the movement lasts and brought back once the slide has
-//           arrived (js/slide-bands.js).
+//
+// Where a presentation is RUNNING there is a third thing, and it is not a
+// flag because there is nothing to choose: the strip is lifted out of the
+// slides and hung on the screen, where it stands still while the slides
+// change behind it and reaches the screen's own edges rather than the
+// slide's (js/slide-bands.js). It is only the places that CANNOT move --
+// paper, and a card in the editor's slide list -- that draw the strip
+// inside the slide.
 //
 // The one value a flag takes in this file, as everywhere else in this
 // project: it is there or it is not (deck.js, ON).
-const FLAGS = ["noRule", "center", "still"];
+const FLAGS = ["noRule", "center"];
 const ON = "1";
 
 // Which bands there are, in the order they appear on the slide. The dialog
@@ -106,7 +109,6 @@ function keys(name) {
     // before this existed would lose it.
     noRule: `${name}-no-rule`,
     center: `${name}-center`,
-    still: `${name}-still`,
   };
 }
 
@@ -132,7 +134,6 @@ function normalize(raw) {
     logoPlace: onlyPlace(band.logoPlace, LOGO_PLACE_DEFAULT),
     noRule: !!band.noRule,
     center: !!band.center,
-    still: !!band.still,
   };
 }
 
@@ -153,7 +154,6 @@ function fromHead(head, name) {
     logoPlace: head[k.logoPlace],
     noRule: head[k.noRule] === ON,
     center: head[k.center] === ON,
-    still: head[k.still] === ON,
   });
 }
 

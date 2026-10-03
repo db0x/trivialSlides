@@ -999,9 +999,19 @@ body.is-preview .reveal .fragment {
        justify-content  the main axis of the two layouts that are a flex
                         column, video and qr. On a block it means nothing
                         and on those grids there is nothing left to
-                        distribute, so it costs the others nothing. */
-  align-content: center;
-  justify-content: center;
+                        distribute, so it costs the others nothing.
+
+     SAFE centre, both of them, and that word is not decoration. Centred
+     plainly, a slide holding more than fits spills EQUALLY at the top and
+     at the bottom -- and scrollHeight, which is what the type is stepped
+     down by (js/slide-fit.js), never sees what hangs above the top edge.
+     The slide would measure as half as overfull as it is, stop shrinking
+     one step too early, and put its last line through the footer. Safe
+     means: centre it, unless centring would push it out of sight, and
+     then let it start at the top -- which is the same thing the card in
+     the editor's slide list says for the same reason (css/thumb.css). */
+  align-content: safe center;
+  justify-content: safe center;
 }
 .reveal .slides section.layout-image-full[data-bands] { --band-edge: var(--slide-air); }
 
@@ -1061,39 +1071,62 @@ body.is-preview .reveal .fragment {
    move its text by a pixel over whether one is drawn. */
 .reveal .slide-band[data-rule="none"]::after { display: none; }
 
-/* --- A strip that stays where it is ------------------------------------
-   A band that is not to travel with the slide (bands.js, still).
+/* --- The strip, lifted onto the screen ---------------------------------
+   Where a presentation is RUNNING, the two strips do not stay in the
+   slides at all: one copy of each is lifted out and hung on the screen
+   (js/slide-bands.js), and the copies inside the slides give way to it.
 
-   It cannot be held still where it stands: it sits in the <section>, and
-   reveal.js moves that box -- there is no counter-move for a slide that
-   rotates through a perspective. So where a presentation is running, ONE
-   copy of the strip is lifted out of the slides and hung on the stage
-   instead (js/slide-bands.js), and the copies inside the slides give way
-   to it. The stage does not move between slides, so neither does the
-   strip: it simply stands there while the slides change behind it.
+   Two things are won by that, and the second is the reason it is done for
+   every band rather than on request.
 
-   Only there, and only then. On paper and on a card there is no movement
-   to stand out of, and the strip inside the slide is what gets drawn --
-   which is what keeps one renderer for all four views (render.js). The
-   class below is put on by that script and by nothing else, so a page it
-   does not run on carries on exactly as before. */
-.reveal.bands-standing .slides section .slide-band[data-still] { display: none; }
+   The strip no longer travels. It sat in the <section>, and reveal.js
+   moves that box -- there is no counter-move for a slide that rotates
+   through a perspective. Hung on the screen it simply stands there while
+   the slides change behind it.
+
+   And it reaches the SCREEN's edges. reveal.js lays every slide out in a
+   box of 960 by 700 and paints the slide's ground across the whole
+   display -- so on a 21:9 screen the slide is the middle half of what the
+   eye sees, and a footer sitting on the slide's edge floats in the
+   colour with nothing under it. Measured on such a screen: 21 pixels
+   above the bottom and 574 in from the left, for a line that reads as the
+   bottom of the page. So the strip runs the full width and sits on the
+   screen's own edge -- while its words and its logo stay in the slide's
+   column, where the slide's own text stands. A letterhead on a wide sheet
+   does exactly that.
+
+   Only where nothing CAN be lifted does the strip inside the slide get
+   drawn: on paper, where the page is the slide and its edge is the
+   screen's, and on a card in the editor's slide list, which is one still
+   slide and loads no script. The class below is put on by that script and
+   by nothing else, so those two carry on exactly as before. */
+.reveal.bands-standing .slides .slide-band { display: none; }
 
 .reveal .band-stand { display: none; }
 .reveal.bands-standing .band-stand {
   display: block;
-  position: absolute;
-  inset: 0;
-  /* Over the slides, which are 10 and 11 to reveal.js. A strip is the
-     paper the talk is printed on, not a part of what is written on it. */
-  z-index: 12;
+  /* The screen, measured in the slide's own units and then scaled by
+     exactly what reveal scales the slide by (js/slide-bands.js writes the
+     three numbers). Everything inside is therefore written in the same
+     stage pixels as the strip inside a slide -- one set of measurements,
+     whichever of the two is on the screen.
+
+     Fixed and not absolute: nothing between here and the window carries a
+     transform, so this is the window; the stage next door does carry one,
+     which is what the strip had to get out of. */
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  /* Over the slides, which reveal puts at 1, and under its controls. */
+  z-index: 5;
   /* It is a copy of what the slides carry; nothing on it is to be
      clicked, and it must not come between a hand and the slide. */
   pointer-events: none;
-  /* Standing over every layout, it belongs to none, so it keeps its
-     distance from the edge nowhere -- the full-bleed picture's own inset
-     would make it jump inward on those slides, which is the one thing a
-     strip that stands still may not do. */
+  /* Standing over every layout, it belongs to none, so it keeps no
+     distance from the edge -- the full-bleed picture's own inset would
+     make it jump inward on those slides, which is the one thing a strip
+     that stands still may not do. */
   --band-edge: 0px;
   /* The colour follows the slide underneath (the script copies it over).
      A colour that changes is not a strip that moves, and between two
@@ -1107,6 +1140,25 @@ body.is-preview .reveal .fragment {
      else. */
   transition: opacity 0.18s ease-out, color 0.45s ease-in-out;
 }
+/* Not quite ON the screen's edge: the same air it keeps from the slide's
+   text, kept from the glass as well. Hard against the edge the descenders
+   of its own words touch it, which reads as a strip that has been cut off
+   rather than one that has been placed. Horizontally there is no such
+   inset -- the line is meant to reach the edge, and a line has no
+   descenders. */
+.reveal.bands-standing .band-stand .slide-band[data-band="header"] { top: var(--band-air); }
+.reveal.bands-standing .band-stand .slide-band[data-band="footer"] { bottom: var(--band-air); }
+
+/* The line runs to the screen's edge, the words stand in the slide's
+   column. The padding is what holds the two apart -- how wide the bars
+   beside the slide are is only known while the page is running, so it
+   arrives as a number from the script. An absolutely positioned child
+   resolves against the PADDING box, which is why the hairline below
+   reaches past the words to the edge. */
+.reveal.bands-standing .band-stand .slide-band {
+  padding-left: var(--band-column, 0px);
+  padding-right: var(--band-column, 0px);
+}
 /* Away, because the slide underneath is one that sends this band off
    (deck.js, data-no-footer). This is the only moment the strip fades at
    all: it has to appear or disappear, and a quick ease is what that is
@@ -1116,7 +1168,7 @@ body.is-preview .reveal .fragment {
   opacity: 0;
   transition: opacity 0.12s ease-in;
 }
-/* In the overview the stage holds a grid of small slides, and a strip
+/* In the overview the screen holds a grid of small slides, and a strip
    lying across all of them would belong to none. */
 .reveal.overview .band-stand { display: none; }
 
@@ -1297,12 +1349,20 @@ html.reveal-print .reveal .slides section:is(.layout-video, .layout-qr) {
    from an offset meant for a short one. The footer then sits below the
    page, which clips it, and the header sits a third of the way down.
 
-   So on paper the height is said outright and the offset is taken back:
-   the page IS the slide, and `align-content` above centres the text in it
-   exactly as reveal's offset would have. */
+   So on paper the offset is taken back: the page IS the slide, and
+   `align-content` above centres the text in it exactly as reveal's offset
+   would have.
+
+   The height is NOT said outright here, although it looks like the
+   obvious other half of it. min-height from the rule above already fills
+   the page, and it leaves the slide able to GROW -- which is what the
+   type is stepped down by (js/slide-fit.js): a slide pinned to the page's
+   exact height reports no overflow until its text has passed the page's
+   bottom, by which time it has already passed the footer's top, and the
+   last line comes out of the printer through the footer. Measured, on
+   that very slide. */
 html.reveal-print .reveal .slides section[data-bands] {
   top: 0 !important;
-  height: 100% !important;
 }
 /* And the room for the two bands, for the third time and for the same
    reason: printing, reveal.js writes `padding: 0 !important` onto every
