@@ -216,6 +216,74 @@
   break-inside: avoid;
 }
 
+/* --- Freestyle: blocks that stand where they were put ------------------ */
+/* The renderer writes four numbers onto a placed block and nothing else
+   (render.js, boxStyle): --x and --y are where its top left corner goes,
+   --w how wide it is, --h its height where it has one of its own, all as
+   a percentage -- and --turn the angle it is then turned by, about its own
+   middle. Everything below is the arrangement those numbers stand for, so
+   the geometry can be changed here without touching a line of JavaScript.
+
+   The percentages are of .slide-text, which is the area the slide's text
+   may use: the slide less the room its strips need and less the air at its
+   edges. So the same numbers mean the same picture whether or not the deck
+   has a header, which they would not if they were of the whole slide. */
+.reveal .slides section.layout-freestyle {
+  /* A grid of one row, for one reason: the row is a definite height, and
+     only then does a percentage height inside it mean anything. Plain
+     flow would leave .slide-text as tall as its text, and a box at 50%
+     of nothing stands nowhere.
+
+     !important and min-height for the same reasons the strips give above:
+     reveal writes `display: block` into the style attribute of the
+     visible slide, and its centre mode writes `min-height: 0` onto every
+     section. */
+  display: grid !important;
+  /* One row and one column, both flexible, and both said out loud. A
+     track left at `auto` is as big as its content -- and a slide carrying
+     a strip also carries `justify-content: safe center` from the rule
+     above, which then centres that content-sized track instead of
+     filling the slide. The boxes inside would be placed as percentages of
+     something much narrower than the slide, which is exactly as wrong as
+     it sounds. A flexible track leaves no free space to distribute, so
+     neither alignment has anything to say. */
+  grid-template: 1fr / 1fr;
+  min-height: 100% !important;
+}
+.reveal .layout-freestyle .slide-text {
+  position: relative;
+  height: 100%;
+}
+/* A block that was never given a place simply flows, which is what makes
+   a slide switched to this layout look exactly like the text slide it
+   was. Only a placed one is lifted out of the flow.
+
+   Under the layout and not on its own, although the renderer would write
+   the same class anywhere: placing is this layout's, and a `data-at` on
+   any other slide should do what every other attribute in the wrong place
+   does -- nothing at all. */
+.reveal .layout-freestyle .slide-box {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  /* No height unless the block was given one: a text box is as tall as
+     its text, and that is the only honest answer while nobody has said
+     otherwise. */
+  height: var(--h, auto);
+  /* Placed, THEN turned, about the block's own middle -- which is the
+     default origin and is left unwritten on purpose, so that the editor's
+     handles cannot quietly adopt another one later. */
+  transform: rotate(var(--turn, 0deg));
+  margin: 0;
+}
+/* reveal lays lists out as inline-block, a box as wide as its longest
+   line -- a placed list would ignore the width it was given. The same fix
+   the columns make further up. */
+.reveal .layout-freestyle .slide-box:is(ul, ol) { display: block; }
+.reveal .layout-freestyle .slide-box > :first-child { margin-top: 0; }
+.reveal .layout-freestyle .slide-box > :last-child { margin-bottom: 0; }
+
 /* --- Image beside text ------------------------------------------------ */
 .reveal .slides section.layout-image-right,
 .reveal .slides section.layout-image-left {
@@ -1374,6 +1442,9 @@ html.reveal-print .reveal .slides section.layout-image-left {
 html.reveal-print .reveal .slides section.layout-image-full {
   display: grid !important;
 }
+html.reveal-print .reveal .slides section.layout-freestyle {
+  display: grid !important;
+}
 /* The video layout needs it for the same reason, and needs it more since
    there is a choice of sides: without this line the handout would put the
    text above the player whichever side the slide asks for. The direction
@@ -1408,7 +1479,7 @@ html.reveal-print .reveal .slides section:is(.layout-video, .layout-qr) {
    bottom, by which time it has already passed the footer's top, and the
    last line comes out of the printer through the footer. Measured, on
    that very slide. */
-html.reveal-print .reveal .slides section[data-bands] {
+html.reveal-print .reveal .slides section:is([data-bands], .layout-freestyle) {
   top: 0 !important;
 }
 /* The air at the slide's own edges, for the second time: printing,

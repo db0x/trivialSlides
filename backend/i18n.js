@@ -53,6 +53,9 @@ const FOR_BROWSER = [
   "dialog.codeTitle", "dialog.codeEdit", "dialog.codeInsert", "dialog.codeApply",
   "code.click", "code.noLanguage", "code.remove",
   "editor.videoUnknown", "editor.urlInvalid",
+  // Said when a slide could not be arranged with the mouse after all
+  // (js/editor/places.js).
+  "editor.placeLost",
   "card.up", "card.down", "card.indent", "card.outdent",
   "card.duplicate", "card.delete", "card.untitled",
   "message.atLeastOne", "message.deleteSlide", "message.staysSource",

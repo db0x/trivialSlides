@@ -11,6 +11,7 @@ import { createPreview } from "./preview.js";
 import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
+import * as places from "./places.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
 import { setupAi } from "./ai.js";
@@ -97,6 +98,7 @@ var el = {
   textLabel: $("#text-label"),
   columnTabs: $("#column-tabs"),
   columnsSplit: $("#slide-columns-split"),
+  fieldHeading: $("#field-heading"),
   fieldColumns: $(".field-columns"),
   fieldColumnCount: $("#field-column-count"),
   slideBands: $("#slide-bands"),
@@ -111,7 +113,38 @@ var el = {
 // but 0 while the slide keeps its columns apart.
 var activeColumn = 0;
 
-var preview = createPreview($("#preview"), BASE);
+var preview = createPreview($("#preview"), BASE, placed);
+
+// Something in the preview was moved, widened or turned. The gesture is
+// over; what arrives is which block and where it now stands, and the only
+// thing to do here is write it into the slide's text (places.js).
+//
+// harvest() FIRST, as everywhere else on this path: the text field may be
+// a keystroke ahead of the model, and a placement written onto the older
+// text would take that keystroke back.
+function placed(n) {
+  var slide = deck.slides[active];
+  if (!slide || !n || n.block < 0) return;
+  harvest();
+  // The two sides count the blocks of this slide separately -- the editor
+  // in the text, the preview in the markup (js/slide-place.js) -- and if
+  // they disagree, the number that came back points at a block other than
+  // the one under the mouse. Then nothing is placed: moving the wrong
+  // block is worse than moving none.
+  if (!places.placeable(slide.content) || places.count(slide.content) !== n.count) {
+    return note(t("editor.placeLost"));
+  }
+  var text = places.place(slide.content, n.block, n.at, n.turn);
+  if (text == null) return;
+  slide.content = text;
+  // The body has changed under the field, and a body carrying placements
+  // is beyond what the rich-text field can show -- so which field is in
+  // front is decided afresh (contentSimple), exactly as it is when a
+  // slide is opened.
+  sourceMode = !contentSimple(slide);
+  showSlide();
+  remember();
+}
 
 // --- Notices -------------------------------------------------------------
 // One dialog, one line of text. The browser's alert would do the same job,
@@ -338,7 +371,12 @@ function harvest() {
   // one field cannot say which is meant, so what the slide already is
   // decides -- which is what makes a hand-written "##" survive being opened
   // here (deck.js).
-  slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
+  // A layout with no heading has none to read either, and the field is
+  // not on the form for it (showSlide). Its alignment goes with it: where
+  // there is no heading, an attribute saying where it stands is a line in
+  // the file for nothing.
+  if (!hasTitle(slide)) slide.title = null;
+  else slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
   slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
@@ -354,7 +392,7 @@ function harvest() {
   // The chooser beside the heading keeps two things apart: what the slide
   // has CHOSEN (which may be nothing) and what the button SHOWS, which is
   // never nothing. Only the choice belongs in the model.
-  slide.titleAlign = el.titleAlignButton.dataset.choice || "";
+  slide.titleAlign = hasTitle(slide) ? (el.titleAlignButton.dataset.choice || "") : "";
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
@@ -376,6 +414,13 @@ function columnCount(slide) {
 // layouts.js' hasField(), asked of the definition the page was handed.
 function has(def, field) {
   return ((def || {}).fields || []).indexOf(field) !== -1;
+}
+
+// Whether the slide has a heading of its own. The exception speaks, as it
+// does on the server (layouts.js, hasTitle): a layout without one says so,
+// and on such a slide a heading is one of the blocks in the text.
+function hasTitle(slide) {
+  return (layoutsById[(slide || {}).layout] || {}).heading !== false;
 }
 
 // How many text fields the slide's body is written in: one, unless the
@@ -457,6 +502,9 @@ function showSlide() {
   el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
 
   var def = layoutsById[slide.layout] || { fields: [] };
+  // The layout that has no heading puts the whole field away -- an input
+  // that cannot end up anywhere is worse than no input.
+  el.fieldHeading.hidden = !hasTitle(slide);
   el.fieldImage.hidden = def.fields.indexOf("image") === -1;
   el.fieldSource.hidden = def.fields.indexOf("source") === -1;
   el.fieldVideo.hidden = def.fields.indexOf("video") === -1;

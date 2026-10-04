@@ -106,6 +106,23 @@
     // shortened since would keep the size it needed when it was long.
     slide.style.fontSize = "";
     slide.removeAttribute("data-fit");
+    // A slide whose blocks were placed by hand is left alone. Stepping the
+    // type down there would shrink what somebody sized on purpose -- a
+    // heading set large is the point of placing it -- and the boxes would
+    // stay where they are while their text grew out of them. What the
+    // author arranged, the author owns; too much on such a slide is theirs
+    // to see and theirs to move.
+    //
+    // Read off the slide and not off its layout: a freestyle slide on
+    // which nothing has been placed yet IS an ordinary text slide, and
+    // there the rescue is as welcome as anywhere else.
+    //
+    // And the stylesheet is what is asked, not the class alone -- it is
+    // the stylesheet that decides whether a block was really taken out of
+    // the flow, and it only does that on the one layout that places
+    // things (slides.css). So this file needs to know no layout by name.
+    var box = slide.querySelector(".slide-box");
+    if (box && getComputedStyle(box).position === "absolute") return;
     var before = layOut(slide);
     // Nothing may be mid-transition while this measures -- a fragment
     // carries `transition: all`, and that includes the size being set here

@@ -279,7 +279,10 @@
         <!-- No longer a <label> around the whole thing: a click on the
              chooser beside the field would otherwise land in the field,
              which is what a label does. The word keeps its "for" instead. -->
-        <div class="field">
+        <!-- The id is what the one layout WITHOUT a heading hides
+             (js/editor/index.js): there a heading is not the slide's name
+             but one of the blocks in its text. -->
+        <div class="field" id="field-heading">
           <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
           <div class="field-row">
             <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">

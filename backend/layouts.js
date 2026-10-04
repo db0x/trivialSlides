@@ -53,6 +53,20 @@ const LAYOUTS = [
     fields: ["columnCount", "columnMode"],
   },
   {
+    // Nothing is arranged for this slide: every block of its text stands
+    // where it was put -- where that is, is written on the block itself
+    // (render.js, the .element line). A heading here is not the slide's
+    // name but one of those blocks, which is why this layout has none.
+    //
+    // A block that has not been placed simply flows, so a slide switched
+    // to this layout looks exactly like the text slide it was until the
+    // first block is moved -- and so does this layout in any other
+    // reveal.js, which knows none of it.
+    id: "freestyle",
+    heading: false,
+    fields: [],
+  },
+  {
     id: "image-right",
     fields: ["image", "textWidth"],
     // Half and half, which is what this layout has always looked like.
@@ -233,7 +247,7 @@ function onlyColumnCount(value) {
 }
 
 // Tolerant of spacing the way the other two comment lines are (deck.js'
-// ATTR_LINE, render.js' FRAGMENT_RE): a break is a line that holds nothing
+// ATTR_LINE, render.js' ELEMENT_LINE_RE): a break is a line that holds nothing
 // but the comment.
 const COLUMN_BREAK_LINE = /^[ \t]*<!--[ \t]*\.column[ \t]*-->[ \t]*$/m;
 
@@ -358,7 +372,19 @@ function hasField(id, field) {
   return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, wasLayout, get, hasField,
+// Whether this layout has a heading of its own -- a line that names the
+// SLIDE, kept apart from its text (deck.js, splitTitle). All but one do,
+// so it is the exception that speaks: a layout without one says
+// heading: false and the rest stay silent.
+//
+// What hangs on it is more than one element: a layout without a heading
+// has no heading LINE in the file either, so a "#" in such a slide stays
+// in the body and is part of what is written on it.
+function hasTitle(id) {
+  return get(id).heading !== false;
+}
+
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, wasLayout, get, hasField, hasTitle,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
   WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
   COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,

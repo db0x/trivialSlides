@@ -25,7 +25,101 @@ const qr = require("./qr");
 // slide or for none of it: reveal puts the ones without a number after the
 // ones with it (fragments.js, sort()), so half a slide numbered would
 // reorder the other half.
-const FRAGMENT_RE = /^<!--\s*\.element:\s*class="([A-Za-z0-9 _-]+)"(?:\s+data-fragment-index="(\d{1,3})")?\s*-->$/;
+// The line has grown a second thing to say -- besides "this block appears
+// on a click", it can now say WHERE the block stands (the freestyle
+// layout, see below) -- so it is read attribute by attribute instead of
+// through one expression for the whole line. One pattern for each value,
+// which is where the strictness lives:
+//
+//   class                letters, digits, spaces, hyphens, underscores
+//   data-fragment-index  up to three digits
+//   data-at              x,y,w and optionally h -- digits and commas
+//   data-turn            up to three digits
+//
+// Not one of those can close the quote it travels in, so a second
+// attribute cannot be smuggled in behind it and <script> stays
+// impossible -- the same argument the single expression made, now made
+// once per value. A line carrying an unknown attribute, or a value that
+// does not fit, is dropped WHOLE, exactly as it was before: half of a
+// line nobody wrote is worse than none of it.
+const ELEMENT_LINE_RE = /^<!--\s*\.element:((?:\s+[a-z-]+="[^"]*")+)\s*-->$/;
+const ELEMENT_PAIR_RE = /([a-z-]+)="([^"]*)"/g;
+const ELEMENT_VALUE = {
+  class: /^[A-Za-z0-9 _-]+$/,
+  "data-fragment-index": /^\d{1,3}$/,
+  "data-at": /^\d{1,3},\d{1,3},\d{1,3}(?:,\d{1,3})?$/,
+  "data-turn": /^\d{1,3}$/,
+};
+
+// --- Where a block stands ----------------------------------------------
+// data-at="x,y,w" or "x,y,w,h", every number a percentage of the area the
+// slide's text may use -- which is the slide less the room its strips need
+// (slides.css), so the same numbers mean the same picture whether or not
+// the deck has a header.
+//
+// Per cent and not a grid of cells: the grid belongs in the editor, where
+// dragging snaps to it, not in the file. A file that holds cells can never
+// be given a finer grid again.
+//
+// The height is optional and usually left out: a text box is as tall as
+// its text, and nothing is gained by saying so in a number that then has
+// to be kept true. It is there for what does have a height of its own.
+//
+// data-turn is the angle in degrees, 0 to 359, turned about the block's
+// own middle AFTER it has been placed. That order is the convention, and
+// it has to be the same one the editor's handles use later -- otherwise
+// the preview and the wall would disagree, which is the one thing this
+// project may not do.
+const TURN_MAX = 359;
+
+function boxStyle(at, turn) {
+  const n = String(at).split(",").map(Number);
+  if (n.some((v) => !(v >= 0 && v <= 100))) return "";
+  const parts = [`--x:${n[0]}%`, `--y:${n[1]}%`, `--w:${n[2]}%`];
+  // Written as a finished CSS value and not as a bare number, so that the
+  // stylesheet can fall back to `auto` for the one that is absent -- a
+  // height of nothing is not a height of zero.
+  if (n.length > 3) parts.push(`--h:${n[3]}%`);
+  if (turn !== undefined) {
+    const deg = Number(turn);
+    // Out of range is not half right: three digits fit the pattern, 400
+    // degrees do not fit a circle. The caller drops the whole line over
+    // it, the way it drops a line with any other value that does not fit.
+    if (!(deg >= 0 && deg <= TURN_MAX)) return "";
+    parts.push(`--turn:${deg}deg`);
+  }
+  return parts.join(";");
+}
+
+// The whole line -> what it says, or null for a line that says nothing
+// this renderer understands.
+function elementMark(text) {
+  const line = ELEMENT_LINE_RE.exec(text);
+  if (!line) return null;
+  const said = {};
+  ELEMENT_PAIR_RE.lastIndex = 0;
+  let hit;
+  while ((hit = ELEMENT_PAIR_RE.exec(line[1])) !== null) {
+    const rule = ELEMENT_VALUE[hit[1]];
+    // An attribute this renderer does not know, or one that does not fit
+    // its shape: the line is dropped whole.
+    if (!rule || !rule.test(hit[2])) return null;
+    said[hit[1]] = hit[2];
+  }
+  // An angle without a place is a line somebody got wrong: there is
+  // nothing to turn until the block has been put somewhere.
+  if (said["data-turn"] !== undefined && said["data-at"] === undefined) return null;
+  const style = said["data-at"] ? boxStyle(said["data-at"], said["data-turn"]) : "";
+  if (said["data-at"] && !style) return null;
+  return {
+    // The hook the stylesheet hangs the arrangement on, added to whatever
+    // the author wrote -- a placed block that also appears on a click
+    // carries both.
+    classes: [said.class || "", style ? "slide-box" : ""].filter(Boolean).join(" "),
+    index: said["data-fragment-index"],
+    style,
+  };
+}
 
 // The second, and only other, thing let through: a run of text in a colour
 // of its own. It is the one piece of formatting that has no Markdown of its
@@ -67,26 +161,25 @@ const GROUP_CLOSE_RE = /^<!--\s*\/\.group\s*-->$/;
 const MARK_OPEN = "\u0001";
 const MARK_CLOSE = "\u0002";
 
-// The classes and, after a space, the fragment number -- one string,
-// because the marker travels through the finished markup as one piece.
-function brand(classes, index) {
-  return MARK_OPEN + classes + (index == null ? "" : " " + index) + MARK_CLOSE;
+// What the marker carries is kept beside the markup, and the marker holds
+// nothing but its number. It used to pack the classes into the marker
+// itself and take them apart again by convention -- which worked while
+// there were two things to carry and stopped being readable at three.
+function brand(marks, mark) {
+  marks.push(mark);
+  return MARK_OPEN + (marks.length - 1) + MARK_CLOSE;
 }
 
-// And apart again. A number cannot be a class name, so the two need no
-// separator of their own -- the last word decides. Both ends of the marker
-// go through here: the one that walks the finished markup
-// (resolveFragments) and the one that catches a marker inside a list item
-// before the item is built.
-function unbrand(payload) {
-  const t = /^(.*?)(?:\s+(\d{1,3}))?$/.exec(payload);
-  return { classes: t[1], index: t[2] };
+function unbrand(marks, payload) {
+  return marks[Number(payload)] || { classes: "" };
 }
 
 // Puts the class on the element that closes right before `ende`. Walks the
 // opening and closing tags backwards counting depth, so that a marker after
 // a nested list quiet lands on the outer one.
-function setClass(html, ende, classes, index) {
+function setClass(html, ende, mark) {
+  const classes = mark.classes;
+  const index = mark.index;
   const vor = html.slice(0, ende).replace(/\s+$/, "");
   const zu = /<\/([a-z][a-z0-9]*)>$/i.exec(vor);
   if (!zu) return null;
@@ -105,9 +198,14 @@ function setClass(html, ende, classes, index) {
       // ignored by every browser, so the two are merged.
       const existing = /\sclass="([^"]*)"/i.exec(auf[0]);
       const nummer = index == null ? "" : ` data-fragment-index="${esc(index)}"`;
+      // Where the block stands, as custom properties. The arrangement
+      // itself is in slides.css -- what is written here are the four
+      // numbers the author gave, and nothing is composed from anything
+      // the file could choose freely (see boxStyle).
+      const wo = mark.style ? ` style="${esc(mark.style)}"` : "";
       const replaced = existing
-        ? auf[0].replace(existing[0], ` class="${existing[1]} ${esc(classes)}"${nummer}`)
-        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(classes)}"${nummer}`);
+        ? auf[0].replace(existing[0], ` class="${existing[1]} ${esc(classes)}"${nummer}${wo}`)
+        : auf[0].replace(/^<([a-z][a-z0-9]*)/i, `<$1 class="${esc(classes)}"${nummer}${wo}`);
       return html.slice(0, auf.index) + replaced + html.slice(auf.index + auf[0].length);
     }
   }
@@ -117,16 +215,16 @@ function setClass(html, ende, classes, index) {
 // Resolves the placeholders left by the renderer. A marker inside a list
 // item is handled by the listitem renderer itself; what arrives here is the
 // block-level case, the marker standing after a finished element.
-function resolveFragments(html) {
+function resolveFragments(html, marks) {
   for (;;) {
     const i = html.indexOf(MARK_OPEN);
     if (i < 0) return html;
     const j = html.indexOf(MARK_CLOSE, i);
     if (j < 0) return html.slice(0, i) + html.slice(i + 1);
-    const { classes, index } = unbrand(html.slice(i + 1, j));
+    const mark = unbrand(marks, html.slice(i + 1, j));
     const without = html.slice(0, i) + html.slice(j + 1);
     // Marker removed first, so the scan sees the element unobstructed.
-    html = setClass(without, i, classes, index) || without;
+    html = setClass(without, i, mark) || without;
   }
 }
 
@@ -144,8 +242,8 @@ function markdownRenderer(imageBase, open) {
   let colored = 0;
   r.html = (raw) => {
     const text = String(raw).trim();
-    const t = FRAGMENT_RE.exec(text);
-    if (t) return brand(t[1], t[2]);
+    const mark = elementMark(text);
+    if (mark) return brand(open.marks, mark);
     const color = COLOR_OPEN_RE.exec(text);
     if (color) {
       colored++;
@@ -176,10 +274,11 @@ function markdownRenderer(imageBase, open) {
     const i = text.indexOf(MARK_OPEN);
     if (i < 0) return itemOrig(text, ...rest);
     const j = text.indexOf(MARK_CLOSE, i);
-    const { classes, index } = unbrand(text.slice(i + 1, j));
+    const mark = unbrand(open.marks, text.slice(i + 1, j));
     const without = text.slice(0, i) + text.slice(j + 1);
-    const nummer = index == null ? "" : ` data-fragment-index="${esc(index)}"`;
-    return itemOrig(without, ...rest).replace(/^<li/, `<li class="${esc(classes)}"${nummer}`);
+    const nummer = mark.index == null ? "" : ` data-fragment-index="${esc(mark.index)}"`;
+    const wo = mark.style ? ` style="${esc(mark.style)}"` : "";
+    return itemOrig(without, ...rest).replace(/^<li/, `<li class="${esc(mark.classes)}"${nummer}${wo}`);
   };
   // Code blocks. The fence says the language, and after it may state a
   // style for this one block (```java hl=github). Other renderers read the
@@ -224,9 +323,9 @@ function md(text, imageBase) {
   // worth more than the complaint: the missing ends are added here so the
   // markup leaves this function whole either way. The source dialog says
   // what happened (check.js).
-  const open = { groups: 0 };
+  const open = { groups: 0, marks: [] };
   const html = marked.parse(String(text), { gfm: true, breaks: false, renderer: markdownRenderer(imageBase, open), mangle: false, headerIds: false });
-  return resolveFragments(html + "</div>".repeat(open.groups));
+  return resolveFragments(html + "</div>".repeat(open.groups), open.marks);
 }
 
 // Dark ground or light one? The themes answer it -- each carries a rule

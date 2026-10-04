@@ -1,0 +1,69 @@
+/* The handles for arranging a freestyle slide with the mouse.
+
+   A stylesheet of its own, loaded by the preview and by nothing else
+   (views/reveal.ejs). The layout stylesheet is what the presentation and
+   the exported file carry, and a grip has no business in either -- keeping
+   them apart is what makes that impossible rather than merely unlikely. */
+
+/* The block under the mouse says so quietly: this is something one can
+   take hold of. Outline and not border, because a border would take room
+   and move the very thing it is drawn around. */
+.is-preview .layout-freestyle .slide-text > *:hover {
+  outline: 1px dashed color-mix(in srgb, currentColor 40%, transparent);
+  outline-offset: 4px;
+  cursor: move;
+}
+.is-preview .layout-freestyle .slide-text > .is-picked,
+.is-preview .layout-freestyle .slide-text > .is-picked:hover {
+  outline: 1px solid var(--place-accent, #2b7cd3);
+  outline-offset: 4px;
+}
+
+/* The two grips sit INSIDE the block, so they travel with it -- through
+   its place and through its rotation, which is what keeps the width grip
+   on the right edge however far the block has been turned. */
+.place-grip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: var(--place-accent, #2b7cd3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  /* The slide's type is stepped by em in places; a grip is a piece of
+     furniture and keeps its size. */
+  font-size: 0;
+  z-index: 2;
+}
+/* Width: on the right edge, in the middle of it. */
+.place-grip-width {
+  right: -6px;
+  top: 50%;
+  margin-top: -6px;
+  cursor: ew-resize;
+}
+/* Turning: above the top right corner, where it cannot be mistaken for
+   the one that changes the width. */
+.place-grip-turn {
+  right: -6px;
+  top: -22px;
+  cursor: crosshair;
+  background: var(--place-accent, #2b7cd3);
+}
+.place-grip-turn::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 1px;
+  height: 10px;
+  background: var(--place-accent, #2b7cd3);
+}
+
+/* While something is being dragged nothing else may be selected: a text
+   box full of selected words follows the mouse badly and looks broken. */
+.is-preview.is-placing,
+.is-preview.is-placing * {
+  user-select: none;
+}

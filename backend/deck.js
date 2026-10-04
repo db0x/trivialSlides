@@ -281,7 +281,16 @@ function parseSlide(text, vertical) {
     attrs = parseAttrs(lines[i]);
     i++;
   }
-  return Object.assign({ vertical: !!vertical }, attrs, splitTitle(lines.slice(i).join("\n")));
+  const body = lines.slice(i).join("\n");
+  // A layout with no heading has no heading LINE either: a "#" in such a
+  // slide is part of what is written on it, so it stays in the body
+  // instead of being lifted out into a field the editor does not show.
+  // Nothing is lost and nothing moves -- the slide shows the heading
+  // where it stands, as the text it is (layouts.js, hasTitle).
+  const said = layouts.hasTitle(attrs.layout)
+    ? splitTitle(body)
+    : { title: null, content: body.trim() };
+  return Object.assign({ vertical: !!vertical }, attrs, said);
 }
 
 // --- File -> model -----------------------------------------------------
@@ -488,8 +497,12 @@ function normalize(raw) {
         vertical: i > 0 && !!(f && f.vertical),
         // Passed through rather than folded to "": the editor sends null for
         // a slide without a heading and "" for one with an empty heading,
-        // and both have to survive the round trip.
-        title: f && f.title !== null && f.title !== undefined ? oneLine(f.title).slice(0, 200) : null,
+        // and both have to survive the round trip. A layout that has no
+        // heading at all is the third case and the only one decided here:
+        // it comes back null whatever arrived, the way a field the layout
+        // does not have comes back empty.
+        title: layouts.hasTitle(layout) && f && f.title !== null && f.title !== undefined
+          ? oneLine(f.title).slice(0, 200) : null,
         content: String((f && f.content) || "").replace(/\r\n/g, "\n").slice(0, 20000),
         image: layouts.hasField(layout, "image") ? oneLine(f && f.image).slice(0, 200) : "",
         source: layouts.hasField(layout, "source") ? oneLine(f && f.source).slice(0, 200) : "",

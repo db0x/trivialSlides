@@ -14,7 +14,11 @@
 // unheard and the preview would stay mute for the rest of the session.
 import { schreibHead } from "./base.js";
 
-export function createPreview(iframe, base) {
+// onPlaced: what to do when something in the preview was moved, widened
+// or turned with the mouse (js/slide-place.js). The gesture happens over
+// there, in the slide itself and at the size it will have on the wall;
+// what comes back is one message per drop and nothing in between.
+export function createPreview(iframe, base, onPlaced) {
   var bereit = false;
   var queue = []; // messages that arrived before "bereit"
   var klopfen = null;
@@ -49,6 +53,10 @@ export function createPreview(iframe, base) {
 
   window.addEventListener("message", function (ev) {
     if (ev.source !== iframe.contentWindow) return;
+    if (ev.data && ev.data.kind === "platziert") {
+      if (onPlaced) onPlaced(ev.data);
+      return;
+    }
     if (ev.data && ev.data.kind === "bereit") {
       bereit = true;
       clearInterval(klopfen);

@@ -957,6 +957,32 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Text: heading plus lines */
 .mini-text::before { left: 8%; right: 45%; top: 6px; height: 4px; }
 .mini-text::after { left: 8%; right: 12%; top: 15px; height: 11px; opacity: 0.25; }
+/* Freestyle: three blocks, none of them where a layout would have put
+   them -- and one of them off the square, because that is the half of it
+   no arrangement of rows and columns can show. */
+.mini-freestyle::before {
+  left: 8%;
+  width: 40%;
+  top: 5px;
+  height: 7px;
+  opacity: 0.55;
+  transform: rotate(-7deg);
+}
+.mini-freestyle::after {
+  right: 10%;
+  width: 30%;
+  top: 14px;
+  height: 13px;
+  opacity: 0.25;
+}
+/* The third one is painted into the background, as the three-column tile
+   used to do: an element has only two pseudo-elements. */
+.mini-freestyle {
+  background-image: linear-gradient(color-mix(in srgb, var(--muted) 25%, transparent) 0 100%);
+  background-size: 30% 8px;
+  background-position: 12% 62%;
+  background-repeat: no-repeat;
+}
 /* Image right / left */
 .mini-image-right::before { left: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
 .mini-image-right::after { right: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }

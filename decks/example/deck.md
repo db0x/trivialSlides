@@ -2,6 +2,8 @@
 titel: Example
 theme: simple
 transition: convex
+generator: trivialSlides
+min-version: 0.10.1
 footer-text: trivialSlides
 footer-logo: trivialslides.svg
 footer-logo-place: left
@@ -20,6 +22,16 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 <!-- .slide: data-layout="section" data-background-color="#122233" -->
 
 # Section divider
+
+---
+
+<!-- .slide: data-layout="freestyle" -->
+
+# FREESTYLE
+<!-- .element: data-at="9,37,73" data-turn="350" -->
+
+### Test
+<!-- .element: data-at="80,60,11" data-turn="20" -->
 
 ---
 

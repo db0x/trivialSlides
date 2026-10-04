@@ -105,7 +105,21 @@ const FEATURES = [
     found: (m) => m.slides.some((s) => s.columnCount
       && s.columnCount !== layouts.COLUMN_COUNT_DEFAULT),
   },
+  {
+    // Same release as the line above, a different thing: a slide whose
+    // blocks stand where they were put. A reader that does not know the
+    // layout shows them stacked in reading order -- the text is all
+    // there, the arrangement is not, which is a loss worth naming.
+    version: "0.10.1",
+    found: (m) => m.slides.some((s) => s.layout === "freestyle"
+      || PLACED.test(String(s.content || ""))),
+  },
 ];
+
+// A block that has been given a place (render.js holds the other end).
+// Read off the text, like the group above: it lives in the body, not in
+// an attribute of the slide.
+const PLACED = /^[ \t]*<!--[ \t]*\.element:[^>]*\bdata-at="/m;
 
 // The opening line of a group, as render.js reads it. Only the shape has
 // to match here, not the class inside it: a line that merely looks like
