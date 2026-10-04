@@ -22,7 +22,8 @@ const storage = require("../storage");
 const i18n = require("../i18n");
 const ai = require("../ai");
 const pdfText = require("../pdf-text");
-const { BASE, MAX_UPLOAD_MB, AI_PER_HOUR } = require("../config");
+const format = require("../format");
+const { BASE, MAX_UPLOAD_MB, AI_PER_HOUR, VERSION } = require("../config");
 
 const router = express.Router();
 
@@ -159,9 +160,21 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     videoPattern: video.PATTERN,
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
-    // How many columns the text block may run in (layouts.js). Numbers,
-    // and the page writes them on the buttons as they stand.
+    // How many columns the text may run in (layouts.js). Numbers, and the
+    // page writes them on the buttons as they stand.
     columnCounts: layouts.COLUMN_COUNTS,
+    // A deck that says it wants a newer trivialSlides than this one, in
+    // as many words -- or "" on every deck that does not (format.js).
+    //
+    // The sentence is built here rather than in the page: the version is
+    // the server's to know, and the page would otherwise need both
+    // numbers and a way to compare them. What this version does not
+    // understand has already been dropped on the way in (deck.js is
+    // forgiving by design), so the warning is about what SAVING would
+    // cost, which is why it is worth interrupting for.
+    tooNew: req.deck.minVersion && format.older(VERSION, req.deck.minVersion)
+      ? req.t("editor.deckTooNew", { needs: req.deck.minVersion, version: VERSION })
+      : "",
     places: i18n.placesTranslated(layouts.PLACES, req.language),
     // The two strips that stand on every slide, for the dialog that
     // manages them (bands.js, partials/bands.ejs).

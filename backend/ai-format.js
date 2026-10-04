@@ -33,6 +33,7 @@
 const layouts = require("./layouts");
 const bands = require("./bands");
 const effects = require("./effects");
+const format = require("./format");
 const deck = require("./deck");
 const check = require("./check");
 const qr = require("./qr");
@@ -164,13 +165,19 @@ function head() {
   const out = [
     "## The head",
     "",
-    "Three keys, and all three are always written. One flat `key: value` per",
-    "line -- this is not YAML: no nesting, no lists, no quotes.",
+    "Three keys are yours and all three are always written. One flat `key: value`",
+    "per line -- this is not YAML: no nesting, no lists, no quotes.",
     "",
     "- `titel` -- the deck's title. German key, deliberately, because it is the",
     "  key in the FILE. `title:` is not read.",
     "- `theme` -- one of " + values(deck.THEMES),
     "- `transition` -- one of " + values(deck.TRANSITIONS),
+    "",
+    "Two more are written by trivialSlides itself and are not yours to write:",
+    "`" + format.GENERATOR_KEY + "`, which says what the file is, and `"
+      + format.MIN_VERSION_KEY + "`, the",
+    "oldest version that reads the deck whole -- worked out from what the deck",
+    "actually uses. Leave both out; they appear when the file is saved.",
     "",
     "Then, optional, the two strips that stand on EVERY slide -- a header along",
     "the top edge, a footer along the bottom. A strip with neither text nor logo",
@@ -232,24 +239,25 @@ function layoutList() {
     "layout that has no field for it is dropped -- `data-image` on a `quote`",
     "slide is a picture nobody will ever see.",
     "",
+    "`columns` and `columns-three` are not layouts any more: how many columns the",
+    "text stands in is `data-column-count` on a `text` slide. The old names are",
+    "still read as exactly that, but do not write them.",
+    "",
   ];
   layouts.LAYOUTS.forEach((l) => {
     out.push("### `" + l.id + "` -- " + word("layout." + l.id + ".label"));
     out.push("");
     out.push(word("layout." + l.id + ".hint"));
     out.push("");
-    // How many columns there are is the layout's own number, except where
-    // the layout leaves it to the slide -- then the attribute below says
-    // it and there is no number to name here (layouts.js).
-    const chosen = layouts.hasField(l.id, "columnCount");
-    const columns = chosen ? 0 : layouts.columnCount(l.id);
-    if (columns || chosen) {
-      out.push((chosen
-        ? "The body runs by itself through as many columns as `data-column-count` says."
-        : "The body runs through " + columns + " columns by itself.")
-        + " With `data-columns=\"" + layouts.COLUMN_SPLIT + "\"` each column gets a text of"
-        + " its own instead, separated in the body by a line holding nothing but"
-        + " `" + layouts.COLUMN_BREAK + "`.");
+    // How many columns the body stands in belongs to the SLIDE, not to the
+    // layout (layouts.js) -- so what is said here is how the two
+    // attributes work together, and the numbers themselves are listed with
+    // the field below.
+    if (layouts.hasField(l.id, "columnCount")) {
+      out.push("The body runs by itself through as many columns as"
+        + " `data-column-count` says. With `data-columns=\"" + layouts.COLUMN_SPLIT
+        + "\"` each column gets a text of its own instead, separated in the body by a"
+        + " line holding nothing but `" + layouts.COLUMN_BREAK + "`.");
       out.push("");
     }
     const lines = l.fields.map((f) => fieldLine(f, l.id)).filter(Boolean);
@@ -260,16 +268,8 @@ function layoutList() {
       out.push("Reads no attributes of its own.");
     }
     out.push("");
-    // The one layout with no heading. Worth a line of its own rather than
-    // silence: the model has to know that a `#` on such a slide is text
-    // and stays in the body, where every other layout would have it
-    // lifted out into the slide's name (deck.js, parseSlide).
-    out.push(layouts.hasTitle(l.id)
-      ? "Its heading stands `" + layouts.defaultTitleAlign(l.id)
-        + "` unless `data-title-align` says otherwise."
-      : "It has NO heading. Write no `#` line on such a slide -- one written"
-        + " there stays in the body and is shown as part of the text,"
-        + " and `data-title-align` says nothing here.");
+    out.push("Its heading stands `" + layouts.defaultTitleAlign(l.id)
+      + "` unless `data-title-align` says otherwise.");
     out.push("");
   });
   // The blank line the last layout left behind. The sections are joined

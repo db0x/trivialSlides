@@ -182,12 +182,16 @@
            A disabled button has no tooltip to explain itself with, so the
            reason stands here (js/editor/index.js). -->
       <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
-      <!-- How many columns the text runs in, where the layout leaves that
-           to the slide (the text block). Here and not in the text bar for
-           the same reason as the switch below it: it is a question about
-           the shape of the slide, not about its wording -- and the two
-           belong next to each other, because one asks how many columns
-           there are and the other how they are filled. -->
+      <!-- How many columns the text runs in. Here and not in the text bar
+           for the same reason as the switch below it: it is a question
+           about the shape of the slide, not about its wording -- and the
+           two belong next to each other, because one asks how many columns
+           there are and the other how they are filled.
+
+           It sits under the tiles rather than among them because it is not
+           a layout: the tiles are dead as soon as the slide has text on it
+           (js/editor/index.js), and the number has to stay changeable --
+           that is the whole reason it is a field. -->
       <div id="field-column-count" class="field-column-count" role="group" hidden
            aria-label="<%= t('editor.columnCount') %>"
            data-tip="<%= t('editor.columnCountHint') %>">
@@ -200,11 +204,11 @@
         </div>
       </div>
 
-      <!-- Only the column layouts have this, and it belongs here rather
-           than in the text bar: it decides how many text fields there are
-           below, which is a question about the structure of the slide, not
-           about its wording. Off (and that is how every deck written so far
-           reads) the slide has one text and the browser distributes it. -->
+      <!-- And how they are filled. It decides how many text fields there
+           are below, which is a question about the structure of the slide,
+           not about its wording. Off (and that is how every deck written
+           so far reads) the slide has one text and the browser distributes
+           it. Only there once the slide stands in more than one column. -->
       <label class="field field-columns" hidden
              data-tip="<%= t('editor.columnsSplitHint') %>">
         <input type="checkbox" id="slide-columns-split" class="switch">
@@ -275,10 +279,7 @@
         <!-- No longer a <label> around the whole thing: a click on the
              chooser beside the field would otherwise land in the field,
              which is what a label does. The word keeps its "for" instead. -->
-        <!-- The id is what the one layout WITHOUT a heading hides
-             (js/editor/index.js): the field goes, the text field moves up
-             and takes its place, and the slide has no heading to write. -->
-        <div class="field" id="field-heading">
+        <div class="field">
           <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
           <div class="field-row">
             <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
@@ -855,6 +856,11 @@
   // arrangement. Both are defined on the server (layouts.js) and handed
   // over rather than written a second time (js/editor/columns.js).
   window.SLIDES_COLUMNS = <%- JSON.stringify(columns) %>;
+  // Said once, when the editor opens, and only on a deck that wants a
+  // newer trivialSlides than this one (routes/decks.js). A ready-made
+  // sentence rather than two version numbers: comparing them is the
+  // server's job, and the page has nothing to add to it.
+  window.SLIDES_TOO_NEW = <%- JSON.stringify(tooNew) %>;
 </script>
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
 <%- include("partials/prefs") %>

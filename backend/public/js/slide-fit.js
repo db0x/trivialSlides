@@ -16,11 +16,24 @@
 // The size goes on the <section>, so everything on the slide follows it:
 // the themes size their headings in em, and ours do too (slides.css).
 (function () {
-  // Where the shrinking stops. Below this a slide is unreadable from the
-  // back of the room, and the honest answer is "put less on it" rather than
-  // a smaller size -- so from here on the slide is allowed to run over
-  // again, which is what shows the author that there is a problem.
-  var SMALLEST = 0.55;
+  // Where the shrinking stops. Past this the honest answer is "put less on
+  // it" rather than a smaller size, so from here on the slide is allowed
+  // to run over again -- which is what shows the author that there is a
+  // problem instead of quietly printing a slide nobody can read.
+  //
+  // The number is measured, not chosen: about 350 words is the most anyone
+  // should ever put on one slide, and that much has to FIT -- with the air
+  // at the slide's edges, and on the worst slide a deck can ask for, which
+  // is one carrying BOTH strips (slides.css keeps their room free of the
+  // text). Measured that way over all fourteen themes, 350 words of prose
+  // in paragraphs ask for between 0.45 and 0.52 depending on the theme, so
+  // the floor sits below the whole range with a little to spare.
+  //
+  // Below here the honest answer is "put less on it" rather than a smaller
+  // size, so from here on the slide is allowed to run over again -- which
+  // is what shows the author there is a problem instead of quietly
+  // printing a slide nobody can read.
+  var SMALLEST = 0.42;
 
   // Halving the interval seven times lands within a thousandth of the
   // largest size that quiet fits -- finer than anyone can see, and seven

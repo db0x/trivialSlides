@@ -384,13 +384,16 @@ function slideHtml(slide, imageBase, deckBands) {
   const split = layouts.hasField(layout, "columnMode")
     && slide.columnMode === layouts.COLUMN_SPLIT;
   if (split) attrs.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
-  // How many columns the body runs in, where the layout leaves that to the
-  // slide. On the <section> like the rest of the arrangement: the markup
-  // is the same for one column and for two, and the stylesheet reads this.
+  // How many columns the body runs in. On the <section> like the rest of
+  // the arrangement: the markup is the same whatever the number, and the
+  // stylesheet reads this.
+  //
+  // Only past the first one. A single column is what .slide-text does
+  // anyway, with no rule of its own -- so a plain text slide, which is
+  // most of every deck, carries no attribute for it, exactly as it did
+  // before the number was a question.
   const columns = layouts.columnCount(layout, slide.columnCount);
-  if (layouts.hasField(layout, "columnCount")) {
-    attrs.push(`data-column-count="${layouts.onlyColumnCount(slide.columnCount)}"`);
-  }
+  if (columns > 1) attrs.push(`data-column-count="${columns}"`);
 
   // Which bands this slide carries, named on the <section> so the
   // stylesheet can keep the room they need free (slides.css). A slide

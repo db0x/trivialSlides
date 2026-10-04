@@ -17,6 +17,42 @@
   text-align: left;
 }
 
+/* --- The air at the top and bottom edge --------------------------------
+   reveal lays a slide out in a box of 960 by 700 and the text may use all
+   of it, right up to the edge. On a slide with room to spare that is never
+   seen -- reveal centres it -- but a long one then begins on the very
+   first pixel of the screen and ends on the last, which reads as text
+   somebody forgot to finish rather than as a full slide.
+
+   So every slide keeps a strip free, top and bottom. In pixels and not in
+   em, for the same reason the strips below are: it is a distance from the
+   EDGE of the slide, and it must not shrink along with the type when a
+   long slide is stepped down to fit (js/slide-fit.js) -- that is exactly
+   the slide that needs it.
+
+   Nothing is said about left and right: there the themes already keep
+   their own distance, and a line that starts further in starts a different
+   deck.
+
+   Two layouts state a padding of their own and keep it: the full-bleed
+   picture, whose text box has its own inset, and any slide carrying one of
+   the two strips -- those keep the strip's room free instead, which is
+   more than this and already holds the air inside it (see below). Both say
+   !important, so both win over the line here without this one having to
+   name them. */
+.reveal {
+  --slide-edge: 16px;
+}
+.reveal .slides section[data-layout] {
+  padding-top: var(--slide-edge);
+  padding-bottom: var(--slide-edge);
+  /* The padding has to come OFF the 700, not be added to it: what the
+     stylesheet keeps free here is the same room js/slide-fit.js measures
+     against, and a box that grew instead would simply push the overflow
+     back out at the bottom. */
+  box-sizing: border-box;
+}
+
 .reveal .slide-text > :first-child { margin-top: 0; }
 .reveal .slide-text > :last-child { margin-bottom: 0; }
 
@@ -89,25 +125,29 @@
 .reveal .layout-section .slide-text > p { font-size: 0.7em; opacity: 0.8; }
 
 /* --- Columns ---------------------------------------------------------- */
-/* Two arrangements, and the slide says which one it is in: without
-   data-columns the body FLOWS through the columns, with data-columns="split"
-   each column has a text of its own (layouts.js). Flowing is what the
-   layouts have always done and stays the default, so it is the rules below
-   that carry the :not() -- an old deck reads exactly as it did.
+/* How many columns the text stands in is the SLIDE's own number, not its
+   layout's: data-column-count, 2 or 3 (layouts.js). One column is the
+   default and has no rule at all -- that is .slide-text as it stands
+   everywhere else, so a plain text slide carries no attribute and nothing
+   below applies to it.
 
-   Flowing: one body, the browser distributes it, the heading runs across
-   all of it. No need to split the text -- in the .md the slide body stays a
-   perfectly ordinary list or paragraph, and the same text can be moved
-   between two columns and three by changing the layout alone. */
-.reveal :is(.layout-columns, .layout-columns-three):not([data-columns="split"]) .slide-text {
+   Two arrangements on top of that, and the slide says which one it is in:
+   without data-columns the body FLOWS through the columns, with
+   data-columns="split" each column has a text of its own. Flowing is what
+   the columns have always done and stays the default, so it is the rules
+   below that carry the :not() -- an old deck reads exactly as it did. In
+   the .md its body then stays a perfectly ordinary list or paragraph, and
+   the same text moves between two columns and three by changing one
+   number. */
+.reveal .slides section[data-column-count="2"]:not([data-columns="split"]) .slide-text {
   column-count: 2;
   column-gap: 1.2em;
 }
 /* Three columns on a 960-unit slide leave about a third each. At the
    theme's own size that is a handful of characters per line, so the type
    steps down with the column count -- three columns are for short points,
-   which is what the layout's own help text says. */
-.reveal .layout-columns-three:not([data-columns="split"]) .slide-text {
+   which is what the chooser's own help text says. */
+.reveal .slides section[data-column-count="3"]:not([data-columns="split"]) .slide-text {
   column-count: 3;
   /* Wider than the two-column gap, not narrower: the bullets of the next
      column would otherwise sit right against the longest line of the one
@@ -117,21 +157,25 @@
 }
 /* The step down in type follows the column WIDTH, not the arrangement, so
    it applies to both of them. */
-.reveal .layout-columns-three .slide-text { font-size: 0.85em; }
+.reveal .slides section[data-column-count="3"] .slide-text { font-size: 0.85em; }
 /* reveal indents lists by a fixed amount, which in a third of a slide is a
    sizeable part of the column. */
-.reveal .layout-columns-three .slide-text :is(ul, ol) { padding-left: 0.8em; }
-.reveal :is(.layout-columns, .layout-columns-three):not([data-columns="split"]) .slide-text h2 {
+.reveal .slides section[data-column-count="3"] .slide-text :is(ul, ol) { padding-left: 0.8em; }
+.reveal .slides section[data-column-count]:not([data-columns="split"]) .slide-text h2 {
   column-span: all;
 }
 
 /* Split: one box per column (render.js), laid out as a grid. A grid and not
    column-count, because the whole point is that the boxes do NOT spill into
    one another -- what stands in the second column is what was written for
-   the second column, however long the first one gets. */
+   the second column, however long the first one gets.
+
+   Written from the count up: one column by default, which is what a file
+   asking for a split with nothing to split gets, and two or three where
+   the slide says so. */
 .reveal .slides section[data-columns="split"] .slide-text {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   column-gap: 1.2em;
   /* The columns start at the same line, however long each of them gets --
      that is the whole of the top alignment here. The SLIDE itself keeps
@@ -139,7 +183,10 @@
      centres it and nothing here argues with that. */
   align-items: start;
 }
-.reveal .slides section.layout-columns-three[data-columns="split"] .slide-text {
+.reveal .slides section[data-column-count="2"][data-columns="split"] .slide-text {
+  grid-template-columns: repeat(2, 1fr);
+}
+.reveal .slides section[data-column-count="3"][data-columns="split"] .slide-text {
   grid-template-columns: repeat(3, 1fr);
   column-gap: 1.6em;
 }
@@ -156,38 +203,17 @@
 .reveal .slide-column > :last-child { margin-bottom: 0; }
 /* Two pitfalls at once:
    1. reveal.js sets lists to display:inline-block. An inline block is an
-      indivisible box -- it lands wholly in the first column and the layout
-      would have no effect. Hence back to block here.
+      indivisible box -- it lands wholly in the first column and the
+      columns would have no effect. Hence back to block here.
    2. The break rule applies to the individual list item, NOT to the list --
       otherwise you would have the same effect all over again. */
-.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text ul,
-.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text ol {
+.reveal .slides section[data-column-count] .slide-text ul,
+.reveal .slides section[data-column-count] .slide-text ol {
   display: block;
   width: 100%;
 }
-.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text li {
+.reveal .slides section[data-column-count] .slide-text li {
   break-inside: avoid;
-}
-
-/* --- The text block --------------------------------------------------- */
-/* A slide that is text and nothing else: no heading over it, and the SLIDE
-   says how many columns it runs in rather than the layout
-   (data-column-count, layouts.js). One column is the default and needs no
-   rule at all -- that is .slide-text as it stands everywhere else, which is
-   the point of the layout. Two is the same arrangement the column layouts
-   above have, so it is written the same way: the body flows through them
-   unless the slide keeps them apart. */
-.reveal .slides section.layout-text-block[data-column-count="2"]:not([data-columns="split"]) .slide-text {
-  column-count: 2;
-  column-gap: 1.2em;
-}
-/* Kept apart, the boxes are a grid (render.js) -- and the grid above is
-   two columns wide for every layout that has it. A text block standing in
-   ONE column must not be laid out in two, which is what a file written by
-   hand can ask for: the editor takes the question away as soon as the
-   second column goes. */
-.reveal .slides section.layout-text-block[data-column-count="1"][data-columns="split"] .slide-text {
-  grid-template-columns: 1fr;
 }
 
 /* --- Image beside text ------------------------------------------------ */
@@ -837,8 +863,7 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
 .reveal .slide-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
 
 /* Columns plus a table are a tight fit already -- one notch smaller. */
-.reveal :is(.layout-columns, .layout-columns-three) .slide-text table,
-.reveal .layout-text-block[data-column-count="2"] .slide-text table { font-size: 0.55em; }
+.reveal .slides section[data-column-count] .slide-text table { font-size: 0.55em; }
 
 /* --- Code --------------------------------------------------------------
    The colours come from the highlighter's own stylesheet (reveal.js'
@@ -1327,7 +1352,7 @@ body.is-preview .reveal .fragment {
   }
   .reveal .layout-image-left .slide-image,
   .reveal .layout-image-left .slide-text { grid-column: 1; grid-row: auto; }
-  .reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text { column-count: 1; }
+  .reveal .slides section[data-column-count] .slide-text { column-count: 1; }
 }
 
 /* --- Print view (PDF export) ------------------------------------------
@@ -1385,6 +1410,20 @@ html.reveal-print .reveal .slides section:is(.layout-video, .layout-qr) {
    that very slide. */
 html.reveal-print .reveal .slides section[data-bands] {
   top: 0 !important;
+}
+/* The air at the slide's own edges, for the second time: printing,
+   reveal.js writes `padding: 0 !important` onto every section with a
+   selector heavier than the one at the top of this file. Said here rather
+   than left out, so that a long slide is stepped down against the same
+   room on paper as on the wall -- otherwise the handout gets a slide one
+   size larger than the one the author saw, standing on the page's edge.
+
+   Before the two band rules below, not after: a side carrying a strip
+   keeps the strip's room instead, and of two important rules of equal
+   weight the later one wins. */
+html.reveal-print .reveal .slides section[data-layout] {
+  padding-top: var(--slide-edge) !important;
+  padding-bottom: var(--slide-edge) !important;
 }
 /* And the room for the two bands, for the third time and for the same
    reason: printing, reveal.js writes `padding: 0 !important` onto every

@@ -30,7 +30,7 @@ and a slide that had to be shrunk is unreadable from the back of a room:
 - at most 5 bullets on a slide, and at most about 10 words in each
 - at most 2 short paragraphs if you write prose instead
 - never both a full list and a paragraph of prose
-- a `columns` slide gets half of that per column, a `columns-three` a third
+- a slide in two columns gets half of that per column, in three a third
 
 If the material for one point does not fit, it is two points. Split the
 slide. More slides with less on them is always the better deck.
@@ -59,13 +59,13 @@ per minute of talk.
 ## Choosing a layout
 
 - `text` for most slides. It is the default and that is correct.
-- `columns` for a genuine pair -- before and after, cost and benefit, two
-  options. Not to fit more words on a slide.
-- `columns-three` only for three short, parallel items.
-- `text-block` where the slide carries no claim worth a heading -- a
-  passage someone reads out, a definition, a closing thought. Not as a way
-  around writing one: if the slide makes a point, it gets a heading and is
-  a `text` slide.
+- `data-column-count="2"` on a text slide for a genuine pair -- before and
+  after, cost and benefit, two options. Not to fit more words on a slide.
+- `data-column-count="3"` only for three short, parallel items.
+- A text slide with no `#` line where the slide carries no claim worth a
+  heading -- a passage someone reads out, a definition, a closing thought.
+  Not as a way around writing one: if the slide makes a point, it gets a
+  heading.
 - `image-right` or `image-left` where a picture carries part of the point.
   The text stays short: it is beside the picture, not under it.
 - `image-full` for one picture that is the whole point, and for opening a
