@@ -160,13 +160,34 @@
       would have no effect. Hence back to block here.
    2. The break rule applies to the individual list item, NOT to the list --
       otherwise you would have the same effect all over again. */
-.reveal :is(.layout-columns, .layout-columns-three) .slide-text ul,
-.reveal :is(.layout-columns, .layout-columns-three) .slide-text ol {
+.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text ul,
+.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text ol {
   display: block;
   width: 100%;
 }
-.reveal :is(.layout-columns, .layout-columns-three) .slide-text li {
+.reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text li {
   break-inside: avoid;
+}
+
+/* --- The text block --------------------------------------------------- */
+/* A slide that is text and nothing else: no heading over it, and the SLIDE
+   says how many columns it runs in rather than the layout
+   (data-column-count, layouts.js). One column is the default and needs no
+   rule at all -- that is .slide-text as it stands everywhere else, which is
+   the point of the layout. Two is the same arrangement the column layouts
+   above have, so it is written the same way: the body flows through them
+   unless the slide keeps them apart. */
+.reveal .slides section.layout-text-block[data-column-count="2"]:not([data-columns="split"]) .slide-text {
+  column-count: 2;
+  column-gap: 1.2em;
+}
+/* Kept apart, the boxes are a grid (render.js) -- and the grid above is
+   two columns wide for every layout that has it. A text block standing in
+   ONE column must not be laid out in two, which is what a file written by
+   hand can ask for: the editor takes the question away as soon as the
+   second column goes. */
+.reveal .slides section.layout-text-block[data-column-count="1"][data-columns="split"] .slide-text {
+  grid-template-columns: 1fr;
 }
 
 /* --- Image beside text ------------------------------------------------ */
@@ -816,7 +837,8 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
 .reveal .slide-text table:has(tbody tr:nth-child(14)) { font-size: 0.36em; }
 
 /* Columns plus a table are a tight fit already -- one notch smaller. */
-.reveal :is(.layout-columns, .layout-columns-three) .slide-text table { font-size: 0.55em; }
+.reveal :is(.layout-columns, .layout-columns-three) .slide-text table,
+.reveal .layout-text-block[data-column-count="2"] .slide-text table { font-size: 0.55em; }
 
 /* --- Code --------------------------------------------------------------
    The colours come from the highlighter's own stylesheet (reveal.js'
@@ -1305,7 +1327,7 @@ body.is-preview .reveal .fragment {
   }
   .reveal .layout-image-left .slide-image,
   .reveal .layout-image-left .slide-text { grid-column: 1; grid-row: auto; }
-  .reveal :is(.layout-columns, .layout-columns-three) .slide-text { column-count: 1; }
+  .reveal :is(.layout-columns, .layout-columns-three, .layout-text-block) .slide-text { column-count: 1; }
 }
 
 /* --- Print view (PDF export) ------------------------------------------

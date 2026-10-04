@@ -62,6 +62,10 @@ per minute of talk.
 - `columns` for a genuine pair -- before and after, cost and benefit, two
   options. Not to fit more words on a slide.
 - `columns-three` only for three short, parallel items.
+- `text-block` where the slide carries no claim worth a heading -- a
+  passage someone reads out, a definition, a closing thought. Not as a way
+  around writing one: if the slide makes a point, it gets a heading and is
+  a `text` slide.
 - `image-right` or `image-left` where a picture carries part of the point.
   The text stays short: it is beside the picture, not under it.
 - `image-full` for one picture that is the whole point, and for opening a

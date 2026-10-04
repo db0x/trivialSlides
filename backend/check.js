@@ -58,7 +58,7 @@ const CONTENT_MAX = 20000;
 // The order is the one serialize() writes them in, so a reader comparing
 // the two files has them in the same order.
 //
-// `layout: true` marks the ten that hang on the LAYOUT -- the ones
+// `layout: true` marks the ones that hang on the LAYOUT -- the ones
 // parseAttrs passes through its ifField. What they carry comes back empty
 // on a layout that has no such field, however well it is written. The rest
 // belong to the slide the way its colours do (deck.js says so in as many
@@ -76,6 +76,7 @@ const ATTRIBUTES = [
   { name: "data-textbreite", field: "textWidth", key: "check.width", allowed: () => layouts.WIDTHS, layout: true },
   { name: "data-text-place", field: "textPlace", key: "check.place", allowed: () => layouts.PLACES, layout: true },
   { name: "data-columns", field: "columnMode", key: "check.columns", allowed: () => [layouts.COLUMN_SPLIT], layout: true },
+  { name: "data-column-count", field: "columnCount", key: "check.columnCount", allowed: () => layouts.COLUMN_COUNTS, layout: true },
   { name: "data-title-align", field: "titleAlign", key: "check.titleAlign", allowed: () => layouts.TITLE_ALIGNS },
   { name: "data-text-fragment", field: "textFragment", key: "check.textFragment", allowed: () => [deck.TEXT_FRAGMENT_ON] },
   // The two bands a slide can send away, built from the same table the
@@ -253,7 +254,7 @@ function checkAttrs(line, at, slide, images, add) {
     if (!rule) return add(at, "check.attrUnknown", { name: p.name });
     if (seen.has(p.name)) return add(at, "check.attrTwice", { name: p.name });
     seen.add(p.name);
-    // The layout decides which of those ten a slide may carry at all.
+    // The layout decides which of those a slide may carry at all.
     if (rule.layout && !layouts.hasField(slide.layout, rule.field)) {
       return add(at, "check.attrField", { name: p.name, layout: slide.layout });
     }

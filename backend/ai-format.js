@@ -85,6 +85,7 @@ function fallback(field, layout) {
   if (field === "textSide") return layouts.defaultSide(layout);
   if (field === "textWidth") return layouts.defaultWidth(layout);
   if (field === "textPlace") return layouts.PLACE_DEFAULT;
+  if (field === "columnCount") return layouts.COLUMN_COUNT_DEFAULT;
   if (field === "qrColor") return qr.COLOR_DEFAULT;
   if (field === "qrBackground") return qr.BACKGROUND_DEFAULT;
   return "";
@@ -237,10 +238,16 @@ function layoutList() {
     out.push("");
     out.push(word("layout." + l.id + ".hint"));
     out.push("");
-    const columns = layouts.columnCount(l.id);
-    if (columns) {
-      out.push("The body runs through " + columns + " columns by itself. With"
-        + " `data-columns=\"" + layouts.COLUMN_SPLIT + "\"` each column gets a text of"
+    // How many columns there are is the layout's own number, except where
+    // the layout leaves it to the slide -- then the attribute below says
+    // it and there is no number to name here (layouts.js).
+    const chosen = layouts.hasField(l.id, "columnCount");
+    const columns = chosen ? 0 : layouts.columnCount(l.id);
+    if (columns || chosen) {
+      out.push((chosen
+        ? "The body runs by itself through as many columns as `data-column-count` says."
+        : "The body runs through " + columns + " columns by itself.")
+        + " With `data-columns=\"" + layouts.COLUMN_SPLIT + "\"` each column gets a text of"
         + " its own instead, separated in the body by a line holding nothing but"
         + " `" + layouts.COLUMN_BREAK + "`.");
       out.push("");
@@ -253,8 +260,16 @@ function layoutList() {
       out.push("Reads no attributes of its own.");
     }
     out.push("");
-    out.push("Its heading stands `" + layouts.defaultTitleAlign(l.id)
-      + "` unless `data-title-align` says otherwise.");
+    // The one layout with no heading. Worth a line of its own rather than
+    // silence: the model has to know that a `#` on such a slide is text
+    // and stays in the body, where every other layout would have it
+    // lifted out into the slide's name (deck.js, parseSlide).
+    out.push(layouts.hasTitle(l.id)
+      ? "Its heading stands `" + layouts.defaultTitleAlign(l.id)
+        + "` unless `data-title-align` says otherwise."
+      : "It has NO heading. Write no `#` line on such a slide -- one written"
+        + " there stays in the body and is shown as part of the text,"
+        + " and `data-title-align` says nothing here.");
     out.push("");
   });
   // The blank line the last layout left behind. The sections are joined

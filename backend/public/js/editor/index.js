@@ -98,6 +98,8 @@ var el = {
   columnTabs: $("#column-tabs"),
   columnsSplit: $("#slide-columns-split"),
   fieldColumns: $(".field-columns"),
+  fieldColumnCount: $("#field-column-count"),
+  fieldHeading: $("#field-heading"),
   slideBands: $("#slide-bands"),
   headerOn: $("#slide-header-on"),
   footerOn: $("#slide-footer-on"),
@@ -337,7 +339,12 @@ function harvest() {
   // one field cannot say which is meant, so what the slide already is
   // decides -- which is what makes a hand-written "##" survive being opened
   // here (deck.js).
-  slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
+  // A layout with no heading has no heading to read either, and the field
+  // is not even on the form for it (showSlide). Its alignment goes with
+  // it: an attribute saying where a heading stands that does not exist
+  // would be a line in the file for nothing.
+  if (!hasTitle(slide)) slide.title = null;
+  else slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
   slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
@@ -353,7 +360,7 @@ function harvest() {
   // The chooser beside the heading keeps two things apart: what the slide
   // has CHOSEN (which may be nothing) and what the button SHOWS, which is
   // never nothing. Only the choice belongs in the model.
-  slide.titleAlign = el.titleAlignButton.dataset.choice || "";
+  slide.titleAlign = hasTitle(slide) ? (el.titleAlignButton.dataset.choice || "") : "";
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
@@ -363,12 +370,32 @@ function harvest() {
 }
 
 // --- Columns -----------------------------------------------------------
+// How many columns the slide has at all, 0 for a layout with none. The
+// twin of layouts.js' columnCount(): the column layouts carry the number
+// themselves, the text block is asked for it.
+function columnCount(slide) {
+  var def = layoutsById[(slide || {}).layout] || {};
+  if (has(def, "columnCount")) return Number(slide.columnCount || 1);
+  return def.columns || 0;
+}
+
+// Whether the layout has this field at all -- the browser's half of
+// layouts.js' hasField(), asked of the definition the page was handed.
+function has(def, field) {
+  return ((def || {}).fields || []).indexOf(field) !== -1;
+}
+
+// Whether the slide has a heading at all. The exception speaks, as it does
+// on the server (layouts.js, hasTitle): a layout without one says so.
+function hasTitle(slide) {
+  return (layoutsById[(slide || {}).layout] || {}).heading !== false;
+}
+
 // How many text fields the slide's body is written in: one, unless the
-// layout has columns AND the slide keeps them apart. The count belongs to
-// the layout (layouts.js), the arrangement to the slide.
+// slide has columns AND keeps them apart.
 function splitCount(slide) {
   if (!slide || slide.columnMode !== SPLIT) return 0;
-  return (layoutsById[slide.layout] || {}).columns || 0;
+  return columnCount(slide);
 }
 
 // The body as the field holds it. Kept apart, the field holds ONE column --
@@ -443,12 +470,19 @@ function showSlide() {
   el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
 
   var def = layoutsById[slide.layout] || { fields: [] };
+  // The one layout with no heading puts the whole field away -- an input
+  // that cannot end up anywhere is worse than no input.
+  el.fieldHeading.hidden = !hasTitle(slide);
   el.fieldImage.hidden = def.fields.indexOf("image") === -1;
   el.fieldSource.hidden = def.fields.indexOf("source") === -1;
   el.fieldVideo.hidden = def.fields.indexOf("video") === -1;
   el.fieldUrl.hidden = def.fields.indexOf("url") === -1;
   el.fieldQrColors.hidden = def.fields.indexOf("qrColor") === -1;
-  el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
+  showColumnCount(slide, def);
+  // Keeping columns apart is a question only where there are two of them:
+  // on a text block standing in one column there is nothing to keep apart,
+  // so the switch is not there to be asked.
+  el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1 || columnCount(slide) < 2;
   el.columnsSplit.checked = slide.columnMode === SPLIT;
   drawSlideBands(slide);
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
@@ -855,6 +889,21 @@ function showTextWidth(width) {
   el.textWidthButton.dataset.tip = name;
 }
 
+// How many columns the text runs in, where the layout leaves that to the
+// slide. Two buttons and not a menu: there are two values, and a chooser
+// one has to open to see two numbers in is a lid on a box holding nothing.
+function showColumnCount(slide, def) {
+  var here = has(def, "columnCount");
+  el.fieldColumnCount.hidden = !here;
+  if (!here) return;
+  var count = String(slide.columnCount || "1");
+  $$(".count-option", el.fieldColumnCount).forEach(function (b) {
+    var is = b.dataset.count === count;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-pressed", is ? "true" : "false");
+  });
+}
+
 // Where the heading stands. The choice may be empty -- then the layout
 // decides (layouts.js) and the button shows what the layout does, because
 // the question this button answers is "where is my heading", not "have I
@@ -972,10 +1021,41 @@ $$(".layout-tile").forEach(function (tile) {
     harvest();
     var slide = deck.slides[active];
     slide.layout = tile.dataset.layout;
-    // A layout without columns cannot keep any apart, so the breaks in the
-    // body go with the layout that had them.
-    if (!splitCount(slide)) dropColumnBreaks(slide);
+    // A layout without columns -- or with one single column -- cannot keep
+    // any apart, so the breaks in the body go with the layout that had
+    // them.
+    if (splitCount(slide) < 2) dropColumnBreaks(slide);
+    // A layout with no heading has no field to keep one in, and dropping
+    // the words silently is the one thing the lock above exists to
+    // prevent. So they become the first line of the text: the slide keeps
+    // everything that was written on it, it is simply no longer called
+    // that. (A plain line and not "## " -- a heading in the body would
+    // send the slide to source mode over something the user never typed.)
+    if (!hasTitle(slide) && String(slide.title || "").trim()) {
+      slide.content = [slide.title.trim(), String(slide.content || "").trim()]
+        .filter(Boolean).join("\n\n");
+      slide.title = null;
+    }
     drawAll();
+    remember();
+  });
+});
+
+// One column or two. Like the switch below it this is read BEFORE the
+// change and the fields are filled again after it: going from two columns
+// to one leaves nothing to keep apart, so the breaks in the body go the
+// same way they go when the switch is unticked -- the two texts become
+// one, which is exactly the arrangement the slide now has.
+$$(".count-option", el.fieldColumnCount).forEach(function (button) {
+  button.addEventListener("click", function () {
+    harvest();
+    var slide = deck.slides[active];
+    slide.columnCount = button.dataset.count;
+    if (columnCount(slide) < 2) dropColumnBreaks(slide);
+    // The whole form, not only the field: the switch under the buttons
+    // comes and goes with the second column, and the body has to go back
+    // into the fields -- two texts become one, or the other way round.
+    showSlide();
     remember();
   });
 });

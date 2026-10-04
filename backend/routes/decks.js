@@ -159,6 +159,9 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     videoPattern: video.PATTERN,
     textSides: i18n.textSidesTranslated(layouts.SIDES, req.language),
     textWidths: layouts.WIDTHS,
+    // How many columns the text block may run in (layouts.js). Numbers,
+    // and the page writes them on the buttons as they stand.
+    columnCounts: layouts.COLUMN_COUNTS,
     places: i18n.placesTranslated(layouts.PLACES, req.language),
     // The two strips that stand on every slide, for the dialog that
     // manages them (bands.js, partials/bands.ejs).

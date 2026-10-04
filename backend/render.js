@@ -384,6 +384,13 @@ function slideHtml(slide, imageBase, deckBands) {
   const split = layouts.hasField(layout, "columnMode")
     && slide.columnMode === layouts.COLUMN_SPLIT;
   if (split) attrs.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+  // How many columns the body runs in, where the layout leaves that to the
+  // slide. On the <section> like the rest of the arrangement: the markup
+  // is the same for one column and for two, and the stylesheet reads this.
+  const columns = layouts.columnCount(layout, slide.columnCount);
+  if (layouts.hasField(layout, "columnCount")) {
+    attrs.push(`data-column-count="${layouts.onlyColumnCount(slide.columnCount)}"`);
+  }
 
   // Which bands this slide carries, named on the <section> so the
   // stylesheet can keep the room they need free (slides.css). A slide
@@ -453,7 +460,7 @@ function slideHtml(slide, imageBase, deckBands) {
     // open, so two texts beside an empty middle column stay where the
     // writer put them instead of sliding over.
     inner = `<div class="${textBox}">${heading}` +
-      layouts.splitColumns(slide.content, layouts.columnCount(layout))
+      layouts.splitColumns(slide.content, columns)
         .map((part) => `<div class="slide-column">${md(part, imageBase)}</div>`)
         .join("") +
       `</div>`;

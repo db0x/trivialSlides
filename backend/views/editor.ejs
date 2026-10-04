@@ -182,7 +182,25 @@
            A disabled button has no tooltip to explain itself with, so the
            reason stands here (js/editor/index.js). -->
       <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
-      <!-- Only the two column layouts have this, and it belongs here rather
+      <!-- How many columns the text runs in, where the layout leaves that
+           to the slide (the text block). Here and not in the text bar for
+           the same reason as the switch below it: it is a question about
+           the shape of the slide, not about its wording -- and the two
+           belong next to each other, because one asks how many columns
+           there are and the other how they are filled. -->
+      <div id="field-column-count" class="field-column-count" role="group" hidden
+           aria-label="<%= t('editor.columnCount') %>"
+           data-tip="<%= t('editor.columnCountHint') %>">
+        <span class="field-label"><%= t('editor.columnCount') %></span>
+        <div class="count-choice">
+          <% columnCounts.forEach(function (n) { %>
+            <button type="button" class="count-option" data-count="<%= n %>"
+                    aria-pressed="false"><%= n %></button>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Only the column layouts have this, and it belongs here rather
            than in the text bar: it decides how many text fields there are
            below, which is a question about the structure of the slide, not
            about its wording. Off (and that is how every deck written so far
@@ -257,7 +275,10 @@
         <!-- No longer a <label> around the whole thing: a click on the
              chooser beside the field would otherwise land in the field,
              which is what a label does. The word keeps its "for" instead. -->
-        <div class="field">
+        <!-- The id is what the one layout WITHOUT a heading hides
+             (js/editor/index.js): the field goes, the text field moves up
+             and takes its place, and the slide has no heading to write. -->
+        <div class="field" id="field-heading">
           <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
           <div class="field-row">
             <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">

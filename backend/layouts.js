@@ -20,7 +20,10 @@
 //            player (data-textbreite, see WIDTHS below)
 //   columnMode - whether the columns are filled one by one or the text
 //            flows through them (data-columns, see COLUMNS below)
-// Every layout has a title and a body, so those are not in the list.
+//   columnCount - how many columns the body runs in, where the layout
+//            leaves that to the slide (data-column-count, see COLUMNS)
+// Every layout has a body, so that is not in the list. A heading is in all
+// but one of them, and the one without says so: heading: false.
 const LAYOUTS = [
   {
     id: "title",
@@ -36,6 +39,16 @@ const LAYOUTS = [
   {
     id: "text",
     fields: [],
+  },
+  {
+    // The text alone: no heading over it, and the slide says whether it
+    // runs in one column or two. The column layouts below are a heading
+    // with columns under it; this one is for the slide that is a
+    // paragraph, a list or a page of prose and has nothing to be called --
+    // where a heading would only be an empty line at the top.
+    id: "text-block",
+    heading: false,
+    fields: ["columnCount", "columnMode"],
   },
   {
     id: "columns",
@@ -211,13 +224,35 @@ function onlyTitleAlign(value) {
 const COLUMN_SPLIT = "split";
 const COLUMN_BREAK = "<!-- .column -->";
 
+// How many columns there are is a different question from how they are
+// filled, and the layouts answer it in two ways. The column layouts have a
+// fixed number of them -- "two columns" IS the layout, and the same text
+// moves between two and three by changing it. The text block is asked
+// instead (the columnCount field): there the number is a property of the
+// slide, because without a heading the layout has nothing else to be.
+//
+// One and two, and no more: three columns of text with nothing named above
+// them is a newspaper page, and the layout for three short points already
+// exists above.
+const COLUMN_COUNTS = ["1", "2"];
+const COLUMN_COUNT_DEFAULT = "1";
+
+function onlyColumnCount(value) {
+  const s = String(value == null ? "" : value).trim();
+  return COLUMN_COUNTS.includes(s) ? s : COLUMN_COUNT_DEFAULT;
+}
+
 // Tolerant of spacing the way the other two comment lines are (deck.js'
 // ATTR_LINE, render.js' FRAGMENT_RE): a break is a line that holds nothing
 // but the comment.
 const COLUMN_BREAK_LINE = /^[ \t]*<!--[ \t]*\.column[ \t]*-->[ \t]*$/m;
 
-// How many columns a layout has; 0 for every layout that has none.
-function columnCount(id) {
+// How many columns a slide of this layout has; 0 for every layout that has
+// none. `chosen` is the slide's own count and is read only where the
+// layout leaves the number to it -- every other layout answers out of its
+// own definition, so asking with the id alone still means what it did.
+function columnCount(id, chosen) {
+  if (hasField(id, "columnCount")) return Number(onlyColumnCount(chosen));
   return get(id).columns || 0;
 }
 
@@ -304,9 +339,19 @@ function hasField(id, field) {
   return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, get, hasField,
+// Whether this layout has a heading at all. All but one do, so it is the
+// exception that speaks: a layout with none says heading: false, and the
+// rest stay silent. What hangs on it is more than one element -- a layout
+// without a heading has no heading LINE in the file either, so a "#" in
+// such a slide is part of its text (deck.js, parseSlide).
+function hasTitle(id) {
+  return get(id).heading !== false;
+}
+
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, get, hasField, hasTitle,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
   WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
   COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,
+  COLUMN_COUNTS, COLUMN_COUNT_DEFAULT, onlyColumnCount,
   TITLE_ALIGNS, TITLE_ALIGN_DEFAULT, defaultTitleAlign, onlyTitleAlign,
   PLACES, PLACE_DEFAULT, onlyPlace };

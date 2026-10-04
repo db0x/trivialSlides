@@ -957,6 +957,30 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Text: heading plus lines */
 .mini-text::before { left: 8%; right: 45%; top: 6px; height: 4px; }
 .mini-text::after { left: 8%; right: 12%; top: 15px; height: 11px; opacity: 0.25; }
+/* Text block: lines of text from the top edge down, and no bar above them
+   -- no heading is the whole of what this layout is. Lines and not one
+   filled block, which is what the section divider wears: the two would
+   read as the same tile from across the form. Four of them, painted into
+   the background, because an element has only two pseudo-elements and the
+   one that is left goes on shortening the last line -- the sign that this
+   is running text and not a picture. Whether it stands in one column or
+   two is the SLIDE's choice, and a tile shows the layout. */
+.mini-text-block {
+  background-image: repeating-linear-gradient(
+    color-mix(in srgb, var(--muted) 25%, transparent) 0 3px, transparent 3px 6px);
+  background-size: 84% 21px;
+  background-position: 8% 6px;
+  background-repeat: no-repeat;
+}
+.mini-text-block::before { display: none; }
+.mini-text-block::after {
+  right: 8%;
+  width: 34%;
+  top: 24px;
+  height: 3px;
+  background: var(--paper);
+  opacity: 1;
+}
 /* Two columns */
 .mini-columns::before { left: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
 .mini-columns::after { right: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
@@ -1450,6 +1474,41 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 /* Off the tiles above it, which are a dense block of their own. */
 .field-columns { margin-top: 8px; }
+
+/* --- How many columns -------------------------------------------------
+   The question above the switch, and it reads the same way: a word and the
+   answer beside it on one line. Two buttons rather than a menu -- there
+   are two values, and a chooser one has to open to see "1" and "2" in is a
+   lid on a box holding nothing. The label keeps the switch line's size, so
+   the two questions under the tiles line up. */
+.field-column-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.field-column-count .field-label { margin-bottom: 0; }
+.count-choice { display: flex; gap: 4px; }
+/* The same small, quiet button the column chooser over the text field
+   wears (.column-tab): one shape for choosing among a handful of things. */
+.count-option {
+  min-width: 26px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+  cursor: pointer;
+}
+.count-option:hover { border-color: var(--accent); }
+.count-option.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.count-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* --- Choosing a column ------------------------------------------------ */
 /* One text field for all the columns, and this says which of them is in it.

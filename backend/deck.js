@@ -134,8 +134,14 @@ function parseAttrs(line) {
     // Whether each column has a text of its own. The breaks between them
     // are in the body, not here -- see layouts.js.
     columnMode: ifField("columnMode", layouts.onlyColumnMode(attrs["data-columns"])),
-    // Where the heading stands. No ifField: every layout has a heading, so
-    // this belongs to the slide like its colours do.
+    // How many columns there are, where the layout leaves that to the
+    // slide. A number as a string, like the text width above: it is a
+    // name out of a short list, not something to count with.
+    columnCount: ifField("columnCount", layouts.onlyColumnCount(attrs["data-column-count"])),
+    // Where the heading stands. No ifField: a heading is in all but one
+    // layout, so this belongs to the slide like its colours do -- and on
+    // the one layout that has none it simply says nothing, the way a text
+    // width says nothing while the text stands above the player.
     titleAlign: layouts.onlyTitleAlign(attrs["data-title-align"]),
     // Whether the text waits for a click. Also no ifField: every layout
     // has a text box, and reveal.js makes a fragment of it (render.js).
@@ -196,6 +202,11 @@ function serializeAttrs(slide, immer) {
   // columns flow, which is what these layouts have always done.
   if (layouts.hasField(slide.layout, "columnMode")
       && slide.columnMode === layouts.COLUMN_SPLIT) parts.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+  // The one column is the default and stays out of the file: a text block
+  // nobody has split is a text block, and that is what it should look like
+  // when the file is opened in a text editor.
+  if (layouts.hasField(slide.layout, "columnCount") && slide.columnCount
+      && slide.columnCount !== layouts.COLUMN_COUNT_DEFAULT) parts.push(`data-column-count="${slide.columnCount}"`);
   // Nothing is written while the layout is left in charge -- which is what
   // keeps a deck that has never been asked looking untouched in the file.
   if (slide.titleAlign) parts.push(`data-title-align="${slide.titleAlign}"`);
@@ -261,7 +272,16 @@ function parseSlide(text, vertical) {
     attrs = parseAttrs(lines[i]);
     i++;
   }
-  return Object.assign({ vertical: !!vertical }, attrs, splitTitle(lines.slice(i).join("\n")));
+  const body = lines.slice(i).join("\n");
+  // A layout with no heading has no heading LINE either: a "#" in such a
+  // slide is part of what is written on it, so it stays in the body
+  // instead of being lifted out into a field the editor does not show.
+  // Nothing is lost that way and nothing moves -- the slide renders the
+  // heading where it stands, as the text it is (layouts.js, hasTitle).
+  const said = layouts.hasTitle(attrs.layout)
+    ? splitTitle(body)
+    : { title: null, content: body.trim() };
+  return Object.assign({ vertical: !!vertical }, attrs, said);
 }
 
 // --- File -> model -----------------------------------------------------
@@ -418,6 +438,7 @@ function newSlide(layout) {
     textWidth: layouts.defaultWidth(layout),
     textPlace: layouts.hasField(layout, "textPlace") ? layouts.PLACE_DEFAULT : "",
     columnMode: "",
+    columnCount: layouts.hasField(layout, "columnCount") ? layouts.COLUMN_COUNT_DEFAULT : "",
     titleAlign: "",
     textFragment: false,
     noHeader: false,
@@ -450,8 +471,12 @@ function normalize(raw) {
         vertical: i > 0 && !!(f && f.vertical),
         // Passed through rather than folded to "": the editor sends null for
         // a slide without a heading and "" for one with an empty heading,
-        // and both have to survive the round trip.
-        title: f && f.title !== null && f.title !== undefined ? oneLine(f.title).slice(0, 200) : null,
+        // and both have to survive the round trip. A layout that has no
+        // heading at all is the third case and the only one decided here:
+        // it comes back null whatever arrived, the way a field the layout
+        // does not have comes back empty.
+        title: layouts.hasTitle(layout) && f && f.title !== null && f.title !== undefined
+          ? oneLine(f.title).slice(0, 200) : null,
         content: String((f && f.content) || "").replace(/\r\n/g, "\n").slice(0, 20000),
         image: layouts.hasField(layout, "image") ? oneLine(f && f.image).slice(0, 200) : "",
         source: layouts.hasField(layout, "source") ? oneLine(f && f.source).slice(0, 200) : "",
@@ -469,6 +494,7 @@ function normalize(raw) {
         textWidth: layouts.hasField(layout, "textWidth") ? layouts.onlyWidth(f && f.textWidth, layout) : "",
         textPlace: layouts.hasField(layout, "textPlace") ? layouts.onlyPlace(f && f.textPlace) : "",
         columnMode: layouts.hasField(layout, "columnMode") ? layouts.onlyColumnMode(f && f.columnMode) : "",
+        columnCount: layouts.hasField(layout, "columnCount") ? layouts.onlyColumnCount(f && f.columnCount) : "",
         titleAlign: layouts.onlyTitleAlign(f && f.titleAlign),
         textFragment: !!(f && f.textFragment),
         noHeader: !!(f && f.noHeader),
