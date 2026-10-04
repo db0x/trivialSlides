@@ -190,6 +190,21 @@ function describe() {
   return AI_MODEL + " over " + AI_API + ", at " + (AI_URL || dialect().url);
 }
 
+// The same two facts for the dialog, as values rather than a sentence:
+// WHICH model writes and WHERE the material goes. Named in the UI because
+// a user handing over their notes is owed both -- what writes the slides
+// is not part of trivialSlides, and the material leaves this machine
+// unless the host says it does not (partials/ai-new.ejs).
+//
+// The host and not the whole address: the path is this module's business,
+// the machine is the user's.
+function connection() {
+  const url = AI_URL || (dialect() ? dialect().url : "");
+  let host = url;
+  try { host = new URL(url).host; } catch (err) { /* then the raw string */ }
+  return { model: AI_MODEL, host };
+}
+
 // Why it is NOT available, for the same line. Three ways to get this
 // wrong, and each has a different thing missing.
 function missing() {
@@ -397,5 +412,5 @@ async function compose(parts, onEvent) {
   return { text, findings };
 }
 
-module.exports = { available, describe, missing, compose, document: format.document,
+module.exports = { available, describe, connection, missing, compose, document: format.document,
   PROMPT_MAX, MATERIAL_MAX, LOOK_MAX, LOOK_BYTES, LOOK_TOTAL, LOOK_TYPES };

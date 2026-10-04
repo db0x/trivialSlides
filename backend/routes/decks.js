@@ -117,6 +117,9 @@ router.get("/", async (req, res) => {
     aiPromptMax: ai.PROMPT_MAX,
     aiMaterialMax: ai.MATERIAL_MAX,
     aiLookMax: ai.LOOK_MAX,
+    // Which model writes and where the material goes, said in the dialog
+    // itself rather than only in the startup line (ai.js).
+    aiWhere: ai.available() ? ai.connection() : null,
   });
 });
 
@@ -184,6 +187,9 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     // (ai.js, config.js).
     ai: ai.available(),
     aiPromptMax: ai.PROMPT_MAX,
+    // Which model writes and where the deck goes, said in the dialog
+    // itself, as on the overview (ai.js, connection()).
+    aiWhere: ai.available() ? ai.connection() : null,
     // The editor's dialog changes a deck that already exists, so it asks
     // for an instruction and nothing else: the material and the pictures
     // are handed over where a deck BEGINS (views/index.ejs).

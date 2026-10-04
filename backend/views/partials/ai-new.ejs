@@ -25,6 +25,13 @@
   </form>
   <div class="dialog-content">
 
+    <!-- Who is actually writing. At the top and not in the note at the
+         foot, because it is the thing to know BEFORE typing one's notes
+         in: the slides are written by a model that is not part of
+         trivialSlides, and the material is sent to it (ai.js,
+         connection()). -->
+    <p class="hint"><%= t('ai.where', aiWhere) %></p>
+
     <div class="field">
       <label class="field-label" for="ai-new-name"><%= t('dialog.title') %></label>
       <input id="ai-new-name" maxlength="120" autocomplete="off"

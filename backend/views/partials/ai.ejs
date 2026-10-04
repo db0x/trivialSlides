@@ -39,6 +39,13 @@
   </form>
   <div class="dialog-content">
 
+    <!-- Who is actually writing, before the instruction is typed: the
+         deck is changed by a model that is not part of trivialSlides, and
+         it is sent there to be changed (ai.js, connection()). The same
+         line stands over the dialog that BUILDS a deck
+         (partials/ai-new.ejs). -->
+    <p class="hint"><%= t('ai.whereChange', aiWhere) %></p>
+
     <p class="hint"><%= t('ai.changeHint') %></p>
 
     <div class="field">
