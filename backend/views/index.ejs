@@ -34,6 +34,18 @@
           <span class="deck-title"><%= t('overview.new') %></span>
         </button>
       </li>
+      <!-- And beside it the other way of starting one: out of material
+           somebody already has (partials/ai-new.ejs). The same shape as
+           the button above, because it answers the same question -- how
+           does a talk come into being here. -->
+      <% if (ai) { %>
+        <li class="deck-fresh">
+          <button type="button" id="deck-compose" class="deck-fresh-button">
+            <span class="deck-compose-zeichen" aria-hidden="true"></span>
+            <span class="deck-title"><%= t('ai.newOpen') %></span>
+          </button>
+        </li>
+      <% } %>
     </ul>
   </main>
 
@@ -56,7 +68,16 @@
     </form>
   </dialog>
 
+  <% if (ai) { %><%- include("partials/ai-new") %><% } %>
+
   <script src="<%= BASE %>/static/js/overview.js" defer></script>
+  <!-- A module, unlike the script above: it shares the reader for the
+       answer with the editor's own dialog (js/ai-run.js), and sharing it
+       is the point -- both pages ask for a deck the same way. -->
+  <% if (ai) { %>
+    <script>window.SLIDES_BASE = <%- JSON.stringify(BASE) %>;</script>
+    <script type="module" src="<%= BASE %>/static/js/overview-ai.js"></script>
+  <% } %>
 <%- include("partials/prefs") %>
 
 </body>

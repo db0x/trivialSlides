@@ -127,6 +127,18 @@
        what that menu is for. -->
   <button type="button" id="bands-open" class="button button-icon header-bands"
           data-tip="<%= t('header.bands') %>" aria-label="<%= t('header.bands') %>"></button>
+  <!-- This deck, changed by instruction (partials/ai.ejs). Rendered only
+       where a key is configured: without one this is not a feature that is
+       switched off, it is a feature the instance does not have -- the same
+       way the PDF export is absent where no browser was found. It stands
+       beside the file and the bands because it is the third thing here that
+       works on the whole DECK rather than on the slide in front.
+       BUILDING a deck out of material is the other half of the job and sits
+       on the overview, where talks begin (views/index.ejs). -->
+  <% if (ai) { %>
+    <button type="button" id="ai-open" class="button button-icon header-ai"
+            data-tip="<%= t('ai.changeOpen') %>" aria-label="<%= t('ai.changeOpen') %>"></button>
+  <% } %>
   <%- include("partials/settings") %>
 </header>
 
@@ -814,6 +826,10 @@
 <script type="application/json" id="data-emoji"><%- JSON.stringify(emoji) %></script>
 <script>
   window.SLIDES_BASE = <%- JSON.stringify(BASE + "/d/" + slug) %>;
+  // The deck's own name in the folder. Needed where something has to be
+  // kept for THIS deck across a page load -- a suggestion built on the
+  // overview and carried here (js/ai-run.js).
+  window.SLIDES_SLUG = <%- JSON.stringify(slug) %>;
   // The break line between two columns' texts and the name of that
   // arrangement. Both are defined on the server (layouts.js) and handed
   // over rather than written a second time (js/editor/columns.js).
@@ -822,6 +838,7 @@
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
 <%- include("partials/prefs") %>
 <%- include("partials/bands") %>
+<% if (ai) { %><%- include("partials/ai") %><% } %>
 
 </body>
 </html>

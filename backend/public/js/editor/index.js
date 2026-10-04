@@ -13,6 +13,7 @@ import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
+import { setupAi } from "./ai.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
@@ -1572,6 +1573,9 @@ function libraryDelete(name) {
       if (a.ok && a.d.ok) {
         images = a.d.images || images.filter(function (n) { return n !== name; });
         libraryDraw();
+        // The prompt dialog names the pictures a model may choose from, and
+        // one that has just gone is not one of them any more (ai.js).
+        if (aiDialog) aiDialog.pictures(images);
         return;
       }
       // The server names both ways of being in use, and they are two
@@ -1603,6 +1607,7 @@ $("#image-file").addEventListener("change", function (ev) {
       images = d.images || images;
       drawGallery();
       if (!libraryPanel.hidden) libraryDraw();
+      if (aiDialog) aiDialog.pictures(images);
       // A freshly uploaded image is almost always wanted right away -- by
       // whoever opened the picker, which may be a band rather than the
       // slide (askForImage above).
@@ -1772,7 +1777,7 @@ function adoptDeck(fresh, wrote) {
   preview.newLoad(active);
 }
 
-setupDeckSource({
+var deckSource = setupDeckSource({
   base: BASE,
   flush: window.trivialSlidesSave,
   adopt: adoptDeck,
@@ -1781,6 +1786,23 @@ setupDeckSource({
   preview: preview,
   // And the box it stands in, which the dialog's veil is kept off -- a
   // slide seen through a veil is a slide judged wrongly.
+  frame: $(".preview-frame"),
+});
+
+// This deck, changed by instruction, where the server has a key for it
+// (js/editor/ai.js) -- and the place a deck BUILT on the overview is
+// received, which is why it is wired up whether or not the dialog exists.
+// It is handed the source dialog rather than the model: what a model
+// writes is a FILE, and it is judged and applied over there, through the
+// one door that saves and never saves past a finding. Nothing about the
+// deck in this page is touched until the user applies it -- which is also
+// what keeps it out of the way of the autosave.
+var aiDialog = setupAi({
+  base: BASE,
+  slug: window.SLIDES_SLUG,
+  images: images,
+  source: deckSource,
+  flush: window.trivialSlidesSave,
   frame: $(".preview-frame"),
 });
 

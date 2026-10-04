@@ -74,6 +74,19 @@ const FOR_BROWSER = [
   // A picture may be the logo of one of the two bands, and then the
   // library names the band rather than a list of slides (bands.js).
   "bands.header", "bands.footer",
+  // The two prompt dialogs say what they are doing while they wait, and
+  // what came of it afterwards -- all of it built in the page as the
+  // answer arrives. The first group is shared, then the one that BUILDS a
+  // deck on the overview (js/overview-ai.js) and the one that CHANGES it
+  // in the editor (js/editor/ai.js).
+  "ai.working", "ai.round", "ai.needPrompt", "ai.aborted", "ai.failed",
+  "ai.newName", "ai.newCreating", "ai.newReady", "ai.newReadyFaults", "ai.abortedKept",
+  "ai.pictures", "ai.picturesNone", "ai.ready", "ai.readyFaults",
+  // The files brought along: the row for each one, and what a PDF turns
+  // into. The list is built as they are chosen (js/overview-ai.js).
+  "ai.fileRemove", "ai.uploading", "ai.tooManyPictures",
+  "ai.pdfReading", "ai.pdfTaken", "ai.pdfCut", "ai.pdfFailed",
+  "ai.textTaken", "ai.fileEmpty", "ai.fileKind",
 ];
 
 function forBrowser(language) {

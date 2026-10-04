@@ -32,6 +32,36 @@ services:
       # The browser that prints the PDF. The image ships Chromium -- this
       # line exists only so a different one can be substituted.
       - BROWSER_PATH=${BROWSER_PATH:-/usr/bin/chromium}
+      # The one feature that talks to a service outside this app: building a
+      # deck from a prompt. Without a model to talk to it is not switched
+      # off, it is absent -- no route, no button (backend/ai.js). All of
+      # these are empty by default, so a compose file checked out by
+      # somebody else brings no surprise and no error.
+      #
+      # WHICH model is deliberately not this project's business. Two
+      # request shapes cover nearly the whole field:
+      #   AI_API=anthropic  Claude (the default)
+      #   AI_API=openai     OpenAI, Mistral, Groq, Together, OpenRouter,
+      #                     vLLM -- and the local ones, Ollama and
+      #                     LM Studio, which cost nothing
+      - AI_API=${AI_API:-}
+      # The key. ANTHROPIC_API_KEY is read as well, so a machine that
+      # already exports it needs nothing new. A model on localhost wants
+      # none, and that is allowed.
+      - AI_KEY=${AI_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # Where to send it. Empty means the dialect's own address. For a
+      # model on the HOST machine this has to be host.docker.internal
+      # rather than localhost, which inside the container is the container.
+      - AI_URL=${AI_URL:-}
+      # Which model writes. Sonnet where nothing is said and the dialect is
+      # Claude's; for every other one the name has to be given.
+      - AI_MODEL=${AI_MODEL:-}
+      # How often the model may be handed its own mistakes before the
+      # result is shown as it stands (backend/check.js is what finds them).
+      - AI_ROUNDS=${AI_ROUNDS:-}
+      # The fuse: how many of those calls an hour this process will make.
+      - AI_PER_HOUR=${AI_PER_HOUR:-}
     volumes:
       # The decks themselves: one folder per deck holding deck.md and an
       # assets folder with the uploaded pictures. Deliberately a host path

@@ -1,0 +1,75 @@
+<!-- A deck changed by instruction (backend/ai.js).
+
+     Rendered only where a key is configured. An instance without one does
+     not get a disabled button, it gets no button -- the same way the PDF
+     export is simply absent where no browser was found.
+
+     A dialog and not a tab in the form, for the reason the bands dialog is
+     one: this is about the whole DECK, the three tabs over there are about
+     the slide in front. It is dragged aside and the preview is kept out of
+     its veil (js/editor/dialog-aside.js), because the half minute this
+     takes is a half minute one spends watching.
+
+     What it holds is one field, and that is the whole of it: what should
+     be different. The deck goes along by itself, and everything else a
+     model would need to know -- the eleven layouts, every attribute, the
+     limits, which pictures lie in this deck's folder -- is generated and
+     sent without anybody being asked (backend/ai-format.js).
+
+     Building a deck out of material is the other half of this and lives
+     on the overview, where talks begin (partials/ai-new.ejs).
+
+     Nothing in here writes. What comes back goes into the source dialog,
+     coloured, cut into slides and checked, and is applied from there
+     through the one door that saves (js/editor/deck-source.js). So the
+     worst a prompt can do is waste a minute. -->
+<dialog id="ai-dialog" class="dialog dialog-aside">
+  <!-- The buttons sit in the head, where the source dialog's do: this
+       dialog is scrolled through while it is filled in, and the one that
+       starts the work must not scroll out of reach. Starting is a plain
+       button and not a submit -- a submit would close the dialog, and the
+       answer is what one came for. -->
+  <form method="dialog" class="dialog-head">
+    <h2><%= t('ai.changeTitle') %></h2>
+    <span class="dialog-head-buttons">
+      <button type="button" id="ai-start" class="button button-haupt"><%= t('ai.start') %></button>
+      <button type="button" id="ai-stop" class="button" hidden><%= t('ai.cancel') %></button>
+      <button id="ai-close" class="button button-quiet" value="close"><%= t('dialog.close') %></button>
+    </span>
+  </form>
+  <div class="dialog-content">
+
+    <!-- Who is actually writing, before the instruction is typed: the
+         deck is changed by a model that is not part of trivialSlides, and
+         it is sent there to be changed (ai.js, connection()). The same
+         line stands over the dialog that BUILDS a deck
+         (partials/ai-new.ejs). -->
+    <p class="hint"><%= t('ai.whereChange', aiWhere) %></p>
+
+    <p class="hint"><%= t('ai.changeHint') %></p>
+
+    <div class="field">
+      <label class="field-label" for="ai-prompt"><%= t('ai.prompt') %></label>
+      <textarea id="ai-prompt" rows="4" maxlength="<%= aiPromptMax %>"
+                placeholder="<%= t('ai.promptPlaceholderChange') %>"></textarea>
+    </div>
+
+    <!-- Which pictures the instruction may send for. The deck's library is
+         where they come from, the model is told their names and picks from
+         them, so it can never name a file that is not there
+         (backend/ai-format.js). This is also the answer to the one limit
+         of building on the overview: a deck made there has no pictures
+         yet, and putting them on the slides is an instruction for here. -->
+    <p id="ai-pictures" class="hint"></p>
+
+    <!-- What it is writing, as it writes it. Not a spinner: this takes half
+         a minute, and the one thing worth showing in it is the thing the
+         user is about to have to judge. It is also where Cancel becomes
+         meaningful -- a deck going visibly wrong can be stopped. -->
+    <pre id="ai-stream" class="ai-stream" hidden aria-live="off"></pre>
+
+    <p id="ai-state" class="ai-state" role="status"></p>
+
+    <p class="hint prefs-scope"><%= t('ai.note') %></p>
+  </div>
+</dialog>

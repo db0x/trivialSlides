@@ -20,7 +20,9 @@ const emoji = require("../emoji");
 const video = require("../video");
 const storage = require("../storage");
 const i18n = require("../i18n");
-const { BASE, MAX_UPLOAD_MB } = require("../config");
+const ai = require("../ai");
+const pdfText = require("../pdf-text");
+const { BASE, MAX_UPLOAD_MB, AI_PER_HOUR } = require("../config");
 
 const router = express.Router();
 
@@ -99,12 +101,36 @@ router.get("/code-styles.css", (req, res) => {
 });
 
 // --- Overview ----------------------------------------------------------
-router.get("/", (req, res) => {
-  res.render("index", { decks: storage.list() });
+router.get("/", async (req, res) => {
+  // Whether a deck can be built from material here. The overview is where
+  // that belongs -- it is an act of CREATING a talk, like the button it
+  // stands beside, and not something one does inside a talk that already
+  // exists (partials/ai-new.ejs). Changing a deck is the other job and
+  // lives in the editor.
+  res.render("index", {
+    decks: storage.list(),
+    ai: ai.available(),
+    // Reading PDFs rests on an optional dependency, so it is a question of
+    // its own: without it the dialog offers pictures and nothing else
+    // (pdf-text.js).
+    aiPdf: ai.available() && await pdfText.available(),
+    aiPromptMax: ai.PROMPT_MAX,
+    aiMaterialMax: ai.MATERIAL_MAX,
+    aiLookMax: ai.LOOK_MAX,
+    // Which model writes and where the material goes, said in the dialog
+    // itself rather than only in the startup line (ai.js).
+    aiWhere: ai.available() ? ai.connection() : null,
+  });
 });
 
+// The form in the overview posts and is redirected, which is what a form
+// should do. The prompt dialog beside it cannot: it has to go on working
+// in the page for the half minute the model writes, so it asks for the
+// deck first and says where to send the answer afterwards. One route for
+// both, because what they want is the same thing -- a deck to exist.
 router.post("/new", (req, res) => {
   const slug = storage.create(req.body.title || req.t("server.newTalk"));
+  if (req.body && req.body.json) return res.json({ slug });
   res.redirect(`${BASE}/d/${slug}`);
 });
 
@@ -155,6 +181,18 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     // the renderer does (layouts.js, js/editor/columns.js).
     columns: { break: layouts.COLUMN_BREAK, split: layouts.COLUMN_SPLIT },
     images: storage.images(req.slug),
+    // Whether a deck can be built from a prompt here at all. Without a key
+    // the button and its dialog are not rendered -- absent, not disabled,
+    // the way the rest of this editor treats a thing that cannot be done
+    // (ai.js, config.js).
+    ai: ai.available(),
+    aiPromptMax: ai.PROMPT_MAX,
+    // Which model writes and where the deck goes, said in the dialog
+    // itself, as on the overview (ai.js, connection()).
+    aiWhere: ai.available() ? ai.connection() : null,
+    // The editor's dialog changes a deck that already exists, so it asks
+    // for an instruction and nothing else: the material and the pictures
+    // are handed over where a deck BEGINS (views/index.ejs).
   });
 });
 
@@ -338,6 +376,19 @@ router.get("/d/:slug/source.html", loadDeck, (req, res) => {
   res.type("html").send(source.highlight(deck.serialize(req.deck), req.t));
 });
 
+// The same view, but of a file that is not on disk: a suggestion the model
+// has just written (ai.js). The dialog shows it exactly as it shows a saved
+// file -- coloured, cut into blocks, one mark per slide -- so that judging
+// a suggestion is the same act as judging one's own typing, with the same
+// check under it and the same button to apply it.
+//
+// Deliberately no deck and no saving here. This route colours text and
+// nothing else; what it costs to save is still POST /source's answer, and
+// that is the only door that writes.
+router.post("/d/:slug/source.html", sameOriginOnly, loadDeck, (req, res) => {
+  res.json({ html: source.highlight(String((req.body && req.body.text) || ""), req.t) });
+});
+
 // The way back: a file edited by hand in that dialog.
 //
 // Checking and saving are one call rather than two, because they are one
@@ -383,6 +434,174 @@ router.post("/d/:slug/source", sameOriginOnly, loadDeck, (req, res) => {
     html: source.highlight(deck.serialize(model), req.t),
   });
 });
+
+// --- Building a deck from a prompt --------------------------------------
+// The only route in this app that talks to a service outside it, and the
+// only one that costs money when it is called. Three things follow from
+// that, and all three are visible below.
+//
+// It exists only where a key is configured. Not disabled -- absent, the
+// way the PDF export is absent without a browser (pdf.js). An instance
+// without a key is an instance where this was never built.
+//
+// It writes nothing. What comes back is TEXT, the file as the user could
+// have typed it, and it goes into the source dialog -- from where the user
+// applies it through POST /d/:slug/source, which checks and saves in one
+// call and never saves past a finding. So a prompt cannot damage a deck,
+// and the autosave in the editor cannot collide with it: nothing is on
+// disk until somebody looked at it and pressed the button.
+//
+// And it is fused. One job per deck at a time, and a ceiling per hour
+// (config.js, AI_PER_HOUR): this app has no login of its own, so the
+// endpoint must not be able to spend faster than a person can click.
+//
+// The answer is newline-delimited JSON rather than server-sent events: it
+// is a POST, so EventSource is out anyway, and one JSON object per line is
+// ten lines to write at each end instead of a protocol.
+//
+//   {"text": "..."}                   a piece of the file, as it is written
+//   {"round": 1}                      the check found faults; it starts over
+//   {"done": true, "text": "...",
+//    "findings": [...]}               the whole file, and what is left wrong
+//   {"error": "..."}                  one sentence, already in the language
+if (ai.available()) {
+  // Which decks have a job running, and when the last jobs were started.
+  // Per process, in memory, like the drafts in storage.js -- a fuse does
+  // not have to survive a restart.
+  const running = new Set();
+  let started = [];
+
+  // The service's own words are not shown to the user: a key that is
+  // wrong and an account out of credit are two different things to be
+  // told, and both read badly raw. The status says which.
+  function trouble(req, err) {
+    if (err.name === "AbortError") return null;
+    // The ordinary mistake when the model runs on one's own machine: it is
+    // not started, or AI_URL names a port it does not listen on. Nothing
+    // to do with keys or credit, so it must not be told as either.
+    if (err.unreachable) return req.t("ai.unreachable");
+    if (err.status === 401 || err.status === 403) return req.t("ai.keyBad");
+    if (err.status === 404) return req.t("ai.notFound");
+    if (err.status === 429 || err.status === 529) return req.t("ai.serviceBusy");
+    if (err.status === 400 && /credit/i.test(err.message)) return req.t("ai.noCredit");
+    // A model name the service does not know -- the other ordinary
+    // mistake, because AI_MODEL has to be written out by hand for every
+    // dialect but Claude's.
+    if (err.status === 400 && /model/i.test(err.message)) return req.t("ai.modelBad");
+    return req.t("ai.failed");
+  }
+
+  // The pictures the model is to SEE, read off the deck's folder. The
+  // browser names them -- the ones just uploaded in the prompt dialog --
+  // and every name is checked against the folder rather than believed: it
+  // arrives from a request, and a name is a path until somebody proves it
+  // is not (storage.js, imagePath).
+  //
+  // Capped, because this is the one part of the prompt that costs real
+  // money (ai.js). What is over the ceiling is quietly left out: the
+  // picture is still in the folder and still in the format document, so
+  // the model can use it -- it just has not seen it.
+  function look(slug, wanted) {
+    if (!Array.isArray(wanted) || !wanted.length) return [];
+    const inFolder = new Set(storage.images(slug));
+    const out = [];
+    let spent = 0;
+    for (const raw of wanted) {
+      if (out.length >= ai.LOOK_MAX || spent >= ai.LOOK_TOTAL) break;
+      const name = String(raw || "");
+      if (!inFolder.has(name)) continue;
+      const type = ai.LOOK_TYPES[path.extname(name).toLowerCase()];
+      if (!type) continue;
+      const file = storage.imagePath(slug, name);
+      if (!file) continue;
+      try {
+        const data = fs.readFileSync(file);
+        if (data.length > ai.LOOK_BYTES || spent + data.length > ai.LOOK_TOTAL) continue;
+        spent += data.length;
+        out.push({ name, type, base64: data.toString("base64") });
+      } catch (err) { /* gone between the listing and here */ }
+    }
+    return out;
+  }
+
+  router.post("/d/:slug/compose", sameOriginOnly, loadDeck, async (req, res) => {
+    if (running.has(req.slug)) return res.status(409).json({ error: req.t("ai.busy") });
+    const now = Date.now();
+    started = started.filter((t) => now - t < 3600 * 1000);
+    if (started.length >= AI_PER_HOUR) return res.status(429).json({ error: req.t("ai.tooMany") });
+    started.push(now);
+    running.add(req.slug);
+
+    res.type("application/x-ndjson");
+    res.setHeader("Cache-Control", "no-store");
+    // Sent before the first token, so the browser can start reading rather
+    // than waiting for a response that takes half a minute to begin.
+    if (res.flushHeaders) res.flushHeaders();
+
+    function line(what) {
+      if (!res.writableEnded) res.write(JSON.stringify(what) + "\n");
+    }
+
+    // A browser tab closed mid-answer must stop the request, not go on
+    // paying for tokens nobody will read.
+    const stop = new AbortController();
+    res.on("close", () => stop.abort());
+
+    try {
+      const out = await ai.compose({
+        prompt: req.body && req.body.prompt,
+        material: req.body && req.body.material,
+        // The deck as it stands, and only where the user asked for it to
+        // be changed. Serialized rather than read off disk: the editor may
+        // be holding unsaved work, and storage.load() hands that back
+        // (storage.js, drafts) -- so this is the deck the user is looking
+        // at, which is the one they mean.
+        current: req.body && req.body.change ? deck.serialize(req.deck) : "",
+        images: storage.images(req.slug),
+        look: look(req.slug, req.body && req.body.look),
+        signal: stop.signal,
+        t: req.t,
+      }, (ev) => {
+        if (ev.restart) line({ round: ev.round });
+        else line({ text: ev.text });
+      });
+      line({ done: true, text: out.text, findings: out.findings });
+    } catch (err) {
+      console.error(err);
+      const said = trouble(req, err);
+      if (said) line({ error: said });
+    } finally {
+      running.delete(req.slug);
+      res.end();
+    }
+  });
+
+  // A PDF turned into words, for the material field (pdf-text.js).
+  //
+  // Nothing is stored. A PDF dropped into the prompt dialog is SOURCE --
+  // a paper, a report, a handout -- not a picture for a slide, so it has
+  // no business in the deck's folder. What comes back is text, and it
+  // goes into the field the user can read and shorten before any of it is
+  // sent anywhere.
+  // Deliberately not under /d/:slug: this converts bytes into words and
+  // has nothing to do with any deck. It could not be deck-bound anyway --
+  // a PDF is dropped into the dialog BEFORE the deck exists, and creating
+  // one just to read a file would leave an empty talk behind every time
+  // somebody changed their mind (js/overview-ai.js).
+  router.post("/material/pdf", sameOriginOnly,
+    upload.single("pdf"), async (req, res) => {
+      if (!req.file) return res.status(400).json({ error: req.t("ai.pdfFailed") });
+      try {
+        const out = await pdfText.read(req.file.buffer);
+        if (!out.text) return res.status(422).json({ error: req.t("ai.pdfEmpty") });
+        res.json({ text: out.text, pages: out.pages, cut: out.cut });
+      } catch (err) {
+        console.error(err);
+        res.status(err.missing ? 501 : 422)
+          .json({ error: req.t(err.missing ? "ai.pdfMissing" : "ai.pdfFailed") });
+      }
+    });
+}
 
 // A single HTML file that runs without a server and without a network:
 // reveal.js, the theme, our layout CSS, the fonts and every image are

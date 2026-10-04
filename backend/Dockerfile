@@ -1,4 +1,11 @@
-FROM node:20-slim
+# 22 and not 20, for two reasons that both come from the same place: the
+# app itself uses what a current node brings -- fetch for the model
+# (ai.js), no client library -- and reading PDFs rests on a package that
+# declares node >= 22 (pdf-text.js). An optional dependency whose engine
+# does not match is skipped SILENTLY by npm, which is the right behaviour
+# and was also why the PDF button was quietly absent in a container built
+# on 20 while development ran on 22.
+FROM node:22-slim
 
 # Chromium produces the PDF: it renders the very same document that is also
 # the standalone HTML version (see pdf.js). The font packages are not
