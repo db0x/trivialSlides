@@ -369,9 +369,7 @@
   "ai.notFound": "Unter dieser Adresse antwortet nichts. AI_URL prüfen.",
   "ai.modelBad": "Dieses Modell kennt der Dienst nicht. AI_MODEL prüfen.",
   "ai.files": "Dateien mitgeben",
-  "ai.addPictures": "Bilder …",
-  "ai.addPdf": "PDF …",
-  "ai.filesHint": "Bilder landen im Vortrag und das Modell sieht sie — die ersten {n}, danach nur noch die Dateinamen. Aus einem PDF wird nur der Text gezogen, er landet oben im Material; die Datei selbst wird nicht gespeichert.",
+  "ai.filesHint": "Bilder landen im Vortrag und das Modell sieht sie — die ersten {n}, danach nur noch die Dateinamen. Aus PDFs und Textdateien (txt, md, csv, json) wird der Text übernommen und steht oben im Material; die Dateien selbst werden nicht gespeichert.",
   "ai.fileRemove": "Entfernen",
   "ai.uploading": "Bilder werden hochgeladen …",
   "ai.tooManyPictures": "Mehr Bilder als das Modell ansehen kann. Die übrigen liegen trotzdem im Vortrag und können über ihren Dateinamen verwendet werden.",
@@ -380,5 +378,10 @@
   "ai.pdfCut": "„{name}“ war sehr lang und wurde gekürzt.",
   "ai.pdfEmpty": "Aus diesem PDF kommt kein Text. Vermutlich ein Scan — da hilft nur, den Text von Hand einzufügen.",
   "ai.pdfFailed": "Dieses PDF ließ sich nicht lesen.",
-  "ai.pdfMissing": "PDFs können hier nicht gelesen werden: die optionale Bibliothek fehlt (npm install unpdf)."
+  "ai.pdfMissing": "PDFs können hier nicht gelesen werden: die optionale Bibliothek fehlt (npm install unpdf).",
+  "ai.addFiles": "Dateien wählen …",
+  "ai.filesHintNoPdf": "Bilder landen im Vortrag und das Modell sieht sie — die ersten {n}, danach nur noch die Dateinamen. Aus Textdateien (txt, md, csv, json) wird der Text oben ins Material übernommen. PDFs kann diese Instanz nicht lesen.",
+  "ai.textTaken": "{name} — Text übernommen",
+  "ai.fileEmpty": "„{name}“ ist leer.",
+  "ai.fileKind": "„{name}“ ist weder Bild noch Text — übergangen."
 }

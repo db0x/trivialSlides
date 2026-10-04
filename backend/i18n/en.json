@@ -369,9 +369,7 @@
   "ai.notFound": "Nothing answers at that address. Check AI_URL.",
   "ai.modelBad": "The service does not know that model. Check AI_MODEL.",
   "ai.files": "Bring files along",
-  "ai.addPictures": "Pictures ...",
-  "ai.addPdf": "PDF ...",
-  "ai.filesHint": "Pictures go into the talk and the model sees them -- the first {n}, after that only their file names. From a PDF only the text is taken, into the material above; the file itself is not stored.",
+  "ai.filesHint": "Pictures go into the talk and the model sees them -- the first {n}, after that only their file names. From PDFs and text files (txt, md, csv, json) the text is taken into the material above; the files themselves are not stored.",
   "ai.fileRemove": "Remove",
   "ai.uploading": "Uploading the pictures ...",
   "ai.tooManyPictures": "More pictures than the model can look at. The rest are in the talk all the same and can be used by file name.",
@@ -380,5 +378,10 @@
   "ai.pdfCut": "\"{name}\" was very long and has been cut.",
   "ai.pdfEmpty": "No text comes out of this PDF. Probably a scan -- there is nothing for it but to paste the text by hand.",
   "ai.pdfFailed": "This PDF could not be read.",
-  "ai.pdfMissing": "PDFs cannot be read here: the optional library is missing (npm install unpdf)."
+  "ai.pdfMissing": "PDFs cannot be read here: the optional library is missing (npm install unpdf).",
+  "ai.addFiles": "Choose files ...",
+  "ai.filesHintNoPdf": "Pictures go into the talk and the model sees them -- the first {n}, after that only their file names. From text files (txt, md, csv, json) the text is taken into the material above. This instance cannot read PDFs.",
+  "ai.textTaken": "{name} -- text taken",
+  "ai.fileEmpty": "\"{name}\" is empty.",
+  "ai.fileKind": "\"{name}\" is neither a picture nor text -- skipped."
 }

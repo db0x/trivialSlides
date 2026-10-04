@@ -86,6 +86,7 @@ const FOR_BROWSER = [
   // into. The list is built as they are chosen (js/overview-ai.js).
   "ai.fileRemove", "ai.uploading", "ai.tooManyPictures",
   "ai.pdfReading", "ai.pdfTaken", "ai.pdfCut", "ai.pdfFailed",
+  "ai.textTaken", "ai.fileEmpty", "ai.fileKind",
 ];
 
 function forBrowser(language) {

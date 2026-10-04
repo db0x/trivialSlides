@@ -57,22 +57,22 @@
          the server and lands in the material field above, where it can be
          read and shortened before any of it is sent
          (backend/pdf-text.js). -->
+    <!-- One button and not one per kind: what a file is, the browser
+         already knows, and asking the user to sort their own material into
+         three slots is work this can do for them (js/overview-ai.js). The
+         hint below says what each kind becomes, which is the part that is
+         genuinely worth knowing. -->
     <div class="field">
       <span class="field-label"><%= t('ai.files') %></span>
       <div class="ai-files-row">
         <label class="button button-small">
-          <%= t('ai.addPictures') %>
-          <input id="ai-new-pictures" type="file" accept="image/*" multiple hidden>
+          <%= t('ai.addFiles') %>
+          <input id="ai-new-files-pick" type="file" multiple hidden
+                 accept="image/*,text/plain,text/markdown,text/csv,.md,.markdown,.txt,.csv,.tsv,.json,.log<%= aiPdf ? ',application/pdf,.pdf' : '' %>">
         </label>
-        <% if (aiPdf) { %>
-          <label class="button button-small">
-            <%= t('ai.addPdf') %>
-            <input id="ai-new-pdf" type="file" accept="application/pdf" multiple hidden>
-          </label>
-        <% } %>
       </div>
       <ul id="ai-new-files" class="ai-files" data-look-max="<%= aiLookMax %>" hidden></ul>
-      <p class="hint"><%= t('ai.filesHint', { n: aiLookMax }) %></p>
+      <p class="hint"><%= aiPdf ? t('ai.filesHint', { n: aiLookMax }) : t('ai.filesHintNoPdf', { n: aiLookMax }) %></p>
     </div>
 
     <pre id="ai-new-stream" class="ai-stream" hidden aria-live="off"></pre>

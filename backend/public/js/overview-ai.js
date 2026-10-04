@@ -38,8 +38,7 @@ import { runCompose, keepComposed } from "./ai-run.js";
   var stream = $("#ai-new-stream");
   var state = $("#ai-new-state");
 
-  var pictureInput = $("#ai-new-pictures");
-  var pdfInput = $("#ai-new-pdf");
+  var filesInput = $("#ai-new-files-pick");
   var fileList = $("#ai-new-files");
 
   var running = null;
@@ -61,20 +60,44 @@ import { runCompose, keepComposed } from "./ai-run.js";
     nameField.disabled = on;
     promptField.disabled = on;
     materialField.disabled = on;
-    if (pictureInput) pictureInput.disabled = on;
-    if (pdfInput) pdfInput.disabled = on;
+    if (filesInput) filesInput.disabled = on;
   }
 
   // --- The files one brings along -----------------------------------------
-  // Two kinds, and the list shows which is which, because they end up in
-  // different places: a picture goes into the deck and is shown to the
-  // model, a PDF has already become the words in the field above and is
-  // gone.
-  function drawFiles(extra) {
+  // Three kinds, and they become three different things, which is why the
+  // picker takes them all and sorts them rather than asking the user to:
+  //
+  //   a picture   goes into the deck's folder and is SHOWN to the model,
+  //               so it can put the screenshot of the dashboard on the
+  //               slide about the dashboard (backend/ai.js, LOOK_MAX)
+  //   a PDF       is read on the server and becomes words in the material
+  //               field; the file itself is kept nowhere
+  //               (backend/pdf-text.js)
+  //   plain text  is read here, in the browser, and appended to the same
+  //               field. No server, no library -- a .txt or .md IS the
+  //               material, it only has to be moved one box over.
+  //
+  // Everything else is refused by name rather than quietly ignored: a
+  // .docx dropped in here would otherwise look as though it had worked.
+  var TEXT_FILE = /\.(txt|md|markdown|csv|tsv|json|log|ya?ml)$/i;
+
+  function kindOf(file) {
+    if ((file.type || "").indexOf("image/") === 0) return "picture";
+    if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return "pdf";
+    if ((file.type || "").indexOf("text/") === 0 || TEXT_FILE.test(file.name)) return "text";
+    return "";
+  }
+
+  // What the material field has already swallowed, so the list goes on
+  // saying where the words came from. These rows carry no "remove": their
+  // text is in the field above, and that is where one takes it out again.
+  var kept = [];
+
+  function drawFiles() {
     fileList.innerHTML = "";
     var rows = pictures.map(function (file, i) {
       return { text: file.name, drop: i };
-    }).concat(extra || []);
+    }).concat(kept);
     fileList.hidden = !rows.length;
     rows.forEach(function (row) {
       var li = document.createElement("li");
@@ -88,7 +111,7 @@ import { runCompose, keepComposed } from "./ai-run.js";
         off.textContent = t("ai.fileRemove");
         off.addEventListener("click", function () {
           pictures.splice(row.drop, 1);
-          drawFiles(kept);
+          drawFiles();
         });
         li.appendChild(off);
       }
@@ -96,54 +119,70 @@ import { runCompose, keepComposed } from "./ai-run.js";
     });
   }
 
-  // What the PDFs left behind, so the list goes on saying where the text in
-  // the material field came from. They cannot be taken back off the list:
-  // their words are in the field, and that is where one removes them.
-  var kept = [];
+  // Appended, never replacing: somebody may have typed in there already,
+  // and two documents are two pieces of material.
+  function addMaterial(text) {
+    var before = materialField.value.trim();
+    materialField.value = (before ? before + "\n\n" : "") + String(text || "").trim();
+  }
 
-  if (pictureInput) {
-    pictureInput.addEventListener("change", function (ev) {
-      Array.prototype.forEach.call(ev.target.files || [], function (file) {
-        pictures.push(file);
+  // A PDF goes to the server, and that is the point of doing it there:
+  // what comes back is visible in the field, where it can be read, cut and
+  // corrected before a single token of it is sent anywhere.
+  function takePdf(file) {
+    say(t("ai.pdfReading", { name: file.name }));
+    var data = new FormData();
+    data.append("pdf", file);
+    return fetch(BASE + "/material/pdf", {
+      method: "POST", headers: { "X-Slides": "1" }, body: data,
+    }).then(function (r) {
+      return r.json().then(function (body) {
+        if (!r.ok) throw new Error(body.error || t("ai.pdfFailed"));
+        return body;
       });
-      ev.target.value = "";
-      drawFiles(kept);
-      if (pictures.length > Number(fileList.dataset.lookMax || 8)) say(t("ai.tooManyPictures"));
+    }).then(function (out) {
+      addMaterial(out.text);
+      kept.push({ text: t("ai.pdfTaken", { name: file.name, pages: out.pages }) });
+      drawFiles();
+      say(out.cut ? t("ai.pdfCut", { name: file.name }) : "");
     });
   }
 
-  // A PDF is read at once rather than at build time, and that is the point
-  // of doing it on the server: what comes back is visible in the material
-  // field, where it can be read, cut and corrected before a single token
-  // of it is sent anywhere.
-  if (pdfInput) {
-    pdfInput.addEventListener("change", function (ev) {
+  // Plain text never leaves the browser until the whole material does.
+  function takeText(file) {
+    return file.text().then(function (text) {
+      if (!text.trim()) throw new Error(t("ai.fileEmpty", { name: file.name }));
+      addMaterial(text);
+      kept.push({ text: t("ai.textTaken", { name: file.name }) });
+      drawFiles();
+      say("");
+    });
+  }
+
+  if (filesInput) {
+    filesInput.addEventListener("change", function (ev) {
       var files = Array.prototype.slice.call(ev.target.files || []);
       ev.target.value = "";
+      // One after another rather than all at once: each one writes into the
+      // same field, and two answers arriving together would interleave.
       files.reduce(function (wait, file) {
         return wait.then(function () {
-          say(t("ai.pdfReading", { name: file.name }));
-          var data = new FormData();
-          data.append("pdf", file);
-          return fetch(BASE + "/material/pdf", {
-            method: "POST", headers: { "X-Slides": "1" }, body: data,
-          }).then(function (r) {
-            return r.json().then(function (body) {
-              if (!r.ok) throw new Error(body.error || t("ai.pdfFailed"));
-              return body;
-            });
-          }).then(function (out) {
-            // Appended, never replacing: somebody may have typed in there
-            // already, and two PDFs are two pieces of material.
-            var before = materialField.value.trim();
-            materialField.value = (before ? before + "\n\n" : "") + out.text;
-            kept.push({ text: t("ai.pdfTaken", { name: file.name, pages: out.pages }) });
-            drawFiles(kept);
-            say(out.cut ? t("ai.pdfCut", { name: file.name }) : "");
-          }).catch(function (err) {
-            console.error(err);
-            say(err.message || t("ai.pdfFailed"), "is-error");
-          });
+          var kind = kindOf(file);
+          if (kind === "picture") {
+            pictures.push(file);
+            drawFiles();
+            if (pictures.length > Number(fileList.dataset.lookMax || 8)) {
+              say(t("ai.tooManyPictures"));
+            }
+            return null;
+          }
+          if (kind === "pdf") return takePdf(file);
+          if (kind === "text") return takeText(file);
+          say(t("ai.fileKind", { name: file.name }), "is-error");
+          return null;
+        }).catch(function (err) {
+          console.error(err);
+          say(err.message || t("ai.failed"), "is-error");
         });
       }, Promise.resolve());
     });
@@ -293,7 +332,7 @@ import { runCompose, keepComposed } from "./ai-run.js";
     // last PDF's words would be worse than empty.
     pictures = [];
     kept = [];
-    drawFiles(kept);
+    drawFiles();
     dialog.showModal();
     promptField.focus();
   });
