@@ -36,6 +36,21 @@
   font-size: 0;
   z-index: 2;
 }
+/* The way back to the words: above the top left corner, as far from the
+   two that change the shape as the block allows. */
+.place-grip-edit {
+  left: -6px;
+  top: -22px;
+  cursor: pointer;
+}
+.place-grip-edit::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: #fff;
+  -webkit-mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
+  mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
+}
 /* Width: on the right edge, in the middle of it. */
 .place-grip-width {
   right: -6px;

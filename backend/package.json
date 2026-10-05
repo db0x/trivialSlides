@@ -1,6 +1,6 @@
 {
   "name": "trivialSlides",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "trivialSlides - based on reveal.js",
   "license": "MIT",
   "main": "app.js",

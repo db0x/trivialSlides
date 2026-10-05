@@ -23,6 +23,10 @@ var ELEMENT = /^[ \t]*<!--[ \t]*\.element:.*-->[ \t]*$/;
 // a class, a fragment number -- is left exactly as it stands.
 var AT = /\s*data-at="[^"]*"/;
 var TURN = /\s*data-turn="[^"]*"/;
+// A heading, and which of the three sizes it is. Only a block that is ONE
+// such line: a size is something the dialog can offer for it, and a block
+// of several lines is not a heading however it starts.
+var HEADING = /^[ \t]*(#{1,6})\s*(.*)$/;
 // A list does not take its comment the way a paragraph does: a comment
 // line directly under the last item belongs to that ITEM, which is how a
 // single bullet is given a fragment. A placement is meant for the whole
@@ -137,4 +141,80 @@ export function place(text, n, at, turn) {
   if (block.list) lines.splice(after + 1, 0, "", neu);
   else lines.splice(after + 1, 0, neu);
   return lines.join("\n");
+}
+
+// --- One element, read and written ------------------------------------
+// What the dialog needs of a block, and what it hands back. The editor
+// never touches the text of a freestyle slide any other way: the text
+// field is not on the form for that layout, because a field showing the
+// whole slide is the one thing that made arranging it unreadable.
+
+// The nth shown block -> { level, body }, or null where there is none.
+//
+// level is 1, 2 or 3 for a heading of that size, 0 for anything that is
+// plain text, and null for a block the dialog has no size to offer for --
+// a list, a code block, a picture. Those keep their text and lose
+// nothing; only the size chooser stays out of the way.
+export function read(text, n) {
+  var all = blocks(text);
+  var block = nth(all, n);
+  if (!block) return null;
+  var own = block.lines.filter(function (l) { return !ELEMENT.test(l); });
+  var head = own.length === 1 && HEADING.exec(own[0]);
+  if (head && head[1].length <= 3) {
+    return { level: head[1].length, body: head[2].trim() };
+  }
+  var plain = own.every(function (l) {
+    return !HEADING.test(l) && !LIST.test(l) && !FENCE.test(l) && !/^[ \t]*>/.test(l);
+  });
+  return { level: plain ? 0 : null, body: own.join("\n") };
+}
+
+// The text of a block, put back. Its comment lines stay exactly as they
+// are -- where it stands, whether it waits for a click -- because none of
+// that is what the dialog was asked about.
+//
+// Blank lines inside the new text are closed up: a blank line is what
+// separates one block from the next, and a dialog that silently turned
+// one element into two would leave the second one unplaced and the
+// numbers on both sides out of step.
+export function write(text, n, level, body) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var all = blocks(text);
+  var block = nth(all, n);
+  if (!block) return null;
+  var said = String(body == null ? "" : body).replace(/\r\n/g, "\n")
+    .split("\n")
+    .map(function (l) { return l.replace(/\s+$/, ""); })
+    .filter(function (l) { return l.trim() !== ""; })
+    .join("\n");
+  if (level > 0) said = "#".repeat(level) + " " + said.replace(/\n/g, " ");
+  var marks = block.lines.filter(function (l) { return ELEMENT.test(l); });
+  lines.splice(block.from, block.to - block.from + 1, said, ...marks);
+  return lines.join("\n");
+}
+
+// A new element, at the end of the text and in the middle of the slide.
+// Its place is given here rather than left empty: an element nobody can
+// see is an element nobody can pick up, and the first thing one does with
+// a new one is move it anyway.
+export function add(text, level, body, at) {
+  var said = level > 0 ? "#".repeat(level) + " " + body : body;
+  var before = String(text == null ? "" : text).replace(/\s+$/, "");
+  var neu = said + "\n" + '<!-- .element: data-at="' + at + '" -->';
+  return (before ? before + "\n\n" : "") + neu + "\n";
+}
+
+// And away again, with the comment lines that belonged to it. The ones
+// standing apart from it are its own too -- blocks() hangs them on the
+// block in front, which is this one.
+export function remove(text, n) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var all = blocks(text);
+  var block = nth(all, n);
+  if (!block) return null;
+  var last = block.to;
+  block.marks.forEach(function (i) { if (i > last) last = i; });
+  lines.splice(block.from, last - block.from + 1);
+  return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }

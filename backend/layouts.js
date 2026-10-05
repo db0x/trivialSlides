@@ -64,6 +64,13 @@ const LAYOUTS = [
     // reveal.js, which knows none of it.
     id: "freestyle",
     heading: false,
+    // Its text is not written through one field but arranged as elements,
+    // each standing somewhere of its own. The editor reads this to put a
+    // row of sizes on the form where the text box would be, and to keep
+    // its hands off the body otherwise (js/editor/index.js, places.js).
+    // A property rather than the layout's name, so that a second layout
+    // of this kind would need no second rule anywhere.
+    places: true,
     fields: [],
   },
   {

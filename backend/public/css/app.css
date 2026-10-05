@@ -1051,8 +1051,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* The icon buttons of the toolbar. The files carry a fixed dark fill, so
    they are masks coloured by the button -- the same treatment as every
    other icon in this app. The two buttons without an icon keep their
-   wording and sit next to them as text; a toolbar may well hold both. */
-.toolbar .tool-icon {
+   wording and sit next to them as text; a toolbar may well hold both.
+   
+   The row of sizes on a freestyle slide is the second place with buttons
+   of this kind, and it is the same shape for the same reason: one icon,
+   pressed to do one thing. */
+.toolbar .tool-icon,
+.place-add .tool-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1061,7 +1066,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   padding: 0;
   color: var(--text);
 }
-.toolbar .tool-icon::before {
+.toolbar .tool-icon::before,
+.place-add .tool-icon::before {
   content: "";
   width: 1rem;
   height: 1rem;
@@ -1299,6 +1305,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .toolbar button:disabled { opacity: 0.35; cursor: default; }
 .toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
 .toolbar .tool-icon.is-active { color: var(--accent); }
+.place-add .tool-icon:hover { color: var(--accent); }
 .toolbar-divider { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
 
 .field-frame {
@@ -1498,6 +1505,36 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   color: var(--accent-text);
 }
 .count-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- The sizes a freestyle slide is written with ----------------------
+   Where the text field stands on every other layout. Four buttons, each
+   with the icon the toolbar uses for that size, because what one is
+   choosing here is a size and not a word.
+
+   Wrapping rather than scrolling: the form column can be made narrow, and
+   two rows of two is a better answer there than a row one has to push
+   sideways. */
+.place-add {
+  display: flex;
+  gap: 2px;
+}
+/* The same bare button the toolbar's are: no box of its own, the icon is
+   the button. */
+.place-add button {
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.place-add-button { --button-icon: url(../assets/text.svg); }
+/* The one in the dialog that says how big an element is reuses the row of
+   numbers from the column chooser -- same shape, same question. */
+#element-level .count-option { min-width: 0; }
+#element-text { width: 100%; font-family: inherit; }
+/* The one button in a dialog that takes something away stands apart from
+   the two that finish it. */
+#element-remove { margin-right: auto; }
 
 /* --- Choosing a column ------------------------------------------------ */
 /* One text field for all the columns, and this says which of them is in it.

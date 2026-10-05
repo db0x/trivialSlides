@@ -55,7 +55,7 @@ const FOR_BROWSER = [
   "editor.videoUnknown", "editor.urlInvalid",
   // Said when a slide could not be arranged with the mouse after all
   // (js/editor/places.js).
-  "editor.placeLost",
+  "editor.placeLost", "editor.placeNewText", "dialog.elementTitle",
   "card.up", "card.down", "card.indent", "card.outdent",
   "card.duplicate", "card.delete", "card.untitled",
   "message.atLeastOne", "message.deleteSlide", "message.staysSource",

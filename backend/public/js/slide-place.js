@@ -119,7 +119,10 @@
   // wall.
   function handles(block) {
     clearHandles();
-    ["width", "turn"].forEach(function (what) {
+    // Three: what the block SAYS, how wide it is, and how far it is
+    // turned. The first of them is the way back to the words -- a block
+    // one can move but not rewrite would be furniture, not text.
+    ["edit", "width", "turn"].forEach(function (what) {
       var grip = document.createElement("span");
       grip.className = "place-grip place-grip-" + what;
       grip.dataset.grip = what;
@@ -163,11 +166,29 @@
   }
 
   // --- The gesture -------------------------------------------------------
+  // The way back to the words. Said to the editor, which has the text and
+  // the dialog (js/editor/index.js); this side knows only which block was
+  // asked for.
+  function edit(block) {
+    var all = blocks(slide());
+    var n = all.indexOf(block);
+    if (n < 0) return;
+    lastPicked = n;
+    window.parent.postMessage({ kind: "bearbeiten", block: n, count: all.length }, "*");
+  }
+
   function start(ev) {
     var section = slide();
     if (!section || ev.button !== 0) return;
     var grip = ev.target.classList && ev.target.classList.contains("place-grip")
       ? ev.target.dataset.grip : "";
+    // The pencil is not a handle to pull on. It is pressed, and what
+    // follows is a dialog rather than a gesture.
+    if (grip === "edit") {
+      if (picked) edit(picked);
+      ev.preventDefault();
+      return;
+    }
     var block = grip ? picked : blockAt(ev.target);
     if (!block) { pick(null); return; }
     var ref = area(block);
@@ -251,6 +272,17 @@
       turn: p.turn || 0,
     }, "*");
   }
+
+  // And the gesture everyone tries first on something placed: two clicks
+  // on the thing itself. The same door as the pencil, for whoever does
+  // not look for a pencil.
+  document.addEventListener("dblclick", function (ev) {
+    var block = blockAt(ev.target);
+    if (!block) return;
+    pick(block);
+    edit(block);
+    ev.preventDefault();
+  });
 
   document.addEventListener("mousedown", start);
   document.addEventListener("mousemove", move);

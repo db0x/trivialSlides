@@ -312,7 +312,32 @@
           </div>
         </div>
 
-        <div class="field">
+        <!-- What a freestyle slide is written with instead of one text
+             field. There the slide is not one text but several, each
+             standing somewhere of its own -- and a single box holding all
+             of them, comment lines and all, was the one thing that made
+             the layout unreadable to work with.
+
+             So: a row of sizes. Pressing one puts a new element on the
+             slide and opens it for writing; everything that is already
+             there is reached in the preview, by its pencil or by two
+             clicks on it (js/slide-place.js). -->
+        <div class="field" id="freestyle-tools" hidden>
+          <span class="field-label"><%= t('editor.placeNew') %></span>
+          <!-- One button, and the size is asked for in the dialog that
+               opens with it. Four buttons made the form ask the question
+               twice -- once here and once again in the dialog, where it
+               has to be asked anyway because a size can be changed
+               afterwards. -->
+          <div class="place-add">
+            <button type="button" class="tool-icon place-add-button"
+                    data-tip="<%= t('editor.placeAdd') %>"
+                    aria-label="<%= t('editor.placeAdd') %>"></button>
+          </div>
+          <p class="hint"><%= t('editor.placeHint') %></p>
+        </div>
+
+        <div class="field" id="field-text">
           <span class="field-label" id="text-label"><%= t('editor.text') %></span>
           <!-- Which column the field below shows. They stand where the label
                stands and take its place, because "Text" and "Column 2" are
@@ -827,6 +852,41 @@
     <p class="hint"><%= t('source.findings') %></p>
     <ul></ul>
   </div>
+</dialog>
+
+<!-- One element of a freestyle slide: what it says and how big it is.
+     Opened from the preview -- by the pencil on the selected block or by
+     two clicks on it -- and from the row of sizes above, which opens it on
+     the element it has just made. -->
+<dialog id="element-dialog" class="dialog">
+  <form method="dialog" class="dialog-head">
+    <h2 id="element-title"><%= t('dialog.elementTitle') %></h2>
+    <button class="button button-quiet" value="abbruch"><%= t('dialog.close') %></button>
+  </form>
+  <form method="dialog" class="dialog-content" id="element-form">
+    <!-- Only there for a block that HAS a size to choose: a list or a
+         code block keeps its text and is not asked how large it is
+         (js/editor/places.js, read). -->
+    <div class="field" id="element-level-field">
+      <span class="field-label"><%= t('dialog.elementLevel') %></span>
+      <div class="count-choice" id="element-level" role="group">
+        <% ["1", "2", "3", "0"].forEach(function (n) { %>
+          <button type="button" class="count-option" data-level="<%= n %>"
+                  aria-pressed="false"><%= t('editor.placeAdd' + n) %></button>
+        <% }); %>
+      </div>
+    </div>
+    <label class="field">
+      <span class="field-label" for="element-text"><%= t('dialog.elementText') %></span>
+      <textarea id="element-text" rows="5"></textarea>
+    </label>
+    <p class="hint"><%= t('dialog.elementNote') %></p>
+    <div class="dialog-fuss">
+      <button type="button" id="element-remove" class="button button-quiet"><%= t('dialog.elementRemove') %></button>
+      <button type="button" class="button" data-close><%= t('dialog.cancel') %></button>
+      <button type="submit" id="element-ok" class="button button-haupt"><%= t('dialog.elementApply') %></button>
+    </div>
+  </form>
 </dialog>
 
 <!-- Image picker -->

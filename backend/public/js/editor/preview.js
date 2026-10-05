@@ -18,7 +18,9 @@ import { schreibHead } from "./base.js";
 // or turned with the mouse (js/slide-place.js). The gesture happens over
 // there, in the slide itself and at the size it will have on the wall;
 // what comes back is one message per drop and nothing in between.
-export function createPreview(iframe, base, onPlaced) {
+// onEdit: the same, for the way back to the words -- the pencil on a
+// selected block, or two clicks on it.
+export function createPreview(iframe, base, onPlaced, onEdit) {
   var bereit = false;
   var queue = []; // messages that arrived before "bereit"
   var klopfen = null;
@@ -55,6 +57,10 @@ export function createPreview(iframe, base, onPlaced) {
     if (ev.source !== iframe.contentWindow) return;
     if (ev.data && ev.data.kind === "platziert") {
       if (onPlaced) onPlaced(ev.data);
+      return;
+    }
+    if (ev.data && ev.data.kind === "bearbeiten") {
+      if (onEdit) onEdit(ev.data);
       return;
     }
     if (ev.data && ev.data.kind === "bereit") {
