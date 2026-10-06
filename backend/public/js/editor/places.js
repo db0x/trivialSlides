@@ -27,6 +27,10 @@ var TURN = /\s*data-turn="[^"]*"/;
 // such line: a size is something the dialog can offer for it, and a block
 // of several lines is not a heading however it starts.
 var HEADING = /^[ \t]*(#{1,6})\s*(.*)$/;
+// A block that is nothing but a picture. It has no size the dialog could
+// offer -- "heading" means nothing to a photograph -- so the row of sizes
+// stays out of its way, the way it does for a list or a code block.
+var IMAGE = /^[ \t]*!\[[^\]]*\]\([^)]*\)[ \t]*$/;
 // A list does not take its comment the way a paragraph does: a comment
 // line directly under the last item belongs to that ITEM, which is how a
 // single bullet is given a fragment. A placement is meant for the whole
@@ -216,7 +220,8 @@ export function read(text, n) {
     return { level: head[1].length, body: head[2].trim() };
   }
   var plain = own.every(function (l) {
-    return !HEADING.test(l) && !LIST.test(l) && !FENCE.test(l) && !/^[ \t]*>/.test(l);
+    return !HEADING.test(l) && !LIST.test(l) && !FENCE.test(l)
+      && !IMAGE.test(l) && !/^[ \t]*>/.test(l);
   });
   return { level: plain ? 0 : null, body: own.join("\n") };
 }

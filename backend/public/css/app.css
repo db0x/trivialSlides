@@ -1531,6 +1531,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   cursor: pointer;
 }
 .place-add-button { --button-icon: url(../assets/text.svg); }
+.place-add-image { --button-icon: url(../assets/image.svg); }
 /* The one in the dialog that says how big an element is reuses the row of
    numbers from the column chooser -- same shape, same question. What it
    carries is an icon rather than a word: "Zwischenüberschrift" is three
@@ -1584,6 +1585,20 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 #element-dialog[open] {
   display: flex;
   flex-direction: column;
+  /* Unmodal, so it is no longer in the browser's top layer: it has to be
+     put over its own veil, and fixed rather than absolute because the
+     numbers written onto it are the ones getBoundingClientRect gave
+     (js/editor/dialog-aside.js).
+
+     inset and margin are what the browser itself writes onto a MODAL
+     dialog and onto no other -- without them an unmodal one is centred
+     sideways and left standing at the top of the page. They only decide
+     where it opens the very first time: from the second time on it opens
+     where it was last pushed to, which is written over these. */
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  margin: auto;
   max-height: 88vh;
   resize: both;
   overflow: hidden;
@@ -2143,6 +2158,47 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
+/* --- The veil of a live aside ------------------------------------------
+   ::backdrop above is the browser's, and the browser gives one only to a
+   MODAL dialog -- the kind the element dialog may not be, because a modal
+   one makes the preview behind it inert and that preview is what the
+   element is turned and pulled on.
+
+   So four panes around the frame, built by hand
+   (js/editor/dialog-aside.js). Not one sheet with the hole masked out of
+   it: a mask is paint and nothing else, so the hole in such a sheet can be
+   seen through and not reached through. Four panes leave the hole open in
+   the only sense that counts here. */
+.dialog-veil {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 90;
+}
+.dialog-veil-top {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--clear-y, 0);
+}
+.dialog-veil-bottom {
+  left: 0;
+  right: 0;
+  top: calc(var(--clear-y, 0) + var(--clear-h, 0));
+  bottom: 0;
+}
+.dialog-veil-left {
+  left: 0;
+  width: var(--clear-x, 0);
+  top: var(--clear-y, 0);
+  height: var(--clear-h, 0);
+}
+.dialog-veil-right {
+  left: calc(var(--clear-x, 0) + var(--clear-w, 0));
+  right: 0;
+  top: var(--clear-y, 0);
+  height: var(--clear-h, 0);
+}
+
 /* The head is the handle. Its buttons keep the arrow -- a drag that began
    on "Apply" would be a press that never arrives. */
 .dialog-aside .dialog-head { cursor: move; user-select: none; }

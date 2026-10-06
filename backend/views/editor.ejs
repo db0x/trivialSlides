@@ -324,15 +324,22 @@
              clicks on it (js/slide-place.js). -->
         <div class="field" id="freestyle-tools" hidden>
           <span class="field-label"><%= t('editor.placeNew') %></span>
-          <!-- One button, and the size is asked for in the dialog that
-               opens with it. Four buttons made the form ask the question
-               twice -- once here and once again in the dialog, where it
-               has to be asked anyway because a size can be changed
-               afterwards. -->
+          <!-- Two buttons, for the two things an element can be. The
+               SIZE is not asked here: it is asked in the dialog that
+               opens with a new text, where it has to be asked anyway
+               because a size can be changed afterwards. Four buttons for
+               four sizes made the form ask the same question twice.
+
+               A picture is not asked anything. It is chosen in the
+               picker, lands on the slide and is then a thing for the
+               mouse -- there is nothing to type about it. -->
           <div class="place-add">
             <button type="button" class="tool-icon place-add-button"
                     data-tip="<%= t('editor.placeAdd') %>"
                     aria-label="<%= t('editor.placeAdd') %>"></button>
+            <button type="button" class="tool-icon place-add-image"
+                    data-tip="<%= t('editor.placeAddImage') %>"
+                    aria-label="<%= t('editor.placeAddImage') %>"></button>
           </div>
           <p class="hint"><%= t('editor.placeHint') %></p>
         </div>

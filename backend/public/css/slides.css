@@ -281,6 +281,29 @@
    line -- a placed list would ignore the width it was given. The same fix
    the columns make further up. */
 .reveal .layout-freestyle .slide-box:is(ul, ol) { display: block; }
+/* A picture fills the width it was given and takes whatever height that
+   leaves it. Which is the whole of keeping its proportions: the box has no
+   height of its own (above), the picture's height follows its width, and
+   the one grip that changes the width therefore cannot squash it. There is
+   no second grip for the height on purpose -- a picture pulled out of
+   shape is a mistake, not a layout.
+
+   Stripped of what reveal's themes give an <img>: a frame, a shadow, a
+   pale ground and a cap at 95% of the slide. On a picture somebody placed
+   by hand all five argue with the four numbers that were given -- the cap
+   most of all, which would quietly refuse the last five per cent of every
+   width. The same reset the image layouts make further up. */
+.reveal .layout-freestyle .slide-box img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
 .reveal .layout-freestyle .slide-box > :first-child { margin-top: 0; }
 .reveal .layout-freestyle .slide-box > :last-child { margin-bottom: 0; }
 

@@ -162,12 +162,18 @@ function placed(n) {
   var text = places.place(slide.content, n.block, n.at, n.turn);
   if (text == null) return;
   slide.content = text;
-  // The body has changed under the field, and a body carrying placements
-  // is beyond what the rich-text field can show -- so which field is in
-  // front is decided afresh (contentSimple), exactly as it is when a
-  // slide is opened.
-  sourceMode = !contentSimple(slide);
-  showSlide();
+  // With the dialog open the form is not what one is looking at, and
+  // filling it afresh would take the element's own field apart under the
+  // words being written in it. Where a block stands is not on that form
+  // anyway -- it belongs to the mouse, which has just said it.
+  if (elementAt < 0) {
+    // The body has changed under the field, and a body carrying placements
+    // is beyond what the rich-text field can show -- so which field is in
+    // front is decided afresh (contentSimple), exactly as it is when a
+    // slide is opened.
+    sourceMode = !contentSimple(slide);
+    showSlide();
+  }
   remember();
 }
 
@@ -302,12 +308,27 @@ function remember() {
   previewSoon();
 }
 
-var previewSoon = verzoegert(350, function () {
+// The slide as the preview is to show it: what the model holds, or --
+// while an element is open in the dialog -- a copy of it carrying what the
+// dialog says about that element. One road for both, so that a redraw
+// asked for from anywhere while the dialog stands open cannot quietly put
+// the unapplied words back to what they were.
+function previewSlide() {
+  var slide = deck.slides[active];
+  if (!slide) return null;
+  var text = elementText();
+  return text == null ? slide : Object.assign({}, slide, { content: text });
+}
+
+function previewNow() {
+  var slide = previewSlide();
   // The bands travel with the slide: they belong to the deck, and the
   // server would otherwise draw the strips as they stood at the last save
   // (routes/decks.js, js/editor/bands.js).
-  preview.slideZeichnen(active, deck.slides[active], deck);
-});
+  if (slide) preview.slideZeichnen(active, slide, deck);
+}
+
+var previewSoon = verzoegert(350, previewNow);
 
 // Structural changes: save first, then rebuild the preview completely --
 // it renders from the file, not from the browser's memory.
@@ -1137,6 +1158,30 @@ $(".place-add-button").addEventListener("click", function () {
   openElement(places.count(slide.content) - 1);
 });
 
+// And a picture, which is the same move with the other half left out: it
+// is chosen in the picker, lands in the middle like a new text does, and
+// then there is nothing to type about it. So no dialog opens -- what one
+// wants of a picture one has just put down is to drag it, pull it to size
+// and turn it, and all three are over there. The handles are asked for in
+// its stead, so it is already taken hold of when it appears.
+//
+// Its width and nothing else is given. A picture's height follows its
+// width (slides.css), which is the whole of how its proportions are kept:
+// there is no number for a height to disagree with.
+$(".place-add-image").addEventListener("click", function () {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  askForImage(function (name) {
+    var now = deck.slides[active];
+    if (!now || !placing(now)) return;
+    harvest();
+    now.content = places.add(now.content, 0, "![](" + name + ")", freeSpot(now));
+    showSlide();
+    remember();
+    preview.pick(places.count(now.content) - 1);
+  });
+});
+
 // --- One element, in a dialog ------------------------------------------
 // Which element is open. -1 for none, which is also what keeps the
 // dialog's buttons from acting after it has been closed.
@@ -1146,10 +1191,14 @@ var elementAt = -1;
 // the same treatment the source and the bands dialogs get, and for the
 // same reason: this one is worked in while the preview is watched, and
 // the element being written is ON that preview (js/editor/dialog-aside.js).
+// live: this one is not modal. A modal dialog makes the page behind it
+// inert, and the preview with it -- and turning the element while choosing
+// its words is the one thing this dialog is for.
 var elementAside = setupAside(el.elementDialog, {
   key: "trivialslides:element-box",
   frame: $(".preview-frame"),
   resizable: true,
+  live: true,
 });
 
 // Abbrechen, and the same for every other way out that is not Apply: the
@@ -1234,8 +1283,12 @@ function openElement(n) {
   showElementLevel(said.level);
   showElementText(said.body);
   showElementMarks(places.classes(slide.content, n));
-  el.elementDialog.showModal();
+  // show() and not showModal(): see the aside's `live` above.
+  el.elementDialog.show();
   elementAside.opened();
+  // From here on this element is the only one the mouse may take hold of
+  // over there (js/slide-place.js).
+  preview.only(n);
   var feld = elementSourceMode ? el.elementText : el.elementContent;
   feld.focus();
   if (elementSourceMode) feld.select();
@@ -1262,7 +1315,9 @@ $$(".count-option", el.elementLevel).forEach(function (b) {
 // after it pointing at its neighbour.
 function elementText() {
   var slide = deck.slides[active];
-  if (elementAt < 0 || !slide) return null;
+  // == null as well as < 0: this is reached from the preview's own road,
+  // which exists before the line further down has run.
+  if (elementAt == null || elementAt < 0 || !slide) return null;
   var chosen = $(".count-option.is-active", el.elementLevel);
   var level = el.elementLevelField.hidden ? null : Number(chosen && chosen.dataset.level);
   var body = elementSourceMode ? el.elementText.value : rt.htmlToMd(el.elementContent);
@@ -1280,17 +1335,18 @@ function elementText() {
 var elementShown = false;
 
 function elementDraw() {
-  var slide = deck.slides[active];
-  var text = elementText();
-  if (text == null || !slide) return;
+  if (elementAt < 0) return;
   elementShown = true;
-  preview.slideZeichnen(active, Object.assign({}, slide, { content: text }), deck);
+  previewNow();
 }
 
 // While typing, at the pace the slide's own text field is drawn at: one
 // picture per pause, not one per letter. A button is pressed and not
 // typed, so it draws at once.
-var elementSoon = verzoegert(350, elementDraw);
+function elementSoon() {
+  elementShown = true;
+  previewSoon();
+}
 
 el.elementContent.addEventListener("input", elementSoon);
 el.elementText.addEventListener("input", elementSoon);
@@ -1325,6 +1381,7 @@ el.elementRemove.addEventListener("click", function () {
 // saves a special case.
 el.elementDialog.addEventListener("close", function () {
   elementAt = -1;
+  preview.only(-1);
   if (elementShown) previewSoon();
   elementShown = false;
 });

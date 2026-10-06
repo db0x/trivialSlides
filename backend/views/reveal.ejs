@@ -258,6 +258,15 @@
         if (ready) window.parent.postMessage({ kind: "bereit" }, "*");
       } else if (n.kind === "gehezu" && indices[n.index]) {
         Reveal.slide(indices[n.index][0], indices[n.index][1]);
+      } else if (n.kind === "allein") {
+        // The editor has opened one element in its dialog, or closed it
+        // again. From here on that one alone may be dragged, widened or
+        // turned (js/slide-place.js).
+        if (window.slidePlaceOnly) window.slidePlaceOnly(n.block);
+      } else if (n.kind === "zeigen") {
+        // The handles, asked for on one block -- the editor has just put
+        // it there and it is about to be dragged (js/slide-place.js).
+        if (window.slidePlacePick) window.slidePlacePick(n.block);
       } else if (n.kind === "slide") {
         // The editor's flat slide list corresponds to those <section>
         // elements that contain no <section> themselves -- the outer ones

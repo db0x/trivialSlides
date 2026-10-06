@@ -25,7 +25,7 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 
 ---
 
-<!-- .slide: data-layout="freestyle" -->
+<!-- .slide: data-layout="freestyle" data-background-effect="starfield" data-text-color="#ffffff" -->
 
 - FREESTYLE ...
 - syxdcvsdx
@@ -34,7 +34,10 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 <!-- .element: data-at="0,32,72" data-turn="350" -->
 
 # Test
-<!-- .element: data-at="37,32,26" data-turn="20" -->
+<!-- .element: data-at="37,32,26" data-turn="10" -->
+
+![](trivialslides.svg)
+<!-- .element: data-at="82,11,15" data-turn="345" -->
 
 ---
 
