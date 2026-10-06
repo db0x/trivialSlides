@@ -16,11 +16,24 @@
 // The size goes on the <section>, so everything on the slide follows it:
 // the themes size their headings in em, and ours do too (slides.css).
 (function () {
-  // Where the shrinking stops. Below this a slide is unreadable from the
-  // back of the room, and the honest answer is "put less on it" rather than
-  // a smaller size -- so from here on the slide is allowed to run over
-  // again, which is what shows the author that there is a problem.
-  var SMALLEST = 0.55;
+  // Where the shrinking stops. Past this the honest answer is "put less on
+  // it" rather than a smaller size, so from here on the slide is allowed
+  // to run over again -- which is what shows the author that there is a
+  // problem instead of quietly printing a slide nobody can read.
+  //
+  // The number is measured, not chosen: about 350 words is the most anyone
+  // should ever put on one slide, and that much has to FIT -- with the air
+  // at the slide's edges, and on the worst slide a deck can ask for, which
+  // is one carrying BOTH strips (slides.css keeps their room free of the
+  // text). Measured that way over all fourteen themes, 350 words of prose
+  // in paragraphs ask for between 0.45 and 0.52 depending on the theme, so
+  // the floor sits below the whole range with a little to spare.
+  //
+  // Below here the honest answer is "put less on it" rather than a smaller
+  // size, so from here on the slide is allowed to run over again -- which
+  // is what shows the author there is a problem instead of quietly
+  // printing a slide nobody can read.
+  var SMALLEST = 0.42;
 
   // Halving the interval seven times lands within a thousandth of the
   // largest size that quiet fits -- finer than anyone can see, and seven
@@ -93,6 +106,23 @@
     // shortened since would keep the size it needed when it was long.
     slide.style.fontSize = "";
     slide.removeAttribute("data-fit");
+    // A slide whose blocks were placed by hand is left alone. Stepping the
+    // type down there would shrink what somebody sized on purpose -- a
+    // heading set large is the point of placing it -- and the boxes would
+    // stay where they are while their text grew out of them. What the
+    // author arranged, the author owns; too much on such a slide is theirs
+    // to see and theirs to move.
+    //
+    // Read off the slide and not off its layout: a freestyle slide on
+    // which nothing has been placed yet IS an ordinary text slide, and
+    // there the rescue is as welcome as anywhere else.
+    //
+    // And the stylesheet is what is asked, not the class alone -- it is
+    // the stylesheet that decides whether a block was really taken out of
+    // the flow, and it only does that on the one layout that places
+    // things (slides.css). So this file needs to know no layout by name.
+    var box = slide.querySelector(".slide-box");
+    if (box && getComputedStyle(box).position === "absolute") return;
     var before = layOut(slide);
     // Nothing may be mid-transition while this measures -- a fragment
     // carries `transition: all`, and that includes the size being set here

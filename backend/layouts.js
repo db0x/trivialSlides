@@ -20,6 +20,8 @@
 //            player (data-textbreite, see WIDTHS below)
 //   columnMode - whether the columns are filled one by one or the text
 //            flows through them (data-columns, see COLUMNS below)
+//   columnCount - how many columns the body runs in (data-column-count,
+//            see COLUMN_COUNTS below)
 // Every layout has a title and a body, so those are not in the list.
 const LAYOUTS = [
   {
@@ -34,18 +36,42 @@ const LAYOUTS = [
     titleAlign: "center",
   },
   {
+    // Words on a slide, however many columns they stand in and whether or
+    // not anything is written above them. Two columns and three used to be
+    // layouts of their own, and the number is a FIELD now (COLUMN_COUNTS
+    // below) for a plain reason: the tiles are dead as soon as a slide has
+    // text on it, so a written slide could never be moved from two columns
+    // to three -- the one change of mind this layout invites. A field can
+    // be changed at any time, because it cannot cost the slide anything.
+    //
+    // A heading is not a layout question either: a slide nobody has
+    // written one on has none, and the element is simply not there
+    // (render.js). So the slide that is a paragraph, a list or a page of
+    // prose and has nothing to be called is this layout with the field
+    // left empty.
     id: "text",
+    fields: ["columnCount", "columnMode"],
+  },
+  {
+    // Nothing is arranged for this slide: every block of its text stands
+    // where it was put -- where that is, is written on the block itself
+    // (render.js, the .element line). A heading here is not the slide's
+    // name but one of those blocks, which is why this layout has none.
+    //
+    // A block that has not been placed simply flows, so a slide switched
+    // to this layout looks exactly like the text slide it was until the
+    // first block is moved -- and so does this layout in any other
+    // reveal.js, which knows none of it.
+    id: "freestyle",
+    heading: false,
+    // Its text is not written through one field but arranged as elements,
+    // each standing somewhere of its own. The editor reads this to put a
+    // row of sizes on the form where the text box would be, and to keep
+    // its hands off the body otherwise (js/editor/index.js, places.js).
+    // A property rather than the layout's name, so that a second layout
+    // of this kind would need no second rule anywhere.
+    places: true,
     fields: [],
-  },
-  {
-    id: "columns",
-    fields: ["columnMode"],
-    columns: 2,
-  },
-  {
-    id: "columns-three",
-    fields: ["columnMode"],
-    columns: 3,
   },
   {
     id: "image-right",
@@ -211,14 +237,31 @@ function onlyTitleAlign(value) {
 const COLUMN_SPLIT = "split";
 const COLUMN_BREAK = "<!-- .column -->";
 
+// How many columns the text runs in. A property of the SLIDE and not of
+// its layout -- see the text layout above for why.
+//
+// Three at the most, and that is a limit of the slide rather than of this
+// list: a third of 960 units at the theme's own size is a handful of
+// characters per line, which is why the type steps down with the third
+// column (slides.css). One is the default and the arrangement every deck
+// written before this had.
+const COLUMN_COUNTS = ["1", "2", "3"];
+const COLUMN_COUNT_DEFAULT = "1";
+
+function onlyColumnCount(value) {
+  const s = String(value == null ? "" : value).trim();
+  return COLUMN_COUNTS.includes(s) ? s : COLUMN_COUNT_DEFAULT;
+}
+
 // Tolerant of spacing the way the other two comment lines are (deck.js'
-// ATTR_LINE, render.js' FRAGMENT_RE): a break is a line that holds nothing
+// ATTR_LINE, render.js' ELEMENT_LINE_RE): a break is a line that holds nothing
 // but the comment.
 const COLUMN_BREAK_LINE = /^[ \t]*<!--[ \t]*\.column[ \t]*-->[ \t]*$/m;
 
-// How many columns a layout has; 0 for every layout that has none.
-function columnCount(id) {
-  return get(id).columns || 0;
+// How many columns a slide has; 0 for a layout that has none at all, which
+// is every layout but the text one. `chosen` is the slide's own number.
+function columnCount(id, chosen) {
+  return hasField(id, "columnCount") ? Number(onlyColumnCount(chosen)) : 0;
 }
 
 function onlyColumnMode(value) {
@@ -284,13 +327,45 @@ const RENAMED = {
   zitat: "quote",
 };
 
-// What a name used to belong to, or "" -- for the check, which has to tell
-// a name that is merely OLD from one that is wrong: the first is rewritten
-// on saving and costs nothing, the second costs the slide its arrangement
-// (check.js).
+// --- The layouts that became an attribute ------------------------------
+// "Two columns" and "three columns" were layouts of their own until the
+// number became a field of the text layout. A deck written before that
+// says data-layout="columns", and reading nothing but the layout off it
+// would leave a plain text slide -- the second column gone, silently, and
+// for good at the next save.
+//
+// So the old names are still read AND what they said is handed back with
+// them: the layout they become, and the field they set. Nothing writes
+// them either -- serialize puts down the layout and the count, so a deck
+// repairs itself the first time it is saved.
+const WAS_LAYOUT = {
+  columns: { layout: "text", columnCount: "2" },
+  "columns-three": { layout: "text", columnCount: "3" },
+};
+
+// What a written name means now, or "" for one this project never had.
+// Both tables in one answer, and in this order: the German names were
+// renamed first and some of them then became an attribute, so "spalten"
+// has to walk through "columns" to arrive at "text".
+//
+// For the check, which has to tell a name that is merely OLD from one that
+// is wrong: the first is rewritten on saving and costs nothing, the second
+// costs the slide its arrangement (check.js).
 function renamedTo(id) {
   const old = String(id || "");
-  return Object.prototype.hasOwnProperty.call(RENAMED, old) ? RENAMED[old] : "";
+  const next = Object.prototype.hasOwnProperty.call(RENAMED, old) ? RENAMED[old] : old;
+  if (Object.prototype.hasOwnProperty.call(WAS_LAYOUT, next)) return WAS_LAYOUT[next].layout;
+  return next === old ? "" : next;
+}
+
+// What else that name said, besides the layout it becomes -- the fields it
+// sets, or null for a name that is simply current or simply wrong. Read
+// where the file is turned into a model (deck.js, parseAttrs), so that an
+// old deck keeps its columns rather than merely its words.
+function wasLayout(id) {
+  const old = String(id || "");
+  const next = Object.prototype.hasOwnProperty.call(RENAMED, old) ? RENAMED[old] : old;
+  return Object.prototype.hasOwnProperty.call(WAS_LAYOUT, next) ? WAS_LAYOUT[next] : null;
 }
 
 // Unknown layout names (hand-written Markdown, an older deck) fall back to
@@ -304,9 +379,22 @@ function hasField(id, field) {
   return get(id).fields.includes(field);
 }
 
-module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, get, hasField,
+// Whether this layout has a heading of its own -- a line that names the
+// SLIDE, kept apart from its text (deck.js, splitTitle). All but one do,
+// so it is the exception that speaks: a layout without one says
+// heading: false and the rest stay silent.
+//
+// What hangs on it is more than one element: a layout without a heading
+// has no heading LINE in the file either, so a "#" in such a slide stays
+// in the body and is part of what is written on it.
+function hasTitle(id) {
+  return get(id).heading !== false;
+}
+
+module.exports = { LAYOUTS, DEFAULT_LAYOUT, RENAMED, renamedTo, wasLayout, get, hasField, hasTitle,
   SIDES, SIDE_DEFAULT, defaultSide, onlySide,
   WIDTHS, WIDTH_DEFAULT, defaultWidth, onlyWidth,
   COLUMN_SPLIT, COLUMN_BREAK, columnCount, onlyColumnMode, splitColumns, joinColumns,
+  COLUMN_COUNTS, COLUMN_COUNT_DEFAULT, onlyColumnCount,
   TITLE_ALIGNS, TITLE_ALIGN_DEFAULT, defaultTitleAlign, onlyTitleAlign,
   PLACES, PLACE_DEFAULT, onlyPlace };

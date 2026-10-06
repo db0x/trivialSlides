@@ -2,6 +2,8 @@
 titel: Example
 theme: simple
 transition: convex
+generator: trivialSlides
+min-version: 0.10.1
 footer-text: trivialSlides
 footer-logo: trivialslides.svg
 footer-logo-place: left
@@ -20,6 +22,22 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 <!-- .slide: data-layout="section" data-background-color="#122233" -->
 
 # Section divider
+
+---
+
+<!-- .slide: data-layout="freestyle" data-background-effect="starfield" data-text-color="#ffffff" -->
+
+- FREESTYLE ...
+- syxdcvsdx
+- lala
+
+<!-- .element: data-at="0,32,72" data-turn="350" -->
+
+# Test
+<!-- .element: data-at="37,32,26" data-turn="10" -->
+
+![](trivialslides.svg)
+<!-- .element: data-at="82,11,15" data-turn="345" -->
 
 ---
 
@@ -65,7 +83,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="columns" data-columns="split" -->
+<!-- .slide: data-columns="split" data-column-count="2" -->
 
 ## Two columns
 
@@ -83,12 +101,13 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 
 ---
 
-<!-- .slide: data-layout="columns-three" data-columns="split" data-title-align="center" -->
+<!-- .slide: data-columns="split" data-column-count="3" data-title-align="center" -->
 
 ## Three columns
 
 - C
-<!-- .element: class="fragment" data-fragment-index="0" -->
+<!-- .element: data-at="80,60,11" data-turn="20" -->
+
 - C++
 <!-- .element: class="fragment" data-fragment-index="0" -->
 - C#
@@ -168,6 +187,25 @@ private int getFactor() {
 ```
 
 <!-- /.group -->
+
+---
+
+<!-- .slide: data-background-gradient="linear-gradient(200deg, #2f4f3a 0%, #1b1f23 100%)" data-text-color="#ffffff" -->
+
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+<!-- .element: class="align-fill" -->
+
+Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero eros et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi. Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat.
+<!-- .element: class="align-fill" -->
+
+Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat. Duis autem vel eum iriure dolor in hendrerit in vulputate velit esse molestie consequat, vel illum dolore eu feugiat nulla facilisis at vero eros et accumsan et iusto odio dignissim qui blandit praesent luptatum zzril delenit augue duis dolore te feugait nulla facilisi.
+<!-- .element: class="align-fill" -->
+
+Nam liber tempor cum soluta nobis eleifend option congue nihil imperdiet doming id quod mazim placerat facer possim assum. Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt ut laoreet dolore magna aliquam erat volutpat. Ut wisi enim ad minim veniam, quis nostrud exerci tation ullamcorper suscipit lobortis nisl ut aliquip ex ea commodo consequat.
+<!-- .element: class="align-fill" -->
+
+Duis autem vel eum iriure dolor in hendrerit in
+<!-- .element: class="align-fill" -->
 
 ---
 

@@ -23,6 +23,7 @@ const source = require("./source");
 const layouts = require("./layouts");
 const bands = require("./bands");
 const effects = require("./effects");
+const format = require("./format");
 const qr = require("./qr");
 
 const ATTR_LINE = /^\s*<!--\s*\.slide:\s*(.*?)\s*-->\s*$/;
@@ -47,6 +48,12 @@ const HEAD_KEYS = ["titel", "theme", "transition"];
 // deck without bands has nothing to say about them and its head is the
 // three lines above and no more -- so a missing one is not a finding here.
 const BAND_KEYS = bands.headKeys();
+// The two lines that say what the file is and what it takes to read it
+// (format.js). Not in HEAD_KEYS either, and for a different reason than
+// the bands: saving writes both, but it writes them with a value nobody
+// has to choose -- so a deck that has not got them yet loses nothing and
+// is not worth a finding. Only a line that says something else is.
+const MARK_KEYS = [format.GENERATOR_KEY, format.MIN_VERSION_KEY];
 // What deck.js cuts to length in normalize(): the deck's title, a slide's
 // heading, and the two one-line fields an attribute may carry.
 const TITLE_MAX = 120;
@@ -58,7 +65,7 @@ const CONTENT_MAX = 20000;
 // The order is the one serialize() writes them in, so a reader comparing
 // the two files has them in the same order.
 //
-// `layout: true` marks the ten that hang on the LAYOUT -- the ones
+// `layout: true` marks the ones that hang on the LAYOUT -- the ones
 // parseAttrs passes through its ifField. What they carry comes back empty
 // on a layout that has no such field, however well it is written. The rest
 // belong to the slide the way its colours do (deck.js says so in as many
@@ -76,6 +83,7 @@ const ATTRIBUTES = [
   { name: "data-textbreite", field: "textWidth", key: "check.width", allowed: () => layouts.WIDTHS, layout: true },
   { name: "data-text-place", field: "textPlace", key: "check.place", allowed: () => layouts.PLACES, layout: true },
   { name: "data-columns", field: "columnMode", key: "check.columns", allowed: () => [layouts.COLUMN_SPLIT], layout: true },
+  { name: "data-column-count", field: "columnCount", key: "check.columnCount", allowed: () => layouts.COLUMN_COUNTS, layout: true },
   { name: "data-title-align", field: "titleAlign", key: "check.titleAlign", allowed: () => layouts.TITLE_ALIGNS },
   { name: "data-text-fragment", field: "textFragment", key: "check.textFragment", allowed: () => [deck.TEXT_FRAGMENT_ON] },
   // The two bands a slide can send away, built from the same table the
@@ -116,6 +124,7 @@ function checkHead(block, model, images, add) {
     const key = hit[1].toLowerCase();
     const value = hit[2].trim();
     if (BAND_KEYS.includes(key)) return checkBandLine(key, value, at, model, images, add);
+    if (MARK_KEYS.includes(key)) return checkMarkLine(key, value, at, model, add);
     if (!HEAD_KEYS.includes(key)) return add(at, "check.headKey", { key: hit[1] });
     // What the file says against what came out of it. Only these three
     // fields, and each one differs for exactly one reason.
@@ -140,6 +149,26 @@ function checkHead(block, model, images, add) {
   // The band keys are deliberately NOT in that list: a deck without bands
   // says nothing about them and saving writes nothing about them either
   // (bands.js, toHead).
+}
+
+// The two lines about the file itself. Neither is wrong in the way a theme
+// can be wrong -- nothing is lost over either of them -- but both are
+// rewritten on saving, and a line that is about to change is worth
+// knowing about before it does.
+function checkMarkLine(key, value, at, model, add) {
+  if (key === format.GENERATOR_KEY) {
+    if (value !== format.GENERATOR) {
+      add(at, "check.generator", { value, name: format.GENERATOR });
+    }
+    return;
+  }
+  // What the slides actually ask for, against what the head claims. Too
+  // low is a deck that has gained something since it was last saved here;
+  // too high is one that was written by a newer trivialSlides -- and in
+  // that case what this version does not know has already been reported,
+  // attribute by attribute, further down.
+  const needed = format.minVersion(model);
+  if (value !== needed) add(at, "check.minVersion", { value, name: needed });
 }
 
 // One line of a band. Four shapes, and each of them is wrong for exactly
@@ -253,7 +282,7 @@ function checkAttrs(line, at, slide, images, add) {
     if (!rule) return add(at, "check.attrUnknown", { name: p.name });
     if (seen.has(p.name)) return add(at, "check.attrTwice", { name: p.name });
     seen.add(p.name);
-    // The layout decides which of those ten a slide may carry at all.
+    // The layout decides which of those a slide may carry at all.
     if (rule.layout && !layouts.hasField(slide.layout, rule.field)) {
       return add(at, "check.attrField", { name: p.name, layout: slide.layout });
     }
@@ -274,6 +303,18 @@ function checkAttrs(line, at, slide, images, add) {
     // name -- so this is worth saying, but not in the words used for a
     // name that is simply wrong.
     if (rule.field === "layout" && layouts.renamedTo(p.value.trim()) === slide.layout) {
+      // Two kinds of old name, and they do not read the same. One is the
+      // same layout under another word. The other was a layout of its own
+      // and is a field now -- "columns" is a text slide in two of them
+      // (layouts.js) -- and what saving writes in its place is the layout
+      // AND that field, which is worth naming.
+      const was = layouts.wasLayout(p.value.trim());
+      if (was) {
+        return add(at, "check.layoutWasLayout", {
+          value: p.value.trim(), name: slide.layout,
+          attr: `data-column-count="${was.columnCount}"`,
+        });
+      }
       return add(at, "check.layoutRenamed", { value: p.value.trim(), name: slide.layout });
     }
     if (rule.field === "url" && slide.url === "https://" + p.value.trim()) {

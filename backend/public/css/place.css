@@ -1,0 +1,132 @@
+/* The handles for arranging a freestyle slide with the mouse.
+
+   A stylesheet of its own, loaded by the preview and by nothing else
+   (views/reveal.ejs). The layout stylesheet is what the presentation and
+   the exported file carry, and a grip has no business in either -- keeping
+   them apart is what makes that impossible rather than merely unlikely. */
+
+/* The block under the mouse says so quietly: this is something one can
+   take hold of. Outline and not border, because a border would take room
+   and move the very thing it is drawn around. */
+.is-preview .layout-freestyle .slide-text > *:hover {
+  outline: 1px dashed color-mix(in srgb, currentColor 40%, transparent);
+  outline-offset: 4px;
+  cursor: move;
+}
+.is-preview .layout-freestyle .slide-text > .is-picked,
+.is-preview .layout-freestyle .slide-text > .is-picked:hover {
+  outline: 1px solid var(--place-accent, #2b7cd3);
+  outline-offset: 4px;
+}
+
+/* The two grips sit INSIDE the block, so they travel with it -- through
+   its place and through its rotation, which is what keeps the width grip
+   on the right edge however far the block has been turned. */
+.place-grip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: var(--place-accent, #2b7cd3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  /* The slide's type is stepped by em in places; a grip is a piece of
+     furniture and keeps its size. */
+  font-size: 0;
+  z-index: 2;
+}
+/* The way back to the words: above the top left corner, as far from the
+   two that change the shape as the block allows. */
+.place-grip-edit {
+  left: -6px;
+  top: -22px;
+  cursor: pointer;
+}
+.place-grip-edit::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: #fff;
+  -webkit-mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
+  mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
+}
+/* Width: on the right edge, in the middle of it. */
+.place-grip-width {
+  right: -6px;
+  top: 50%;
+  margin-top: -6px;
+  cursor: ew-resize;
+}
+/* Turning: above the top right corner, where it cannot be mistaken for
+   the one that changes the width. */
+.place-grip-turn {
+  right: -6px;
+  top: -22px;
+  cursor: crosshair;
+  background: var(--place-accent, #2b7cd3);
+}
+.place-grip-turn::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  width: 1px;
+  height: 10px;
+  background: var(--place-accent, #2b7cd3);
+}
+
+/* While something is being dragged nothing else may be selected: a text
+   box full of selected words follows the mouse badly and looks broken. */
+.is-preview.is-placing,
+.is-preview.is-placing * {
+  user-select: none;
+}
+
+/* --- The guide lines -------------------------------------------------- */
+/* They appear while a block is being moved and show what it has just come
+   to stand in line with: the middle of the slide, one of its edges, or an
+   edge or the middle of another block (js/slide-place.js).
+
+   Drawn by the text box's own two pseudo-elements and not by anything put
+   inside it. The layout stylesheet steps the type down by how many
+   children that box has, so an element appearing the moment a line does
+   would shrink the slide under the mouse -- and the gesture measured the
+   slide before it began. A pseudo-element is no child and counts for
+   nothing.
+
+   Both lines run the full width and height of the box, because that box
+   is the area the per cent are counted in: a line at 50% is the middle of
+   the slide's text area, which is what the number in the file means. */
+.is-preview .layout-freestyle .slide-text::before,
+.is-preview .layout-freestyle .slide-text::after {
+  /* Not the accent the grips carry: a guide is not something one takes
+     hold of, and telling the two apart at a glance is its whole job. */
+  background: var(--place-guide, #e8486b);
+  position: absolute;
+  /* Over the grips, which are the only other furniture on the slide, and
+     catching nothing: the gesture belongs to the block under the mouse,
+     and a line drawn across it must not come between them. */
+  z-index: 3;
+  pointer-events: none;
+  /* And neither of them is there until there is a line to draw. */
+  content: none;
+}
+/* Two pixels because the preview is a slide scaled down: a line of one
+   would arrive on screen as half of one and be the faintest thing on it. */
+.is-preview .layout-freestyle .slide-text.has-guide-x::before {
+  content: "";
+  top: 0;
+  bottom: 0;
+  left: var(--guide-x);
+  width: 2px;
+  margin-left: -1px;
+}
+.is-preview .layout-freestyle .slide-text.has-guide-y::after {
+  content: "";
+  left: 0;
+  right: 0;
+  top: var(--guide-y);
+  height: 2px;
+  margin-top: -1px;
+}

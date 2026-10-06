@@ -14,7 +14,13 @@
 // unheard and the preview would stay mute for the rest of the session.
 import { schreibHead } from "./base.js";
 
-export function createPreview(iframe, base) {
+// onPlaced: what to do when something in the preview was moved, widened
+// or turned with the mouse (js/slide-place.js). The gesture happens over
+// there, in the slide itself and at the size it will have on the wall;
+// what comes back is one message per drop and nothing in between.
+// onEdit: the same, for the way back to the words -- the pencil on a
+// selected block, or two clicks on it.
+export function createPreview(iframe, base, onPlaced, onEdit) {
   var bereit = false;
   var queue = []; // messages that arrived before "bereit"
   var klopfen = null;
@@ -49,6 +55,14 @@ export function createPreview(iframe, base) {
 
   window.addEventListener("message", function (ev) {
     if (ev.source !== iframe.contentWindow) return;
+    if (ev.data && ev.data.kind === "platziert") {
+      if (onPlaced) onPlaced(ev.data);
+      return;
+    }
+    if (ev.data && ev.data.kind === "bearbeiten") {
+      if (onEdit) onEdit(ev.data);
+      return;
+    }
     if (ev.data && ev.data.kind === "bereit") {
       bereit = true;
       clearInterval(klopfen);
@@ -80,6 +94,17 @@ export function createPreview(iframe, base) {
       })
         .then(function (r) { return r.json(); })
         .then(function (d) { sende({ kind: "slide", index: index, html: d.html }); });
+    },
+    // Which element the editor has open in its dialog, so that the
+    // preview lets that one be taken hold of and no other. -1 when the
+    // dialog is shut.
+    only: function (block) {
+      sende({ kind: "allein", block: block });
+    },
+    // The handles, put on one block without locking the others out: a
+    // picture the editor has just added and nobody has touched yet.
+    pick: function (block) {
+      sende({ kind: "zeigen", block: block });
     },
     newLoad: function (index) {
       bereit = false;

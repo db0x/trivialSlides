@@ -5,6 +5,8 @@
 //   ---                      <- header (only at the very start of the file)
 //   titel: My talk
 //   theme: white
+//   generator: trivialSlides <- what wrote it, and what it takes to read
+//   min-version: 0.4.0          it whole (format.js)
 //   footer-text: ACME Corp   <- the strips that stand on every slide
 //   ---
 //
@@ -25,6 +27,7 @@
 // content: the rest of the slide passes through untouched).
 const layouts = require("./layouts");
 const bands = require("./bands");
+const format = require("./format");
 const effects = require("./effects");
 const video = require("./video");
 const qr = require("./qr");
@@ -110,6 +113,13 @@ function parseAttrs(line) {
   let t;
   while ((t = re.exec(line)) !== null) attrs[t[1]] = t[2];
   const layout = layouts.get(attrs["data-layout"]).id;
+  // A name that was a layout of its own and is a field now ("columns",
+  // and the German "spalten" before it) says more than which layout this
+  // is -- see layouts.js. What it said stands in for the attribute the
+  // file does not carry yet; an attribute that IS there wins, because
+  // then the file has been written since.
+  const was = layouts.wasLayout(attrs["data-layout"]) || {};
+  const attr = (name, field) => (attrs[name] !== undefined ? attrs[name] : was[field]);
   // What a layout has no field for comes back empty, exactly as it does
   // from normalize() -- otherwise a text slide read from a file would carry
   // a text arrangement it cannot have, and the same slide would look
@@ -134,6 +144,11 @@ function parseAttrs(line) {
     // Whether each column has a text of its own. The breaks between them
     // are in the body, not here -- see layouts.js.
     columnMode: ifField("columnMode", layouts.onlyColumnMode(attrs["data-columns"])),
+    // How many columns there are, where the layout leaves that to the
+    // slide. A number as a string, like the text width above: it is a
+    // name out of a short list, not something to count with.
+    columnCount: ifField("columnCount",
+      layouts.onlyColumnCount(attr("data-column-count", "columnCount"))),
     // Where the heading stands. No ifField: every layout has a heading, so
     // this belongs to the slide like its colours do.
     titleAlign: layouts.onlyTitleAlign(attrs["data-title-align"]),
@@ -196,6 +211,11 @@ function serializeAttrs(slide, immer) {
   // columns flow, which is what these layouts have always done.
   if (layouts.hasField(slide.layout, "columnMode")
       && slide.columnMode === layouts.COLUMN_SPLIT) parts.push(`data-columns="${layouts.COLUMN_SPLIT}"`);
+  // One column is the default and stays out of the file: a slide nobody
+  // has put in columns is a plain text slide, and that is what it should
+  // look like when the file is opened in a text editor.
+  if (layouts.hasField(slide.layout, "columnCount") && slide.columnCount
+      && slide.columnCount !== layouts.COLUMN_COUNT_DEFAULT) parts.push(`data-column-count="${slide.columnCount}"`);
   // Nothing is written while the layout is left in charge -- which is what
   // keeps a deck that has never been asked looking untouched in the file.
   if (slide.titleAlign) parts.push(`data-title-align="${slide.titleAlign}"`);
@@ -261,7 +281,16 @@ function parseSlide(text, vertical) {
     attrs = parseAttrs(lines[i]);
     i++;
   }
-  return Object.assign({ vertical: !!vertical }, attrs, splitTitle(lines.slice(i).join("\n")));
+  const body = lines.slice(i).join("\n");
+  // A layout with no heading has no heading LINE either: a "#" in such a
+  // slide is part of what is written on it, so it stays in the body
+  // instead of being lifted out into a field the editor does not show.
+  // Nothing is lost and nothing moves -- the slide shows the heading
+  // where it stands, as the text it is (layouts.js, hasTitle).
+  const said = layouts.hasTitle(attrs.layout)
+    ? splitTitle(body)
+    : { title: null, content: body.trim() };
+  return Object.assign({ vertical: !!vertical }, attrs, said);
 }
 
 // --- File -> model -----------------------------------------------------
@@ -300,6 +329,13 @@ function parse(md) {
     title: oneLine(head.titel) || "",
     theme: THEMES.includes(head.theme) ? head.theme : "white",
     transition: TRANSITIONS.includes(head.transition) ? head.transition : "slide",
+    // What the FILE says it takes to read it whole. Read rather than
+    // computed, and that is the whole point of the line: a version can
+    // only work out the requirements of the features it knows itself, so
+    // one that is too old would answer too low -- which is exactly the
+    // case the line is there for (format.js). Empty on every deck written
+    // before it existed.
+    minVersion: format.fromHead(head),
     // The strips that stand on every slide. Always both, even when the
     // file says nothing about them: an empty band draws nothing and writes
     // nothing (bands.js), so the model may hold the pair without the file
@@ -314,8 +350,13 @@ function parse(md) {
 function serialize(deck) {
   const head = ["---", `titel: ${oneLine(deck.title)}`, `theme: ${deck.theme}`, `transition: ${deck.transition}`]
     // After the three that have always been there, so a file opened in a
-    // text editor still begins the way it did. A band that says nothing
-    // adds no line at all (bands.js).
+    // text editor still begins the way it did. What the file IS and what
+    // it takes to read it come first of the later ones: they are about the
+    // file itself, where everything below is about the talk (format.js --
+    // and the second of the two is worked out afresh here, so a deck that
+    // has gained something says so from the next save on). A band that
+    // says nothing adds no line at all (bands.js).
+    .concat(format.toHead(deck))
     .concat(bands.toHead(deck.header, "header"), bands.toHead(deck.footer, "footer"))
     .concat(["---", "", ""]);
   const parts = [];
@@ -418,6 +459,7 @@ function newSlide(layout) {
     textWidth: layouts.defaultWidth(layout),
     textPlace: layouts.hasField(layout, "textPlace") ? layouts.PLACE_DEFAULT : "",
     columnMode: "",
+    columnCount: layouts.hasField(layout, "columnCount") ? layouts.COLUMN_COUNT_DEFAULT : "",
     titleAlign: "",
     textFragment: false,
     noHeader: false,
@@ -438,6 +480,11 @@ function normalize(raw) {
     title: oneLine(deck.title).slice(0, 120),
     theme: THEMES.includes(deck.theme) ? deck.theme : "white",
     transition: TRANSITIONS.includes(deck.transition) ? deck.transition : "slide",
+    // Passed through, not worked out: this is what the FILE claimed, and
+    // the claim has to survive the round trip through the browser so the
+    // editor can still say "this deck wants a newer trivialSlides than
+    // this one" after a save. What gets WRITTEN is computed in serialize.
+    minVersion: format.isVersion(deck.minVersion) ? String(deck.minVersion).trim() : "",
     header: bands.normalize(deck.header),
     footer: bands.normalize(deck.footer),
     slides: (slides.length ? slides : [newSlide("title")]).map((f, i) => {
@@ -450,8 +497,12 @@ function normalize(raw) {
         vertical: i > 0 && !!(f && f.vertical),
         // Passed through rather than folded to "": the editor sends null for
         // a slide without a heading and "" for one with an empty heading,
-        // and both have to survive the round trip.
-        title: f && f.title !== null && f.title !== undefined ? oneLine(f.title).slice(0, 200) : null,
+        // and both have to survive the round trip. A layout that has no
+        // heading at all is the third case and the only one decided here:
+        // it comes back null whatever arrived, the way a field the layout
+        // does not have comes back empty.
+        title: layouts.hasTitle(layout) && f && f.title !== null && f.title !== undefined
+          ? oneLine(f.title).slice(0, 200) : null,
         content: String((f && f.content) || "").replace(/\r\n/g, "\n").slice(0, 20000),
         image: layouts.hasField(layout, "image") ? oneLine(f && f.image).slice(0, 200) : "",
         source: layouts.hasField(layout, "source") ? oneLine(f && f.source).slice(0, 200) : "",
@@ -469,6 +520,7 @@ function normalize(raw) {
         textWidth: layouts.hasField(layout, "textWidth") ? layouts.onlyWidth(f && f.textWidth, layout) : "",
         textPlace: layouts.hasField(layout, "textPlace") ? layouts.onlyPlace(f && f.textPlace) : "",
         columnMode: layouts.hasField(layout, "columnMode") ? layouts.onlyColumnMode(f && f.columnMode) : "",
+        columnCount: layouts.hasField(layout, "columnCount") ? layouts.onlyColumnCount(f && f.columnCount) : "",
         titleAlign: layouts.onlyTitleAlign(f && f.titleAlign),
         textFragment: !!(f && f.textFragment),
         noHeader: !!(f && f.noHeader),

@@ -11,6 +11,8 @@ import { createPreview } from "./preview.js";
 import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
+import { setupAside } from "./dialog-aside.js";
+import * as places from "./places.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
 import { setupAi } from "./ai.js";
@@ -97,7 +99,23 @@ var el = {
   textLabel: $("#text-label"),
   columnTabs: $("#column-tabs"),
   columnsSplit: $("#slide-columns-split"),
+  fieldHeading: $("#field-heading"),
   fieldColumns: $(".field-columns"),
+  fieldColumnCount: $("#field-column-count"),
+  fieldText: $("#field-text"),
+  freestyleTools: $("#freestyle-tools"),
+  elementDialog: $("#element-dialog"),
+  elementForm: $("#element-form"),
+  elementLevel: $("#element-level"),
+  elementLevelField: $("#element-level-field"),
+  elementText: $("#element-text"),
+  elementContent: $("#element-content"),
+  elementFrame: $("#element-frame"),
+  elementSource: $("#element-source"),
+  elementSourceNote: $("#element-source-note"),
+  elementFragment: $("#element-fragment"),
+  elementToolbar: $("#element-toolbar"),
+  elementRemove: $("#element-remove"),
   slideBands: $("#slide-bands"),
   headerOn: $("#slide-header-on"),
   footerOn: $("#slide-footer-on"),
@@ -110,7 +128,54 @@ var el = {
 // but 0 while the slide keeps its columns apart.
 var activeColumn = 0;
 
-var preview = createPreview($("#preview"), BASE);
+var preview = createPreview($("#preview"), BASE, placed, function (n) {
+  // The pencil on a selected block, or two clicks on it. The preview
+  // knows which block it was; the words are over here.
+  var slide = deck.slides[active];
+  if (!slide || !n || n.block < 0) return;
+  harvest();
+  if (!places.placeable(slide.content) || places.count(slide.content) !== n.count) {
+    return note(t("editor.placeLost"));
+  }
+  openElement(n.block);
+});
+
+// Something in the preview was moved, widened or turned. The gesture is
+// over; what arrives is which block and where it now stands, and the only
+// thing to do here is write it into the slide's text (places.js).
+//
+// harvest() FIRST, as everywhere else on this path: the text field may be
+// a keystroke ahead of the model, and a placement written onto the older
+// text would take that keystroke back.
+function placed(n) {
+  var slide = deck.slides[active];
+  if (!slide || !n || n.block < 0) return;
+  harvest();
+  // The two sides count the blocks of this slide separately -- the editor
+  // in the text, the preview in the markup (js/slide-place.js) -- and if
+  // they disagree, the number that came back points at a block other than
+  // the one under the mouse. Then nothing is placed: moving the wrong
+  // block is worse than moving none.
+  if (!places.placeable(slide.content) || places.count(slide.content) !== n.count) {
+    return note(t("editor.placeLost"));
+  }
+  var text = places.place(slide.content, n.block, n.at, n.turn);
+  if (text == null) return;
+  slide.content = text;
+  // With the dialog open the form is not what one is looking at, and
+  // filling it afresh would take the element's own field apart under the
+  // words being written in it. Where a block stands is not on that form
+  // anyway -- it belongs to the mouse, which has just said it.
+  if (elementAt < 0) {
+    // The body has changed under the field, and a body carrying placements
+    // is beyond what the rich-text field can show -- so which field is in
+    // front is decided afresh (contentSimple), exactly as it is when a
+    // slide is opened.
+    sourceMode = !contentSimple(slide);
+    showSlide();
+  }
+  remember();
+}
 
 // --- Notices -------------------------------------------------------------
 // One dialog, one line of text. The browser's alert would do the same job,
@@ -243,12 +308,27 @@ function remember() {
   previewSoon();
 }
 
-var previewSoon = verzoegert(350, function () {
+// The slide as the preview is to show it: what the model holds, or --
+// while an element is open in the dialog -- a copy of it carrying what the
+// dialog says about that element. One road for both, so that a redraw
+// asked for from anywhere while the dialog stands open cannot quietly put
+// the unapplied words back to what they were.
+function previewSlide() {
+  var slide = deck.slides[active];
+  if (!slide) return null;
+  var text = elementText();
+  return text == null ? slide : Object.assign({}, slide, { content: text });
+}
+
+function previewNow() {
+  var slide = previewSlide();
   // The bands travel with the slide: they belong to the deck, and the
   // server would otherwise draw the strips as they stood at the last save
   // (routes/decks.js, js/editor/bands.js).
-  preview.slideZeichnen(active, deck.slides[active], deck);
-});
+  if (slide) preview.slideZeichnen(active, slide, deck);
+}
+
+var previewSoon = verzoegert(350, previewNow);
 
 // Structural changes: save first, then rebuild the preview completely --
 // it renders from the file, not from the browser's memory.
@@ -337,8 +417,17 @@ function harvest() {
   // one field cannot say which is meant, so what the slide already is
   // decides -- which is what makes a hand-written "##" survive being opened
   // here (deck.js).
-  slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
-  slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
+  // A layout with no heading has none to read either, and the field is
+  // not on the form for it (showSlide). Its alignment goes with it: where
+  // there is no heading, an attribute saying where it stands is a line in
+  // the file for nothing.
+  if (!hasTitle(slide)) slide.title = null;
+  else slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
+  // On a freestyle slide the text is not in a field at all: it is in the
+  // elements, and those are written by the dialog and by the mouse
+  // (places.js). Reading a field that is not on the form would put back
+  // whatever it happened to be holding.
+  if (!placing(slide)) slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
   // it does so for the live preview too. So a pasted link is a video
@@ -353,7 +442,7 @@ function harvest() {
   // The chooser beside the heading keeps two things apart: what the slide
   // has CHOSEN (which may be nothing) and what the button SHOWS, which is
   // never nothing. Only the choice belongs in the model.
-  slide.titleAlign = el.titleAlignButton.dataset.choice || "";
+  slide.titleAlign = hasTitle(slide) ? (el.titleAlignButton.dataset.choice || "") : "";
   // The gradient field takes CSS, so at any moment it may hold something
   // half-typed. Only a complete gradient goes into the model -- the rest
   // stays in the field and is named as unfinished, instead of quietly
@@ -363,12 +452,39 @@ function harvest() {
 }
 
 // --- Columns -----------------------------------------------------------
+// How many columns the slide stands in, 0 for a layout that has none at
+// all. The twin of layouts.js' columnCount(): the number belongs to the
+// slide, the field to the layout.
+function columnCount(slide) {
+  var def = layoutsById[(slide || {}).layout] || {};
+  return has(def, "columnCount") ? Number(slide.columnCount || 1) : 0;
+}
+
+// Whether the layout has this field at all -- the browser's half of
+// layouts.js' hasField(), asked of the definition the page was handed.
+function has(def, field) {
+  return ((def || {}).fields || []).indexOf(field) !== -1;
+}
+
+// Whether this slide is arranged rather than written through: the one
+// layout whose text is a set of elements, each standing somewhere of its
+// own (layouts.js, slides.css, js/slide-place.js).
+function placing(slide) {
+  return !!(layoutsById[(slide || {}).layout] || {}).places;
+}
+
+// Whether the slide has a heading of its own. The exception speaks, as it
+// does on the server (layouts.js, hasTitle): a layout without one says so,
+// and on such a slide a heading is one of the blocks in the text.
+function hasTitle(slide) {
+  return (layoutsById[(slide || {}).layout] || {}).heading !== false;
+}
+
 // How many text fields the slide's body is written in: one, unless the
-// layout has columns AND the slide keeps them apart. The count belongs to
-// the layout (layouts.js), the arrangement to the slide.
+// slide has columns AND keeps them apart.
 function splitCount(slide) {
   if (!slide || slide.columnMode !== SPLIT) return 0;
-  return (layoutsById[slide.layout] || {}).columns || 0;
+  return columnCount(slide);
 }
 
 // The body as the field holds it. Kept apart, the field holds ONE column --
@@ -443,12 +559,19 @@ function showSlide() {
   el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
 
   var def = layoutsById[slide.layout] || { fields: [] };
+  // The layout that has no heading puts the whole field away -- an input
+  // that cannot end up anywhere is worse than no input.
+  el.fieldHeading.hidden = !hasTitle(slide);
   el.fieldImage.hidden = def.fields.indexOf("image") === -1;
   el.fieldSource.hidden = def.fields.indexOf("source") === -1;
   el.fieldVideo.hidden = def.fields.indexOf("video") === -1;
   el.fieldUrl.hidden = def.fields.indexOf("url") === -1;
   el.fieldQrColors.hidden = def.fields.indexOf("qrColor") === -1;
-  el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1;
+  showColumnCount(slide, def);
+  // Keeping columns apart is a question only where there is more than one
+  // of them: on a slide standing in a single column there is nothing to
+  // keep apart, so the switch is not there to be asked.
+  el.fieldColumns.hidden = def.fields.indexOf("columnMode") === -1 || columnCount(slide) < 2;
   el.columnsSplit.checked = slide.columnMode === SPLIT;
   drawSlideBands(slide);
   el.textSideMenu.hidden = def.fields.indexOf("textSide") === -1;
@@ -479,6 +602,17 @@ function showSlide() {
 
 function setContentMode(slide) {
   var count = splitCount(slide);
+  // A slide that is arranged rather than written through shows the row of
+  // sizes where the text field stands, and no field at all: its text is
+  // in its elements, and each of those is opened on the slide itself.
+  var arranged = placing(slide);
+  el.freestyleTools.hidden = !arranged;
+  el.fieldText.hidden = arranged;
+  if (arranged) {
+    el.contentFrame.hidden = true;
+    el.sourceFrame.hidden = true;
+    return;
+  }
   // The frames carry the visible border, so those are what get hidden --
   // hiding the field alone would leave an empty box behind.
   el.contentFrame.hidden = sourceMode;
@@ -487,7 +621,7 @@ function setContentMode(slide) {
   // forced by the slide.
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
-  $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  $$("#text-toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
   // "This paragraph" needs a paragraph, and in source mode there is none --
   // only text. The slide's own text box is a different matter: it is an
   // attribute of the slide and can be set from either mode.
@@ -855,6 +989,22 @@ function showTextWidth(width) {
   el.textWidthButton.dataset.tip = name;
 }
 
+// How many columns the text runs in. Buttons and not a menu: there are
+// three values and they are single digits, so the whole question fits in
+// the room a closed menu would take -- and a chooser one has to open to
+// see "1 2 3" in is a lid on a box holding nothing.
+function showColumnCount(slide, def) {
+  var here = has(def, "columnCount");
+  el.fieldColumnCount.hidden = !here;
+  if (!here) return;
+  var count = String(slide.columnCount || "1");
+  $$(".count-option", el.fieldColumnCount).forEach(function (b) {
+    var is = b.dataset.count === count;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-pressed", is ? "true" : "false");
+  });
+}
+
 // Where the heading stands. The choice may be empty -- then the layout
 // decides (layouts.js) and the button shows what the layout does, because
 // the question this button answers is "where is my heading", not "have I
@@ -972,10 +1122,292 @@ $$(".layout-tile").forEach(function (tile) {
     harvest();
     var slide = deck.slides[active];
     slide.layout = tile.dataset.layout;
-    // A layout without columns cannot keep any apart, so the breaks in the
-    // body go with the layout that had them.
-    if (!splitCount(slide)) dropColumnBreaks(slide);
+    // A layout without columns -- or with one single column -- cannot keep
+    // any apart, so the breaks in the body go with the layout that had
+    // them.
+    if (splitCount(slide) < 2) dropColumnBreaks(slide);
     drawAll();
+    remember();
+  });
+});
+
+// --- The elements of an arranged slide ---------------------------------
+// Where a new element lands before anybody has moved it. Not in a corner
+// and not on top of the last one: in the middle of the slide, stepped
+// along a little for each one already there, so that two in a row do not
+// hide one another and neither of them has to be hunted for.
+function freeSpot(slide) {
+  var taken = places.count(slide.content);
+  var step = taken % 6;
+  return [20 + step * 4, 18 + step * 9, 40].join(",");
+}
+
+// A new text. It is made as a plain block and the dialog that opens with
+// it asks how large it should be -- which is where that question has to
+// be asked anyway, since a size can be changed afterwards. One button
+// here, one question there, instead of the same question twice.
+$(".place-add-button").addEventListener("click", function () {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  harvest();
+  slide.content = places.add(slide.content, 0, t("editor.placeNewText"), freeSpot(slide));
+  showSlide();
+  remember();
+  // Straight into the words: the element exists, and the only thing
+  // anybody wants from it now is to say what it reads and how large.
+  openElement(places.count(slide.content) - 1);
+});
+
+// And a picture, which is the same move with the other half left out: it
+// is chosen in the picker, lands in the middle like a new text does, and
+// then there is nothing to type about it. So no dialog opens -- what one
+// wants of a picture one has just put down is to drag it, pull it to size
+// and turn it, and all three are over there. The handles are asked for in
+// its stead, so it is already taken hold of when it appears.
+//
+// Its width and nothing else is given. A picture's height follows its
+// width (slides.css), which is the whole of how its proportions are kept:
+// there is no number for a height to disagree with.
+$(".place-add-image").addEventListener("click", function () {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  askForImage(function (name) {
+    var now = deck.slides[active];
+    if (!now || !placing(now)) return;
+    harvest();
+    now.content = places.add(now.content, 0, "![](" + name + ")", freeSpot(now));
+    showSlide();
+    remember();
+    preview.pick(places.count(now.content) - 1);
+  });
+});
+
+// --- One element, in a dialog ------------------------------------------
+// Which element is open. -1 for none, which is also what keeps the
+// dialog's buttons from acting after it has been closed.
+var elementAt = -1;
+
+// Pushed aside, pulled at the corner, and remembered where it was left --
+// the same treatment the source and the bands dialogs get, and for the
+// same reason: this one is worked in while the preview is watched, and
+// the element being written is ON that preview (js/editor/dialog-aside.js).
+// live: this one is not modal. A modal dialog makes the page behind it
+// inert, and the preview with it -- and turning the element while choosing
+// its words is the one thing this dialog is for.
+var elementAside = setupAside(el.elementDialog, {
+  key: "trivialslides:element-box",
+  frame: $(".preview-frame"),
+  resizable: true,
+  live: true,
+});
+
+// Abbrechen, and the same for every other way out that is not Apply: the
+// dialog closes and the slide keeps what it had. Nothing is written
+// until the one button that says so is pressed.
+el.elementDialog.addEventListener("click", function (ev) {
+  if (ev.target.closest("[data-close]")) el.elementDialog.close();
+});
+
+// Whether the field can show this element's text, or whether it has to be
+// shown as Markdown -- the same question the slide's own text field asks
+// (contentSimple), asked of one block.
+var elementSourceMode = false;
+
+function showElementText(body) {
+  elementSourceMode = !rt.isSimple(body);
+  el.elementFrame.hidden = elementSourceMode;
+  el.elementSource.hidden = !elementSourceMode;
+  el.elementSourceNote.hidden = !elementSourceMode;
+  $$("#element-toolbar button").forEach(function (b) { b.disabled = elementSourceMode; });
+  if (elementSourceMode) el.elementText.value = body;
+  else el.elementContent.innerHTML = rt.mdToHtml(body);
+}
+
+// What the element says about itself besides its words: how it is
+// aligned, and whether it waits for a click. Both are classes on its own
+// comment line (places.js), so both are read and written here rather than
+// typed into the text.
+function showElementMarks(list) {
+  var align = (list || []).filter(function (c) { return c.indexOf("align-") === 0; })[0] || "";
+  $$("#element-toolbar button[data-align]").forEach(function (b) {
+    b.classList.toggle("is-active", "align-" + b.dataset.align === align);
+  });
+  el.elementFragment.checked = (list || []).indexOf("fragment") !== -1;
+}
+
+function elementMarks() {
+  var out = [];
+  var chosen = $("#element-toolbar button[data-align].is-active");
+  if (chosen) out.push("align-" + chosen.dataset.align);
+  if (el.elementFragment.checked) out.push("fragment");
+  return out;
+}
+
+$$("#element-toolbar button[data-command]").forEach(function (b) {
+  // mousedown rather than click, as in the slide's own bar: otherwise the
+  // field loses the selection the command is meant to act on.
+  b.addEventListener("mousedown", function (ev) {
+    ev.preventDefault();
+    rt.befehl(el.elementContent, b.dataset.command);
+    elementDraw();
+  });
+});
+
+// The alignment is a mark on the element, not a command on its text: one
+// of the four or none of them, and pressing the one in force takes it off
+// again.
+$$("#element-toolbar button[data-align]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var on = b.classList.contains("is-active");
+    $$("#element-toolbar button[data-align]").forEach(function (o) { o.classList.remove("is-active"); });
+    b.classList.toggle("is-active", !on);
+    elementDraw();
+  });
+});
+
+function showElementLevel(level) {
+  el.elementLevelField.hidden = level == null;
+  $$(".count-option", el.elementLevel).forEach(function (b) {
+    var is = Number(b.dataset.level) === level;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-pressed", is ? "true" : "false");
+  });
+}
+
+function openElement(n) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  var said = places.read(slide.content, n);
+  if (!said) return;
+  elementAt = n;
+  showElementLevel(said.level);
+  showElementText(said.body);
+  showElementMarks(places.classes(slide.content, n));
+  // show() and not showModal(): see the aside's `live` above.
+  el.elementDialog.show();
+  elementAside.opened();
+  // From here on this element is the only one the mouse may take hold of
+  // over there (js/slide-place.js).
+  preview.only(n);
+  var feld = elementSourceMode ? el.elementText : el.elementContent;
+  feld.focus();
+  if (elementSourceMode) feld.select();
+  else document.execCommand("selectAll", false, null);
+}
+
+$$(".count-option", el.elementLevel).forEach(function (b) {
+  b.addEventListener("click", function () {
+    showElementLevel(Number(b.dataset.level));
+    elementDraw();
+  });
+});
+
+// --- The dialog in the preview -----------------------------------------
+// What the dialog says RIGHT NOW, as the whole slide's text: its size, its
+// words, and the marks that ride on its comment line. Asked by the two
+// that need it -- the one that draws the preview while it is being typed
+// in, and Apply, which is the same answer written down.
+//
+// Always counted off the model's own text, which is the text the dialog
+// was opened on: the block number means something in that text and in no
+// other. Were a half-finished version written back between keystrokes, a
+// moment with an empty field would leave one block fewer and every number
+// after it pointing at its neighbour.
+function elementText() {
+  var slide = deck.slides[active];
+  // == null as well as < 0: this is reached from the preview's own road,
+  // which exists before the line further down has run.
+  if (elementAt == null || elementAt < 0 || !slide) return null;
+  var chosen = $(".count-option.is-active", el.elementLevel);
+  var level = el.elementLevelField.hidden ? null : Number(chosen && chosen.dataset.level);
+  var body = elementSourceMode ? el.elementText.value : rt.htmlToMd(el.elementContent);
+  var text = places.write(slide.content, elementAt, level, body);
+  if (text != null) text = places.setClasses(text, elementAt, elementMarks());
+  return text;
+}
+
+// Drawn, not written. The preview is handed a COPY of the slide carrying
+// the provisional text; the model keeps what it had until Apply says
+// otherwise. That is what lets every other way out of the dialog --
+// Abbrechen, the cross, Escape -- stay what it always was: nothing to
+// undo, because nothing was done. Nothing is saved either, since saving
+// is what remember() does and nothing here calls it.
+var elementShown = false;
+
+function elementDraw() {
+  if (elementAt < 0) return;
+  elementShown = true;
+  previewNow();
+}
+
+// While typing, at the pace the slide's own text field is drawn at: one
+// picture per pause, not one per letter. A button is pressed and not
+// typed, so it draws at once.
+function elementSoon() {
+  elementShown = true;
+  previewSoon();
+}
+
+el.elementContent.addEventListener("input", elementSoon);
+el.elementText.addEventListener("input", elementSoon);
+el.elementFragment.addEventListener("change", elementDraw);
+
+el.elementForm.addEventListener("submit", function () {
+  if (elementAt < 0) return;
+  var slide = deck.slides[active];
+  var text = elementText();
+  elementAt = -1;
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+});
+
+el.elementRemove.addEventListener("click", function () {
+  if (elementAt < 0) return;
+  var slide = deck.slides[active];
+  var text = places.remove(slide.content, elementAt);
+  elementAt = -1;
+  el.elementDialog.close();
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+});
+
+// The model was never touched, so there is nothing to put back but the
+// picture -- and only where a provisional one was ever drawn. After Apply
+// this draws the same slide a second time, which costs one fetch and
+// saves a special case.
+el.elementDialog.addEventListener("close", function () {
+  elementAt = -1;
+  preview.only(-1);
+  if (elementShown) previewSoon();
+  elementShown = false;
+});
+
+// How many columns. Like the switch below it this is read BEFORE the
+// change and the fields are filled again after it: going down to one
+// column leaves nothing to keep apart, so the breaks in the body go the
+// same way they go when the switch is unticked -- the texts become one,
+// which is exactly the arrangement the slide now has. Going from three
+// columns to two is the same walk one step shorter: what stood in the
+// third joins the second rather than being dropped (columns.js).
+//
+// Unlike the layout tiles above, this is NOT taken away once there is
+// text on the slide. It cannot cost anything: no field goes, nothing is
+// unwritten, and changing one's mind about the number of columns is the
+// most ordinary thing to do while writing them.
+$$(".count-option", el.fieldColumnCount).forEach(function (button) {
+  button.addEventListener("click", function () {
+    harvest();
+    var slide = deck.slides[active];
+    slide.columnCount = button.dataset.count;
+    if (columnCount(slide) < 2) dropColumnBreaks(slide);
+    // The whole form, not only the field: the switch under the buttons
+    // comes and goes with the second column, and the body has to go back
+    // into the fields -- two texts become one, or the other way round.
+    showSlide();
     remember();
   });
 });
@@ -995,7 +1427,7 @@ el.columnsSplit.addEventListener("change", function () {
   remember();
 });
 
-$$(".toolbar button[data-command]").forEach(function (b) {
+$$("#text-toolbar button[data-command]").forEach(function (b) {
   // mousedown rather than click: otherwise the field loses focus first,
   // and with it the selection the command is meant to act on.
   b.addEventListener("mousedown", function (ev) {
@@ -1812,3 +2244,14 @@ var aiDialog = setupAi({
 // lossless.
 try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) { /* aeltere Browser */ }
 drawAll();
+
+// A deck that wants a newer trivialSlides than this one says so in its
+// head, and this is where that is passed on (format.js, views/editor.ejs).
+// After the first draw, so the editor stands finished behind the notice
+// rather than building itself while it is read.
+//
+// Said once and not again: it is not an error to be fixed here, it is
+// something to know before typing -- what this version does not
+// understand is already gone from the model, and saving would write the
+// deck without it.
+if (window.SLIDES_TOO_NEW) note(window.SLIDES_TOO_NEW);

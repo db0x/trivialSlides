@@ -495,6 +495,29 @@ function befehl(field, name) {
     return;
   }
   document.execCommand(name, false, null);
+  if (name === "insertUnorderedList" || name === "insertOrderedList") unnestLists(field);
+}
+
+// Where the cursor stands in a paragraph, Chrome makes the list INSIDE
+// it: a <ul> as a child of a <p>. That is a shape no browser would parse
+// out of HTML and not one this file reads back -- htmlToMd takes the
+// paragraph for a block, reads the words in it and the list is gone with
+// its bullets. Which is why pressing the bullets on an element that was
+// one paragraph did nothing at all: the field showed a list, what was
+// saved was the line it had been.
+//
+// So it is lifted out again, right where it was made. Behind the
+// paragraph and not in front of it, because anything left standing in
+// that paragraph was written BEFORE the list; an empty one goes.
+function unnestLists(field) {
+  var nested = field.querySelectorAll("p > ul, p > ol");
+  [].forEach.call(nested, function (list) {
+    var paragraph = list.parentNode;
+    paragraph.parentNode.insertBefore(list, paragraph.nextSibling);
+    if (!paragraph.textContent.trim() && !paragraph.querySelector("img, ul, ol")) {
+      paragraph.remove();
+    }
+  });
 }
 
 // Bare text straight in the field: the browser only wraps a line in a

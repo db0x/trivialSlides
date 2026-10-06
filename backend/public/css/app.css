@@ -957,19 +957,32 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Text: heading plus lines */
 .mini-text::before { left: 8%; right: 45%; top: 6px; height: 4px; }
 .mini-text::after { left: 8%; right: 12%; top: 15px; height: 11px; opacity: 0.25; }
-/* Two columns */
-.mini-columns::before { left: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
-.mini-columns::after { right: 8%; width: 38%; top: 12px; height: 14px; opacity: 0.25; }
-/* Three columns: the outer two are the pseudo-elements, the middle one is
-   painted into the background -- an element has only two of the former. */
-.mini-columns-three {
+/* Freestyle: three blocks, none of them where a layout would have put
+   them -- and one of them off the square, because that is the half of it
+   no arrangement of rows and columns can show. */
+.mini-freestyle::before {
+  left: 8%;
+  width: 40%;
+  top: 5px;
+  height: 7px;
+  opacity: 0.55;
+  transform: rotate(-7deg);
+}
+.mini-freestyle::after {
+  right: 10%;
+  width: 30%;
+  top: 14px;
+  height: 13px;
+  opacity: 0.25;
+}
+/* The third one is painted into the background, as the three-column tile
+   used to do: an element has only two pseudo-elements. */
+.mini-freestyle {
   background-image: linear-gradient(color-mix(in srgb, var(--muted) 25%, transparent) 0 100%);
-  background-size: 26% 14px;
-  background-position: 50% 12px;
+  background-size: 30% 8px;
+  background-position: 12% 62%;
   background-repeat: no-repeat;
 }
-.mini-columns-three::before { left: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
-.mini-columns-three::after { right: 6%; width: 26%; top: 12px; height: 14px; opacity: 0.25; }
 /* Image right / left */
 .mini-image-right::before { left: 6%; width: 40%; top: 10px; height: 13px; opacity: 0.25; }
 .mini-image-right::after { right: 6%; width: 40%; top: 6px; height: 20px; opacity: 0.55; }
@@ -1038,8 +1051,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* The icon buttons of the toolbar. The files carry a fixed dark fill, so
    they are masks coloured by the button -- the same treatment as every
    other icon in this app. The two buttons without an icon keep their
-   wording and sit next to them as text; a toolbar may well hold both. */
-.toolbar .tool-icon {
+   wording and sit next to them as text; a toolbar may well hold both.
+   
+   The row of sizes on a freestyle slide is the second place with buttons
+   of this kind, and it is the same shape for the same reason: one icon,
+   pressed to do one thing. */
+.toolbar .tool-icon,
+.place-add .tool-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1048,7 +1066,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   padding: 0;
   color: var(--text);
 }
-.toolbar .tool-icon::before {
+.toolbar .tool-icon::before,
+.place-add .tool-icon::before {
   content: "";
   width: 1rem;
   height: 1rem;
@@ -1089,6 +1108,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="align-center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
 .tool-icon[data-command="align-right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
 .tool-icon[data-command="align-fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
+/* The four in the element dialog are not commands on the text but a mark
+   on the element (js/editor/index.js), so they are keyed by what they
+   say rather than by what they do -- the icons are the same four. */
+.tool-icon[data-align="left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
+.tool-icon[data-align="center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
+.tool-icon[data-align="right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
+.tool-icon[data-align="fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
 #source-toggle.tool-icon { --button-icon: url(../assets/toolbar/code.svg); }
 .tool-emoji { --button-icon: url(../assets/toolbar/md-emoji.svg); }
 #code-insert.tool-icon { --button-icon: url(../assets/toolbar/md-code.svg); }
@@ -1286,6 +1312,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .toolbar button:disabled { opacity: 0.35; cursor: default; }
 .toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
 .toolbar .tool-icon.is-active { color: var(--accent); }
+.place-add .tool-icon:hover { color: var(--accent); }
 .toolbar-divider { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
 
 .field-frame {
@@ -1450,6 +1477,157 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 /* Off the tiles above it, which are a dense block of their own. */
 .field-columns { margin-top: 8px; }
+
+/* --- How many columns -------------------------------------------------
+   The question above the switch, and it reads the same way: a word and the
+   answer beside it on one line. Two buttons rather than a menu -- there
+   are two values, and a chooser one has to open to see "1" and "2" in is a
+   lid on a box holding nothing. The label keeps the switch line's size, so
+   the two questions under the tiles line up. */
+.field-column-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.field-column-count .field-label { margin-bottom: 0; }
+.count-choice { display: flex; gap: 4px; }
+/* The same small, quiet button the column chooser over the text field
+   wears (.column-tab): one shape for choosing among a handful of things. */
+.count-option {
+  min-width: 26px;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 19px;
+  cursor: pointer;
+}
+.count-option:hover { border-color: var(--accent); }
+.count-option.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.count-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- What a freestyle slide is written with ---------------------------
+   Where the text field stands on every other layout: one button, which
+   puts an element on the slide and opens it. How large it is to be is
+   asked in that dialog and only there (views/editor.ejs). */
+.place-add {
+  display: flex;
+  gap: 2px;
+}
+/* The same bare button the toolbar's are: no box of its own, the icon is
+   the button. */
+.place-add button {
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.place-add-button { --button-icon: url(../assets/text.svg); }
+.place-add-image { --button-icon: url(../assets/image.svg); }
+/* The one in the dialog that says how big an element is reuses the row of
+   numbers from the column chooser -- same shape, same question. What it
+   carries is an icon rather than a word: "Zwischenüberschrift" is three
+   times as long as the thing it names, four of them made a row that broke
+   over two lines in a dialog one can pull narrow, and the bar directly
+   under this one already asks its questions in icons. The word is not
+   lost -- it is in the tooltip and in the button's name
+   (views/editor.ejs).
+
+   The three headings wear the icons the toolbar has for those sizes; the
+   text block has one of its own, because a block of text is the one size
+   the toolbar never had a button for. */
+#element-level .count-option {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+#element-level .count-option::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  /* currentColor, so the icon follows the button through its three states
+     without being told: quiet, lit on hover, and white on the accent once
+     it is the chosen one. */
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+}
+/* Not on the chosen one: there the colour is what says it is chosen. */
+#element-level .count-option:not(.is-active):hover { color: var(--text); }
+#element-level .count-option[data-level="1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
+#element-level .count-option[data-level="2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
+#element-level .count-option[data-level="3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
+#element-level .count-option[data-level="0"] { --button-icon: url(../assets/toolbar/md-text.svg); }
+#element-text { width: 100%; font-family: inherit; }
+/* The one button in a dialog that takes something away stands apart from
+   the two that finish it. */
+#element-remove { margin-right: auto; }
+
+/* --- The element dialog ----------------------------------------------
+   Pullable at the corner like the source dialog, and for a related
+   reason: how much of the text one can see is the point, and the window
+   is pushed aside next to the very element it is writing
+   (js/editor/dialog-aside.js). The same three lines that one needs --
+   a column, a floor, and an overflow that is anything but visible, which
+   is what a CSS resizer wants. */
+#element-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  /* Unmodal, so it is no longer in the browser's top layer: it has to be
+     put over its own veil, and fixed rather than absolute because the
+     numbers written onto it are the ones getBoundingClientRect gave
+     (js/editor/dialog-aside.js).
+
+     inset and margin are what the browser itself writes onto a MODAL
+     dialog and onto no other -- without them an unmodal one is centred
+     sideways and left standing at the top of the page. They only decide
+     where it opens the very first time: from the second time on it opens
+     where it was last pushed to, which is written over these. */
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  margin: auto;
+  max-height: 88vh;
+  resize: both;
+  overflow: hidden;
+  min-width: 340px;
+  min-height: 300px;
+}
+/* The form takes what is left of the window and the text field takes what
+   is left of the form -- so pulling the corner makes the field bigger,
+   which is the only reason anybody pulls it. */
+#element-dialog .dialog-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+#element-dialog .element-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#element-dialog .field-frame {
+  flex: 1;
+  min-height: 90px;
+  max-height: none;
+}
+#element-dialog .content-field,
+#element-dialog .source-field { height: 100%; }
 
 /* --- Choosing a column ------------------------------------------------ */
 /* One text field for all the columns, and this says which of them is in it.
@@ -1980,6 +2158,47 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
+/* --- The veil of a live aside ------------------------------------------
+   ::backdrop above is the browser's, and the browser gives one only to a
+   MODAL dialog -- the kind the element dialog may not be, because a modal
+   one makes the preview behind it inert and that preview is what the
+   element is turned and pulled on.
+
+   So four panes around the frame, built by hand
+   (js/editor/dialog-aside.js). Not one sheet with the hole masked out of
+   it: a mask is paint and nothing else, so the hole in such a sheet can be
+   seen through and not reached through. Four panes leave the hole open in
+   the only sense that counts here. */
+.dialog-veil {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 90;
+}
+.dialog-veil-top {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--clear-y, 0);
+}
+.dialog-veil-bottom {
+  left: 0;
+  right: 0;
+  top: calc(var(--clear-y, 0) + var(--clear-h, 0));
+  bottom: 0;
+}
+.dialog-veil-left {
+  left: 0;
+  width: var(--clear-x, 0);
+  top: var(--clear-y, 0);
+  height: var(--clear-h, 0);
+}
+.dialog-veil-right {
+  left: calc(var(--clear-x, 0) + var(--clear-w, 0));
+  right: 0;
+  top: var(--clear-y, 0);
+  height: var(--clear-h, 0);
+}
+
 /* The head is the handle. Its buttons keep the arrow -- a drag that began
    on "Apply" would be a press that never arrives. */
 .dialog-aside .dialog-head { cursor: move; user-select: none; }

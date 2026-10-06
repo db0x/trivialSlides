@@ -182,11 +182,33 @@
            A disabled button has no tooltip to explain itself with, so the
            reason stands here (js/editor/index.js). -->
       <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
-      <!-- Only the two column layouts have this, and it belongs here rather
-           than in the text bar: it decides how many text fields there are
-           below, which is a question about the structure of the slide, not
-           about its wording. Off (and that is how every deck written so far
-           reads) the slide has one text and the browser distributes it. -->
+      <!-- How many columns the text runs in. Here and not in the text bar
+           for the same reason as the switch below it: it is a question
+           about the shape of the slide, not about its wording -- and the
+           two belong next to each other, because one asks how many columns
+           there are and the other how they are filled.
+
+           It sits under the tiles rather than among them because it is not
+           a layout: the tiles are dead as soon as the slide has text on it
+           (js/editor/index.js), and the number has to stay changeable --
+           that is the whole reason it is a field. -->
+      <div id="field-column-count" class="field-column-count" role="group" hidden
+           aria-label="<%= t('editor.columnCount') %>"
+           data-tip="<%= t('editor.columnCountHint') %>">
+        <span class="field-label"><%= t('editor.columnCount') %></span>
+        <div class="count-choice">
+          <% columnCounts.forEach(function (n) { %>
+            <button type="button" class="count-option" data-count="<%= n %>"
+                    aria-pressed="false"><%= n %></button>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- And how they are filled. It decides how many text fields there
+           are below, which is a question about the structure of the slide,
+           not about its wording. Off (and that is how every deck written
+           so far reads) the slide has one text and the browser distributes
+           it. Only there once the slide stands in more than one column. -->
       <label class="field field-columns" hidden
              data-tip="<%= t('editor.columnsSplitHint') %>">
         <input type="checkbox" id="slide-columns-split" class="switch">
@@ -257,7 +279,10 @@
         <!-- No longer a <label> around the whole thing: a click on the
              chooser beside the field would otherwise land in the field,
              which is what a label does. The word keeps its "for" instead. -->
-        <div class="field">
+        <!-- The id is what the one layout WITHOUT a heading hides
+             (js/editor/index.js): there a heading is not the slide's name
+             but one of the blocks in its text. -->
+        <div class="field" id="field-heading">
           <label class="field-label" for="slide-title"><%= t('editor.heading') %></label>
           <div class="field-row">
             <input id="slide-title" maxlength="200" placeholder="<%= t('editor.headingPlaceholder') %>">
@@ -287,7 +312,39 @@
           </div>
         </div>
 
-        <div class="field">
+        <!-- What a freestyle slide is written with instead of one text
+             field. There the slide is not one text but several, each
+             standing somewhere of its own -- and a single box holding all
+             of them, comment lines and all, was the one thing that made
+             the layout unreadable to work with.
+
+             So: a row of sizes. Pressing one puts a new element on the
+             slide and opens it for writing; everything that is already
+             there is reached in the preview, by its pencil or by two
+             clicks on it (js/slide-place.js). -->
+        <div class="field" id="freestyle-tools" hidden>
+          <span class="field-label"><%= t('editor.placeNew') %></span>
+          <!-- Two buttons, for the two things an element can be. The
+               SIZE is not asked here: it is asked in the dialog that
+               opens with a new text, where it has to be asked anyway
+               because a size can be changed afterwards. Four buttons for
+               four sizes made the form ask the same question twice.
+
+               A picture is not asked anything. It is chosen in the
+               picker, lands on the slide and is then a thing for the
+               mouse -- there is nothing to type about it. -->
+          <div class="place-add">
+            <button type="button" class="tool-icon place-add-button"
+                    data-tip="<%= t('editor.placeAdd') %>"
+                    aria-label="<%= t('editor.placeAdd') %>"></button>
+            <button type="button" class="tool-icon place-add-image"
+                    data-tip="<%= t('editor.placeAddImage') %>"
+                    aria-label="<%= t('editor.placeAddImage') %>"></button>
+          </div>
+          <p class="hint"><%= t('editor.placeHint') %></p>
+        </div>
+
+        <div class="field" id="field-text">
           <span class="field-label" id="text-label"><%= t('editor.text') %></span>
           <!-- Which column the field below shows. They stand where the label
                stands and take its place, because "Text" and "Column 2" are
@@ -302,7 +359,7 @@
                       aria-selected="false"><%= t('editor.column', { n: n }) %></button>
             <% }); %>
           </div>
-          <div class="toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
+          <div class="toolbar" id="text-toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
             <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
             <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
             <button type="button" class="tool-icon" data-command="strikeThrough" data-tip="<%= t('tool.strikethrough') %>" aria-label="<%= t('tool.strikethrough') %>"></button>
@@ -804,6 +861,94 @@
   </div>
 </dialog>
 
+<!-- One element of a freestyle slide: what it says, how big it is, and
+     the handful of things a single block can be given. Opened from the
+     preview -- by the pencil on the selected element or by two clicks on
+     it -- and from the button above, which opens it on the element it has
+     just made.
+
+     An aside dialog like the source and the bands: it is worked in WHILE
+     the preview is watched, so it can be pushed aside, pulled at the
+     corner, and it cuts a hole in its own veil where the preview stands
+     (js/editor/dialog-aside.js). -->
+<dialog id="element-dialog" class="dialog dialog-aside">
+  <form method="dialog" class="dialog-head">
+    <h2 id="element-title"><%= t('dialog.elementTitle') %></h2>
+    <button class="button button-quiet" value="abbruch"><%= t('dialog.close') %></button>
+  </form>
+  <form method="dialog" class="dialog-content" id="element-form">
+    <!-- Only there for a block that HAS a size to choose: a list or a
+         code block keeps its text and is not asked how large it is
+         (js/editor/places.js, read). -->
+    <div class="field" id="element-level-field">
+      <span class="field-label"><%= t('dialog.elementLevel') %></span>
+      <!-- Icons and not words: the four words are longer than what they
+           name, and the bar under this one asks its questions the same
+           way. Each one keeps its word where a word is still needed --
+           in the tooltip and on the button's name for a screen reader. -->
+      <div class="count-choice" id="element-level" role="group">
+        <% ["1", "2", "3", "0"].forEach(function (n) { %>
+          <button type="button" class="count-option" data-level="<%= n %>"
+                  data-tip="<%= t('editor.placeAdd' + n) %>"
+                  aria-label="<%= t('editor.placeAdd' + n) %>"
+                  aria-pressed="false"></button>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="field element-field">
+      <span class="field-label"><%= t('dialog.elementText') %></span>
+      <!-- The same bar as over the slide's text field, with what makes
+           sense for ONE block on it. What is missing is missing on
+           purpose: the slide-wide things (a text waiting for a click is
+           asked below, where it belongs to the element) and the ones that
+           need a field this dialog does not have.
+
+           The four alignments are NOT text commands here. On a placed
+           element the alignment belongs to the element, so it rides on
+           the element's own comment line beside its place
+           (js/editor/places.js) -- one line that says everything about
+           this one block. -->
+      <div class="toolbar" id="element-toolbar" role="toolbar"
+           aria-label="<%= t('editor.toolbar') %>">
+        <% [["bold", "boldTip", "bold"], ["italic", "italicTip", "italic"],
+            ["strikeThrough", "strikethrough", "strikethrough"],
+            ["insertUnorderedList", "bulletList", "bulletList"],
+            ["insertOrderedList", "numberedList", "numberedList"],
+            ["link", "link", "link"]].forEach(function (b) { %>
+          <button type="button" class="tool-icon" data-command="<%= b[0] %>"
+                  data-tip="<%= t('tool.' + b[1]) %>" aria-label="<%= t('tool.' + b[2]) %>"></button>
+        <% }); %>
+        <span class="toolbar-divider"></span>
+        <% [["left", "alignLeft"], ["center", "alignCenter"], ["right", "alignRight"], ["fill", "alignFill"]].forEach(function (a) { %>
+          <button type="button" class="tool-icon" data-align="<%= a[0] %>"
+                  data-tip="<%= t('tool.' + a[1]) %>" aria-label="<%= t('tool.' + a[1]) %>"></button>
+        <% }); %>
+      </div>
+      <div id="element-frame" class="field-frame">
+        <div id="element-content" class="content-field" contenteditable="true" spellcheck="true"></div>
+      </div>
+      <div id="element-source" class="field-frame" hidden>
+        <textarea id="element-text" class="source-field" spellcheck="false"></textarea>
+      </div>
+      <p id="element-source-note" class="hint" hidden><%= t('dialog.elementSource') %></p>
+    </div>
+
+    <!-- A property of the element, like its place: this one block waits
+         for a click while the rest of the slide is already standing. -->
+    <label class="field field-schmal code-fragment-line">
+      <input type="checkbox" id="element-fragment" class="switch">
+      <span><%= t('dialog.elementFragment') %></span>
+    </label>
+    <p class="hint"><%= t('dialog.elementNote') %></p>
+    <div class="dialog-fuss">
+      <button type="button" id="element-remove" class="button button-quiet"><%= t('dialog.elementRemove') %></button>
+      <button type="button" class="button" data-close><%= t('dialog.cancel') %></button>
+      <button type="submit" id="element-ok" class="button button-haupt"><%= t('dialog.elementApply') %></button>
+    </div>
+  </form>
+</dialog>
+
 <!-- Image picker -->
 <dialog id="image-dialog" class="dialog">
   <form method="dialog" class="dialog-head">
@@ -834,6 +979,11 @@
   // arrangement. Both are defined on the server (layouts.js) and handed
   // over rather than written a second time (js/editor/columns.js).
   window.SLIDES_COLUMNS = <%- JSON.stringify(columns) %>;
+  // Said once, when the editor opens, and only on a deck that wants a
+  // newer trivialSlides than this one (routes/decks.js). A ready-made
+  // sentence rather than two version numbers: comparing them is the
+  // server's job, and the page has nothing to add to it.
+  window.SLIDES_TOO_NEW = <%- JSON.stringify(tooNew) %>;
 </script>
 <script type="module" src="<%= BASE %>/static/js/editor/index.js"></script>
 <%- include("partials/prefs") %>

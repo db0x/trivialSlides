@@ -22,6 +22,12 @@
 // source dialog may -- it shows a file, and how much of it one can see is
 // the point. The bands dialog may not: it holds a handful of fields, and
 // stretching them says nothing.
+//
+// And one of them decides to stay LIVE: a modal dialog makes the whole
+// page behind it inert, the preview with it, and the element dialog is
+// the one where that is wrong -- the element being written is on that
+// preview and wants to be turned and pulled while its words are chosen.
+// So that one is opened unmodal and veiled by hand (see veil below).
 import { $ } from "./base.js";
 
 // The corner the browser puts its own resizer in.
@@ -32,7 +38,8 @@ function between(value, low, high) {
 }
 
 // dialog: the <dialog> itself. parts: key (where the box is remembered),
-// frame (the box the veil is kept off, or nothing), resizable.
+// frame (the box the veil is kept off, or nothing), resizable, live
+// (opened unmodal, with a veil of this module's own making).
 export function setupAside(dialog, parts) {
   var key = parts.key;
   var frame = parts.frame;
@@ -92,10 +99,48 @@ export function setupAside(dialog, parts) {
   function clear() {
     if (!frame) return;
     var box = frame.getBoundingClientRect();
-    dialog.style.setProperty("--clear-x", Math.round(box.left) + "px");
-    dialog.style.setProperty("--clear-y", Math.round(box.top) + "px");
-    dialog.style.setProperty("--clear-w", Math.round(box.width) + "px");
-    dialog.style.setProperty("--clear-h", Math.round(box.height) + "px");
+    var where = [dialog].concat(panes || []);
+    where.forEach(function (el) {
+      el.style.setProperty("--clear-x", Math.round(box.left) + "px");
+      el.style.setProperty("--clear-y", Math.round(box.top) + "px");
+      el.style.setProperty("--clear-w", Math.round(box.width) + "px");
+      el.style.setProperty("--clear-h", Math.round(box.height) + "px");
+    });
+  }
+
+  // --- The veil, where the dialog is live --------------------------------
+  // ::backdrop is the browser's, and the browser only gives one to a modal
+  // dialog -- which is exactly the kind this one may not be. So the veil is
+  // built here: FOUR panes around the frame rather than one sheet with a
+  // hole masked out of it, because a mask is only paint. The hole in a
+  // masked sheet can be seen through and not reached through, and reaching
+  // through it is the whole reason this dialog is live.
+  var panes = null;
+
+  function veil(on) {
+    if (!parts.live) return;
+    if (!panes) {
+      panes = ["top", "bottom", "left", "right"].map(function (side) {
+        var pane = document.createElement("div");
+        pane.className = "dialog-veil dialog-veil-" + side;
+        pane.hidden = true;
+        document.body.appendChild(pane);
+        return pane;
+      });
+    }
+    panes.forEach(function (pane) { pane.hidden = !on; });
+  }
+
+  if (parts.live) {
+    // The browser closes a modal dialog on Escape and an unmodal one not at
+    // all. This one promises Escape either way (ext_readme), so it says so
+    // itself.
+    dialog.addEventListener("keydown", function (ev) {
+      if (ev.key !== "Escape") return;
+      ev.preventDefault();
+      dialog.close();
+    });
+    dialog.addEventListener("close", function () { veil(false); });
   }
 
   if (frame && window.ResizeObserver) new ResizeObserver(clear).observe(frame);
@@ -147,6 +192,8 @@ export function setupAside(dialog, parts) {
   return {
     opened: function () {
       restore();
+      // Before the measuring: the panes are what gets measured into.
+      veil(true);
       clear();
     },
   };

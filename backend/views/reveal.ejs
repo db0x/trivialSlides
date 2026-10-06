@@ -13,6 +13,12 @@
      monokai above (see code.js). -->
 <link rel="stylesheet" href="<%= BASE %>/code-styles.css">
 <link rel="stylesheet" href="<%= BASE %>/static/css/slides.css">
+<% if (preview) { %>
+  <!-- The handles for arranging a freestyle slide with the mouse. Only
+       here: the presentation and the exported file must not carry so much
+       as the rule for one (js/slide-place.js). -->
+  <link rel="stylesheet" href="<%= BASE %>/static/css/place.css">
+<% } %>
 </head>
 <body class="<%= preview ? "is-preview" : "" %>">
 <div class="reveal"><div class="slides">
@@ -29,6 +35,9 @@
      is one slide standing still and has no transition to stand out of. -->
 <script src="<%= BASE %>/static/js/slide-bands.js"></script>
 <script src="<%= BASE %>/static/js/slide-fit.js"></script>
+<% if (preview) { %>
+  <script src="<%= BASE %>/static/js/slide-place.js"></script>
+<% } %>
 <!-- Which keys the presenter's spare button sends. Set in the editor's
      settings dialog, stored per browser, read here. This page has a head of
      its own, so it is listed here and not in partials/head.ejs. -->
@@ -249,6 +258,15 @@
         if (ready) window.parent.postMessage({ kind: "bereit" }, "*");
       } else if (n.kind === "gehezu" && indices[n.index]) {
         Reveal.slide(indices[n.index][0], indices[n.index][1]);
+      } else if (n.kind === "allein") {
+        // The editor has opened one element in its dialog, or closed it
+        // again. From here on that one alone may be dragged, widened or
+        // turned (js/slide-place.js).
+        if (window.slidePlaceOnly) window.slidePlaceOnly(n.block);
+      } else if (n.kind === "zeigen") {
+        // The handles, asked for on one block -- the editor has just put
+        // it there and it is about to be dragged (js/slide-place.js).
+        if (window.slidePlacePick) window.slidePlacePick(n.block);
       } else if (n.kind === "slide") {
         // The editor's flat slide list corresponds to those <section>
         // elements that contain no <section> themselves -- the outer ones
@@ -274,6 +292,9 @@
         // Same for the fit: the slide just grew or shrank by a word, and
         // whether it quiet fits is exactly what changed.
         window.slideFit(fresh);
+        // The slide just drawn is a new element; the handles belonged to
+        // the old one and have gone with it (js/slide-place.js).
+        if (window.slidePlace) window.slidePlace(fresh);
         if (indices[n.index]) Reveal.slide(indices[n.index][0], indices[n.index][1]);
         // Last of all: a strip standing still over the slides has to be
         // told too -- the slide just redrawn may have switched one off --
