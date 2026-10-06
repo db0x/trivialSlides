@@ -11,6 +11,7 @@ import { createPreview } from "./preview.js";
 import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
+import { setupAside } from "./dialog-aside.js";
 import * as places from "./places.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
@@ -108,6 +109,12 @@ var el = {
   elementLevel: $("#element-level"),
   elementLevelField: $("#element-level-field"),
   elementText: $("#element-text"),
+  elementContent: $("#element-content"),
+  elementFrame: $("#element-frame"),
+  elementSource: $("#element-source"),
+  elementSourceNote: $("#element-source-note"),
+  elementFragment: $("#element-fragment"),
+  elementToolbar: $("#element-toolbar"),
   elementRemove: $("#element-remove"),
   slideBands: $("#slide-bands"),
   headerOn: $("#slide-header-on"),
@@ -593,7 +600,7 @@ function setContentMode(slide) {
   // forced by the slide.
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
-  $$(".toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  $$("#text-toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
   // "This paragraph" needs a paragraph, and in source mode there is none --
   // only text. The slide's own text box is a different matter: it is an
   // attribute of the slide and can be set from either mode.
@@ -1135,6 +1142,80 @@ $(".place-add-button").addEventListener("click", function () {
 // dialog's buttons from acting after it has been closed.
 var elementAt = -1;
 
+// Pushed aside, pulled at the corner, and remembered where it was left --
+// the same treatment the source and the bands dialogs get, and for the
+// same reason: this one is worked in while the preview is watched, and
+// the element being written is ON that preview (js/editor/dialog-aside.js).
+var elementAside = setupAside(el.elementDialog, {
+  key: "trivialslides:element-box",
+  frame: $(".preview-frame"),
+  resizable: true,
+});
+
+// Abbrechen, and the same for every other way out that is not Apply: the
+// dialog closes and the slide keeps what it had. Nothing is written
+// until the one button that says so is pressed.
+el.elementDialog.addEventListener("click", function (ev) {
+  if (ev.target.closest("[data-close]")) el.elementDialog.close();
+});
+
+// Whether the field can show this element's text, or whether it has to be
+// shown as Markdown -- the same question the slide's own text field asks
+// (contentSimple), asked of one block.
+var elementSourceMode = false;
+
+function showElementText(body) {
+  elementSourceMode = !rt.isSimple(body);
+  el.elementFrame.hidden = elementSourceMode;
+  el.elementSource.hidden = !elementSourceMode;
+  el.elementSourceNote.hidden = !elementSourceMode;
+  $$("#element-toolbar button").forEach(function (b) { b.disabled = elementSourceMode; });
+  if (elementSourceMode) el.elementText.value = body;
+  else el.elementContent.innerHTML = rt.mdToHtml(body);
+}
+
+// What the element says about itself besides its words: how it is
+// aligned, and whether it waits for a click. Both are classes on its own
+// comment line (places.js), so both are read and written here rather than
+// typed into the text.
+function showElementMarks(list) {
+  var align = (list || []).filter(function (c) { return c.indexOf("align-") === 0; })[0] || "";
+  $$("#element-toolbar button[data-align]").forEach(function (b) {
+    b.classList.toggle("is-active", "align-" + b.dataset.align === align);
+  });
+  el.elementFragment.checked = (list || []).indexOf("fragment") !== -1;
+}
+
+function elementMarks() {
+  var out = [];
+  var chosen = $("#element-toolbar button[data-align].is-active");
+  if (chosen) out.push("align-" + chosen.dataset.align);
+  if (el.elementFragment.checked) out.push("fragment");
+  return out;
+}
+
+$$("#element-toolbar button[data-command]").forEach(function (b) {
+  // mousedown rather than click, as in the slide's own bar: otherwise the
+  // field loses the selection the command is meant to act on.
+  b.addEventListener("mousedown", function (ev) {
+    ev.preventDefault();
+    rt.befehl(el.elementContent, b.dataset.command);
+    elementDraw();
+  });
+});
+
+// The alignment is a mark on the element, not a command on its text: one
+// of the four or none of them, and pressing the one in force takes it off
+// again.
+$$("#element-toolbar button[data-align]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var on = b.classList.contains("is-active");
+    $$("#element-toolbar button[data-align]").forEach(function (o) { o.classList.remove("is-active"); });
+    b.classList.toggle("is-active", !on);
+    elementDraw();
+  });
+});
+
 function showElementLevel(level) {
   el.elementLevelField.hidden = level == null;
   $$(".count-option", el.elementLevel).forEach(function (b) {
@@ -1151,25 +1232,74 @@ function openElement(n) {
   if (!said) return;
   elementAt = n;
   showElementLevel(said.level);
-  el.elementText.value = said.body;
+  showElementText(said.body);
+  showElementMarks(places.classes(slide.content, n));
   el.elementDialog.showModal();
-  el.elementText.focus();
-  el.elementText.select();
+  elementAside.opened();
+  var feld = elementSourceMode ? el.elementText : el.elementContent;
+  feld.focus();
+  if (elementSourceMode) feld.select();
+  else document.execCommand("selectAll", false, null);
 }
 
 $$(".count-option", el.elementLevel).forEach(function (b) {
-  b.addEventListener("click", function () { showElementLevel(Number(b.dataset.level)); });
+  b.addEventListener("click", function () {
+    showElementLevel(Number(b.dataset.level));
+    elementDraw();
+  });
 });
 
-// Applied, not typed through: the preview is drawn from the model, and a
-// slide redrawn on every keystroke would move under the dialog that is
-// being typed in.
+// --- The dialog in the preview -----------------------------------------
+// What the dialog says RIGHT NOW, as the whole slide's text: its size, its
+// words, and the marks that ride on its comment line. Asked by the two
+// that need it -- the one that draws the preview while it is being typed
+// in, and Apply, which is the same answer written down.
+//
+// Always counted off the model's own text, which is the text the dialog
+// was opened on: the block number means something in that text and in no
+// other. Were a half-finished version written back between keystrokes, a
+// moment with an empty field would leave one block fewer and every number
+// after it pointing at its neighbour.
+function elementText() {
+  var slide = deck.slides[active];
+  if (elementAt < 0 || !slide) return null;
+  var chosen = $(".count-option.is-active", el.elementLevel);
+  var level = el.elementLevelField.hidden ? null : Number(chosen && chosen.dataset.level);
+  var body = elementSourceMode ? el.elementText.value : rt.htmlToMd(el.elementContent);
+  var text = places.write(slide.content, elementAt, level, body);
+  if (text != null) text = places.setClasses(text, elementAt, elementMarks());
+  return text;
+}
+
+// Drawn, not written. The preview is handed a COPY of the slide carrying
+// the provisional text; the model keeps what it had until Apply says
+// otherwise. That is what lets every other way out of the dialog --
+// Abbrechen, the cross, Escape -- stay what it always was: nothing to
+// undo, because nothing was done. Nothing is saved either, since saving
+// is what remember() does and nothing here calls it.
+var elementShown = false;
+
+function elementDraw() {
+  var slide = deck.slides[active];
+  var text = elementText();
+  if (text == null || !slide) return;
+  elementShown = true;
+  preview.slideZeichnen(active, Object.assign({}, slide, { content: text }), deck);
+}
+
+// While typing, at the pace the slide's own text field is drawn at: one
+// picture per pause, not one per letter. A button is pressed and not
+// typed, so it draws at once.
+var elementSoon = verzoegert(350, elementDraw);
+
+el.elementContent.addEventListener("input", elementSoon);
+el.elementText.addEventListener("input", elementSoon);
+el.elementFragment.addEventListener("change", elementDraw);
+
 el.elementForm.addEventListener("submit", function () {
   if (elementAt < 0) return;
   var slide = deck.slides[active];
-  var chosen = $(".count-option.is-active", el.elementLevel);
-  var level = el.elementLevelField.hidden ? null : Number(chosen && chosen.dataset.level);
-  var text = places.write(slide.content, elementAt, level, el.elementText.value);
+  var text = elementText();
   elementAt = -1;
   if (text == null) return;
   slide.content = text;
@@ -1189,7 +1319,15 @@ el.elementRemove.addEventListener("click", function () {
   remember();
 });
 
-el.elementDialog.addEventListener("close", function () { elementAt = -1; });
+// The model was never touched, so there is nothing to put back but the
+// picture -- and only where a provisional one was ever drawn. After Apply
+// this draws the same slide a second time, which costs one fetch and
+// saves a special case.
+el.elementDialog.addEventListener("close", function () {
+  elementAt = -1;
+  if (elementShown) previewSoon();
+  elementShown = false;
+});
 
 // How many columns. Like the switch below it this is read BEFORE the
 // change and the fields are filled again after it: going down to one
@@ -1232,7 +1370,7 @@ el.columnsSplit.addEventListener("change", function () {
   remember();
 });
 
-$$(".toolbar button[data-command]").forEach(function (b) {
+$$("#text-toolbar button[data-command]").forEach(function (b) {
   // mousedown rather than click: otherwise the field loses focus first,
   // and with it the selection the command is meant to act on.
   b.addEventListener("mousedown", function (ev) {

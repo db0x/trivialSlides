@@ -352,7 +352,7 @@
                       aria-selected="false"><%= t('editor.column', { n: n }) %></button>
             <% }); %>
           </div>
-          <div class="toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
+          <div class="toolbar" id="text-toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
             <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
             <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
             <button type="button" class="tool-icon" data-command="strikeThrough" data-tip="<%= t('tool.strikethrough') %>" aria-label="<%= t('tool.strikethrough') %>"></button>
@@ -854,11 +854,17 @@
   </div>
 </dialog>
 
-<!-- One element of a freestyle slide: what it says and how big it is.
-     Opened from the preview -- by the pencil on the selected block or by
-     two clicks on it -- and from the row of sizes above, which opens it on
-     the element it has just made. -->
-<dialog id="element-dialog" class="dialog">
+<!-- One element of a freestyle slide: what it says, how big it is, and
+     the handful of things a single block can be given. Opened from the
+     preview -- by the pencil on the selected element or by two clicks on
+     it -- and from the button above, which opens it on the element it has
+     just made.
+
+     An aside dialog like the source and the bands: it is worked in WHILE
+     the preview is watched, so it can be pushed aside, pulled at the
+     corner, and it cuts a hole in its own veil where the preview stands
+     (js/editor/dialog-aside.js). -->
+<dialog id="element-dialog" class="dialog dialog-aside">
   <form method="dialog" class="dialog-head">
     <h2 id="element-title"><%= t('dialog.elementTitle') %></h2>
     <button class="button button-quiet" value="abbruch"><%= t('dialog.close') %></button>
@@ -869,16 +875,63 @@
          (js/editor/places.js, read). -->
     <div class="field" id="element-level-field">
       <span class="field-label"><%= t('dialog.elementLevel') %></span>
+      <!-- Icons and not words: the four words are longer than what they
+           name, and the bar under this one asks its questions the same
+           way. Each one keeps its word where a word is still needed --
+           in the tooltip and on the button's name for a screen reader. -->
       <div class="count-choice" id="element-level" role="group">
         <% ["1", "2", "3", "0"].forEach(function (n) { %>
           <button type="button" class="count-option" data-level="<%= n %>"
-                  aria-pressed="false"><%= t('editor.placeAdd' + n) %></button>
+                  data-tip="<%= t('editor.placeAdd' + n) %>"
+                  aria-label="<%= t('editor.placeAdd' + n) %>"
+                  aria-pressed="false"></button>
         <% }); %>
       </div>
     </div>
-    <label class="field">
-      <span class="field-label" for="element-text"><%= t('dialog.elementText') %></span>
-      <textarea id="element-text" rows="5"></textarea>
+
+    <div class="field element-field">
+      <span class="field-label"><%= t('dialog.elementText') %></span>
+      <!-- The same bar as over the slide's text field, with what makes
+           sense for ONE block on it. What is missing is missing on
+           purpose: the slide-wide things (a text waiting for a click is
+           asked below, where it belongs to the element) and the ones that
+           need a field this dialog does not have.
+
+           The four alignments are NOT text commands here. On a placed
+           element the alignment belongs to the element, so it rides on
+           the element's own comment line beside its place
+           (js/editor/places.js) -- one line that says everything about
+           this one block. -->
+      <div class="toolbar" id="element-toolbar" role="toolbar"
+           aria-label="<%= t('editor.toolbar') %>">
+        <% [["bold", "boldTip", "bold"], ["italic", "italicTip", "italic"],
+            ["strikeThrough", "strikethrough", "strikethrough"],
+            ["insertUnorderedList", "bulletList", "bulletList"],
+            ["insertOrderedList", "numberedList", "numberedList"],
+            ["link", "link", "link"]].forEach(function (b) { %>
+          <button type="button" class="tool-icon" data-command="<%= b[0] %>"
+                  data-tip="<%= t('tool.' + b[1]) %>" aria-label="<%= t('tool.' + b[2]) %>"></button>
+        <% }); %>
+        <span class="toolbar-divider"></span>
+        <% [["left", "alignLeft"], ["center", "alignCenter"], ["right", "alignRight"], ["fill", "alignFill"]].forEach(function (a) { %>
+          <button type="button" class="tool-icon" data-align="<%= a[0] %>"
+                  data-tip="<%= t('tool.' + a[1]) %>" aria-label="<%= t('tool.' + a[1]) %>"></button>
+        <% }); %>
+      </div>
+      <div id="element-frame" class="field-frame">
+        <div id="element-content" class="content-field" contenteditable="true" spellcheck="true"></div>
+      </div>
+      <div id="element-source" class="field-frame" hidden>
+        <textarea id="element-text" class="source-field" spellcheck="false"></textarea>
+      </div>
+      <p id="element-source-note" class="hint" hidden><%= t('dialog.elementSource') %></p>
+    </div>
+
+    <!-- A property of the element, like its place: this one block waits
+         for a click while the rest of the slide is already standing. -->
+    <label class="field field-schmal code-fragment-line">
+      <input type="checkbox" id="element-fragment" class="switch">
+      <span><%= t('dialog.elementFragment') %></span>
     </label>
     <p class="hint"><%= t('dialog.elementNote') %></p>
     <div class="dialog-fuss">

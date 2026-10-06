@@ -27,11 +27,14 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 
 <!-- .slide: data-layout="freestyle" -->
 
-# FREESTYLE
-<!-- .element: data-at="9,37,73" data-turn="350" -->
+- FREESTYLE ...
+- syxdcvsdx
+- lala
 
-### Test
-<!-- .element: data-at="80,60,11" data-turn="20" -->
+<!-- .element: data-at="0,32,72" data-turn="350" -->
+
+# Test
+<!-- .element: data-at="37,32,26" data-turn="20" -->
 
 ---
 

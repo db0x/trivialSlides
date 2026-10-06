@@ -111,6 +111,65 @@ function nth(all, n) {
 // has already rounded them to what the file can hold. Everything else on
 // the line survives: a block that appears on a click and is then moved
 // still appears on a click.
+// Which line carries what is said ABOUT this block -- where it stands,
+// how far it is turned, how it is aligned, whether it waits for a click.
+// One line for all of it, so that everything about one element stands in
+// one place and nothing has to be read twice.
+//
+// On a list only a line standing APART may be it: one written directly
+// under the last item belongs to that ITEM, which is how a single bullet
+// is given a fragment (see LIST above).
+function markLine(block) {
+  var mine = -1;
+  block.marks.forEach(function (i) {
+    if (block.list && i === block.to) return;
+    if (mine < 0) mine = i;
+  });
+  return mine;
+}
+
+// The classes that line carries, as a list. Empty for a block that has
+// no line of its own yet.
+export function classes(text, n) {
+  var all = blocks(text);
+  var block = nth(all, n);
+  if (!block) return [];
+  var mine = markLine(block);
+  if (mine < 0) return [];
+  var line = String(text).split("\n")[mine];
+  var hit = /\bclass="([^"]*)"/.exec(line);
+  return hit ? hit[1].trim().split(/\s+/).filter(Boolean) : [];
+}
+
+// And set. An empty list takes the attribute away rather than leaving an
+// empty one standing; a block that has no comment line and is given no
+// classes gets no line either.
+export function setClasses(text, n, list) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var all = blocks(text);
+  var block = nth(all, n);
+  if (!block) return null;
+  var said = (list || []).filter(Boolean).join(" ");
+  var mine = markLine(block);
+  if (mine < 0) {
+    if (!said) return lines.join("\n");
+    var neu = '<!-- .element: class="' + said + '" -->';
+    if (block.list) lines.splice(block.to + 1, 0, "", neu);
+    else lines.splice(block.to + 1, 0, neu);
+    return lines.join("\n");
+  }
+  var line = lines[mine].replace(/\s*class="[^"]*"/, "");
+  // In front of the rest, which is where the renderer's own examples put
+  // it and where a reader looks for it first.
+  if (said) line = line.replace(/^(\s*<!--\s*\.element:)/, '$1 class="' + said + '"');
+  lines[mine] = line.replace(/<!--\s*\.element:\s*-->/, "");
+  // A line left with nothing on it says nothing and goes.
+  if (!/\S/.test(lines[mine]) || /^\s*<!--\s*\.element:\s*-->\s*$/.test(lines[mine])) {
+    lines.splice(mine, 1);
+  }
+  return lines.join("\n");
+}
+
 export function place(text, n, at, turn) {
   var lines = String(text == null ? "" : text).split("\n");
   var all = blocks(text);
@@ -118,15 +177,7 @@ export function place(text, n, at, turn) {
   if (!block) return null;
   var says = ' data-at="' + at + '"' + (turn ? ' data-turn="' + turn + '"' : "");
 
-  // An existing comment line of this block, if it has one that may carry
-  // the placement. On a list only a line standing APART may: one written
-  // directly under the last item belongs to that item (see LIST above).
-  var mine = -1;
-  block.marks.forEach(function (i) {
-    if (block.list && i === block.to) return;
-    if (mine < 0) mine = i;
-  });
-
+  var mine = markLine(block);
   if (mine >= 0) {
     var line = lines[mine].replace(AT, "").replace(TURN, "");
     lines[mine] = line.replace(/\s*-->\s*$/, says + " -->");
@@ -170,9 +221,20 @@ export function read(text, n) {
   return { level: plain ? 0 : null, body: own.join("\n") };
 }
 
-// The text of a block, put back. Its comment lines stay exactly as they
-// are -- where it stands, whether it waits for a click -- because none of
-// that is what the dialog was asked about.
+// The text of a block, put back. Its comment lines say the same thing
+// afterwards as before -- where it stands, how it is aligned, whether it
+// waits for a click -- because none of that is what the dialog was asked
+// about. Where they STAND, though, is the one thing that cannot be left
+// alone: a comment line directly under the last item of a list belongs to
+// that item and not to the list (see LIST). So a block that has become a
+// list has its lines pushed behind a blank one, and a block that has
+// stopped being one has them pulled back up.
+//
+// Without that, the dialog's list button quietly unplaced the element:
+// the comment it wrote back under the new last item went to the <li>,
+// the <ul> was left standing in the flow, and the next drag -- finding no
+// line of the list's own -- wrote a second one and left the first on the
+// item.
 //
 // Blank lines inside the new text are closed up: a blank line is what
 // separates one block from the next, and a dialog that silently turned
@@ -188,9 +250,25 @@ export function write(text, n, level, body) {
     .map(function (l) { return l.replace(/\s+$/, ""); })
     .filter(function (l) { return l.trim() !== ""; })
     .join("\n");
-  if (level > 0) said = "#".repeat(level) + " " + said.replace(/\n/g, " ");
-  var marks = block.lines.filter(function (l) { return ELEMENT.test(l); });
-  lines.splice(block.from, block.to - block.from + 1, said, ...marks);
+  // A size is a thing a HEADING has. Where the dialog hands back a list,
+  // the size the row still shows is the size of what the element used to
+  // be, and obeying it would put a # in front of the first bullet, pull
+  // the rest onto that line and throw the list away without a word. The
+  // other half of this module already agrees: read() offers no size for a
+  // list, so writing one could never be read back.
+  var list = LIST.test(said.split("\n")[0] || "");
+  if (level > 0 && !list) said = "#".repeat(level) + " " + said.replace(/\n/g, " ");
+  // Every comment line of this block, wherever it was standing: inside it,
+  // or apart from it behind a blank line. blocks() hangs both kinds on the
+  // block, and both are this element's.
+  var last = block.to;
+  block.marks.forEach(function (i) { if (i > last) last = i; });
+  var marks = [];
+  for (var i = block.from; i <= last; i++) {
+    if (ELEMENT.test(lines[i])) marks.push(lines[i]);
+  }
+  if (marks.length && list) marks.unshift("");
+  lines.splice(block.from, last - block.from + 1, said, ...marks);
   return lines.join("\n");
 }
 

@@ -1108,6 +1108,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="align-center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
 .tool-icon[data-command="align-right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
 .tool-icon[data-command="align-fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
+/* The four in the element dialog are not commands on the text but a mark
+   on the element (js/editor/index.js), so they are keyed by what they
+   say rather than by what they do -- the icons are the same four. */
+.tool-icon[data-align="left"] { --button-icon: url(../assets/toolbar/format-left.svg); }
+.tool-icon[data-align="center"] { --button-icon: url(../assets/toolbar/format-center.svg); }
+.tool-icon[data-align="right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
+.tool-icon[data-align="fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
 #source-toggle.tool-icon { --button-icon: url(../assets/toolbar/code.svg); }
 .tool-emoji { --button-icon: url(../assets/toolbar/md-emoji.svg); }
 #code-insert.tool-icon { --button-icon: url(../assets/toolbar/md-code.svg); }
@@ -1506,14 +1513,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 .count-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* --- The sizes a freestyle slide is written with ----------------------
-   Where the text field stands on every other layout. Four buttons, each
-   with the icon the toolbar uses for that size, because what one is
-   choosing here is a size and not a word.
-
-   Wrapping rather than scrolling: the form column can be made narrow, and
-   two rows of two is a better answer there than a row one has to push
-   sideways. */
+/* --- What a freestyle slide is written with ---------------------------
+   Where the text field stands on every other layout: one button, which
+   puts an element on the slide and opens it. How large it is to be is
+   asked in that dialog and only there (views/editor.ejs). */
 .place-add {
   display: flex;
   gap: 2px;
@@ -1529,12 +1532,87 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 .place-add-button { --button-icon: url(../assets/text.svg); }
 /* The one in the dialog that says how big an element is reuses the row of
-   numbers from the column chooser -- same shape, same question. */
-#element-level .count-option { min-width: 0; }
+   numbers from the column chooser -- same shape, same question. What it
+   carries is an icon rather than a word: "Zwischenüberschrift" is three
+   times as long as the thing it names, four of them made a row that broke
+   over two lines in a dialog one can pull narrow, and the bar directly
+   under this one already asks its questions in icons. The word is not
+   lost -- it is in the tooltip and in the button's name
+   (views/editor.ejs).
+
+   The three headings wear the icons the toolbar has for those sizes; the
+   text block has one of its own, because a block of text is the one size
+   the toolbar never had a button for. */
+#element-level .count-option {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+#element-level .count-option::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  /* currentColor, so the icon follows the button through its three states
+     without being told: quiet, lit on hover, and white on the accent once
+     it is the chosen one. */
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+}
+/* Not on the chosen one: there the colour is what says it is chosen. */
+#element-level .count-option:not(.is-active):hover { color: var(--text); }
+#element-level .count-option[data-level="1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
+#element-level .count-option[data-level="2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
+#element-level .count-option[data-level="3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
+#element-level .count-option[data-level="0"] { --button-icon: url(../assets/toolbar/md-text.svg); }
 #element-text { width: 100%; font-family: inherit; }
 /* The one button in a dialog that takes something away stands apart from
    the two that finish it. */
 #element-remove { margin-right: auto; }
+
+/* --- The element dialog ----------------------------------------------
+   Pullable at the corner like the source dialog, and for a related
+   reason: how much of the text one can see is the point, and the window
+   is pushed aside next to the very element it is writing
+   (js/editor/dialog-aside.js). The same three lines that one needs --
+   a column, a floor, and an overflow that is anything but visible, which
+   is what a CSS resizer wants. */
+#element-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  resize: both;
+  overflow: hidden;
+  min-width: 340px;
+  min-height: 300px;
+}
+/* The form takes what is left of the window and the text field takes what
+   is left of the form -- so pulling the corner makes the field bigger,
+   which is the only reason anybody pulls it. */
+#element-dialog .dialog-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+#element-dialog .element-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#element-dialog .field-frame {
+  flex: 1;
+  min-height: 90px;
+  max-height: none;
+}
+#element-dialog .content-field,
+#element-dialog .source-field { height: 100%; }
 
 /* --- Choosing a column ------------------------------------------------ */
 /* One text field for all the columns, and this says which of them is in it.

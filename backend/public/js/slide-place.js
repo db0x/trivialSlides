@@ -34,6 +34,10 @@
   // not a drag, and a block one merely wanted to look at must not be
   // placed by looking at it.
   var SLOP = 3;      // screen pixels
+  // How near the eye counts as the same line. Screen pixels and not per
+  // cent, so the pull is the same whether the preview stands in a corner
+  // or fills the window.
+  var SNAP = 6;      // screen pixels
 
   var picked = null;  // the block the handles are on
   var drag = null;    // the gesture in progress
@@ -111,6 +115,76 @@
     else block.style.removeProperty("--turn");
   }
 
+  // --- The guide lines ---------------------------------------------------
+  // What a block may line up with while it is being moved: the middle and
+  // the two edges of the area, and the near edge, the middle and the far
+  // edge of every other block on the slide. Worked out once as the gesture
+  // begins -- nothing but the dragged block moves while it lasts.
+  //
+  // A turned block is left out. Its corners no longer follow its edges, so
+  // a line drawn through the box around it would promise an alignment
+  // nobody can see.
+  function marks(section, block, ref) {
+    var x = [0, 50, 100];
+    var y = [0, 50, 100];
+    blocks(section).forEach(function (el) {
+      if (el === block || el.style.getPropertyValue("--turn")) return;
+      var r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var left = (r.left - ref.left) / ref.width * 100;
+      var right = (r.right - ref.left) / ref.width * 100;
+      var top = (r.top - ref.top) / ref.height * 100;
+      var bottom = (r.bottom - ref.top) / ref.height * 100;
+      x.push(left, (left + right) / 2, right);
+      y.push(top, (top + bottom) / 2, bottom);
+    });
+    return { x: x, y: y };
+  }
+
+  // The mark this block comes nearest to on one axis, or null where it is
+  // near none of them. Its near edge, its middle and its far edge are all
+  // tried: any of the three may be the one the eye is lining up, and the
+  // middle is the one this was built for.
+  //   line -- where the mark stands, which is where the line is drawn
+  //   at   -- what the block's own number has to be to meet it
+  function near(value, size, list, tol) {
+    var best = null;
+    [0, size / 2, size].forEach(function (off) {
+      list.forEach(function (mark) {
+        var d = Math.abs(value + off - mark);
+        if (d <= tol && (!best || d < best.d)) best = { d: d, line: mark, at: mark - off };
+      });
+    });
+    return best;
+  }
+
+  // The lines themselves: two numbers written onto the text box, drawn by
+  // its own ::before and ::after (place.css). Where they are is said in
+  // the same per cent everything else here is said in, so a line at 50%
+  // needs no arithmetic to land in the middle of the slide.
+  //
+  // Nothing is ADDED to the box, and that is the whole reason for the
+  // pseudo-elements: the stylesheet steps the type down by how many
+  // children the box has (slides.css), so a layer appearing the moment a
+  // line does would shrink the slide under the mouse -- and shrink it
+  // against measurements this gesture took before it started.
+  function guides(box, x, y) {
+    if (!box) return;
+    box.classList.toggle("has-guide-x", x != null);
+    box.classList.toggle("has-guide-y", y != null);
+    if (x != null) box.style.setProperty("--guide-x", x + "%");
+    if (y != null) box.style.setProperty("--guide-y", y + "%");
+  }
+
+  function clearGuides() {
+    var boxes = document.querySelectorAll(".has-guide-x, .has-guide-y");
+    [].forEach.call(boxes, function (box) {
+      box.classList.remove("has-guide-x", "has-guide-y");
+      box.style.removeProperty("--guide-x");
+      box.style.removeProperty("--guide-y");
+    });
+  }
+
   // --- The handles -------------------------------------------------------
   // Children of the block itself, so they travel with it -- including
   // through its rotation, which is what makes the width handle stay on the
@@ -136,6 +210,7 @@
     [].forEach.call(old, function (g) { g.remove(); });
     var marked = document.querySelectorAll(".is-picked");
     [].forEach.call(marked, function (b) { b.classList.remove("is-picked"); });
+    clearGuides();
   }
 
   function pick(block) {
@@ -201,6 +276,7 @@
     drag = {
       block: block,
       what: grip || "move",
+      section: section,
       ref: ref,
       from: from,
       startX: ev.clientX,
@@ -227,10 +303,34 @@
     var dy = ev.clientY - drag.startY;
     if (!drag.moved && Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
     drag.moved = true;
+    // The marks are gathered at the first movement rather than at the
+    // press, and only for moving. A block that has never been placed is
+    // still in the flow when it is picked up, and every block under it
+    // moves up the moment it leaves -- marks taken before that would draw
+    // lines where nothing stands any more. So it is put where it already
+    // stands first, and the others are measured after.
+    //
+    // A block being widened or turned gets none at all: it changes shape
+    // under the mouse, and a line it happened to touch on the way would
+    // say nothing about where it ends up.
+    if (drag.what === "move" && !drag.marks) {
+      show(drag.block, drag.from);
+      drag.marks = marks(drag.section, drag.block, drag.ref);
+    }
     var p = { x: drag.from.x, y: drag.from.y, w: drag.from.w, turn: drag.from.turn };
     if (drag.what === "move") {
-      p.x = clamp(round(drag.from.x + dx / drag.ref.width * 100, STEP), 0, 100);
-      p.y = clamp(round(drag.from.y + dy / drag.ref.height * 100, STEP), 0, 100);
+      var x = drag.from.x + dx / drag.ref.width * 100;
+      var y = drag.from.y + dy / drag.ref.height * 100;
+      // The height is measured now and not at the start: a block that has
+      // never been placed is given a width with the first move, and its
+      // text wraps into a different height the moment it is. offsetHeight
+      // and not the rect, because the rect of a turned block is the box
+      // around it rather than the block.
+      var high = drag.block.offsetHeight / drag.ref.height * 100;
+      var hitX = near(x, drag.from.w, drag.marks.x, SNAP / drag.ref.width * 100);
+      var hitY = near(y, high, drag.marks.y, SNAP / drag.ref.height * 100);
+      p.x = clamp(round(hitX ? hitX.at : x, STEP), 0, 100);
+      p.y = clamp(round(hitY ? hitY.at : y, STEP), 0, 100);
     } else if (drag.what === "width") {
       // Five per cent is about one word; below that a text box is a column
       // of single letters and the handle has stopped being useful.
@@ -245,6 +345,18 @@
     }
     drag.last = p;
     show(drag.block, p);
+    // Drawn from where the block ENDED UP rather than from where it was
+    // pulled: the file holds whole per cent, so a block snapped to the
+    // middle of an odd-numbered width still sits half a per cent off it,
+    // and the line is only shown once there is nothing further the numbers
+    // could do about it. Half a per cent is the whole of what the grid can
+    // miss by -- a block that is more than that out is not lined up.
+    if (drag.what === "move") {
+      var seen = drag.block.offsetHeight / drag.ref.height * 100;
+      var onX = near(p.x, p.w, drag.marks.x, STEP / 2 + 0.01);
+      var onY = near(p.y, seen, drag.marks.y, STEP / 2 + 0.01);
+      guides(drag.block.closest(".slide-text"), onX && onX.line, onY && onY.line);
+    }
     ev.preventDefault();
   }
 
@@ -253,6 +365,7 @@
     var done = drag;
     drag = null;
     document.body.classList.remove("is-placing");
+    clearGuides();
     if (!done.moved || !done.last) return;
     // Which block it was, counted the way the editor counts the blocks of
     // the text (js/editor/places.js). The count travels with it: if the

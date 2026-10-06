@@ -82,3 +82,51 @@
 .is-preview.is-placing * {
   user-select: none;
 }
+
+/* --- The guide lines -------------------------------------------------- */
+/* They appear while a block is being moved and show what it has just come
+   to stand in line with: the middle of the slide, one of its edges, or an
+   edge or the middle of another block (js/slide-place.js).
+
+   Drawn by the text box's own two pseudo-elements and not by anything put
+   inside it. The layout stylesheet steps the type down by how many
+   children that box has, so an element appearing the moment a line does
+   would shrink the slide under the mouse -- and the gesture measured the
+   slide before it began. A pseudo-element is no child and counts for
+   nothing.
+
+   Both lines run the full width and height of the box, because that box
+   is the area the per cent are counted in: a line at 50% is the middle of
+   the slide's text area, which is what the number in the file means. */
+.is-preview .layout-freestyle .slide-text::before,
+.is-preview .layout-freestyle .slide-text::after {
+  /* Not the accent the grips carry: a guide is not something one takes
+     hold of, and telling the two apart at a glance is its whole job. */
+  background: var(--place-guide, #e8486b);
+  position: absolute;
+  /* Over the grips, which are the only other furniture on the slide, and
+     catching nothing: the gesture belongs to the block under the mouse,
+     and a line drawn across it must not come between them. */
+  z-index: 3;
+  pointer-events: none;
+  /* And neither of them is there until there is a line to draw. */
+  content: none;
+}
+/* Two pixels because the preview is a slide scaled down: a line of one
+   would arrive on screen as half of one and be the faintest thing on it. */
+.is-preview .layout-freestyle .slide-text.has-guide-x::before {
+  content: "";
+  top: 0;
+  bottom: 0;
+  left: var(--guide-x);
+  width: 2px;
+  margin-left: -1px;
+}
+.is-preview .layout-freestyle .slide-text.has-guide-y::after {
+  content: "";
+  left: 0;
+  right: 0;
+  top: var(--guide-y);
+  height: 2px;
+  margin-top: -1px;
+}
