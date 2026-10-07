@@ -1608,11 +1608,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    other icon in this app. The two buttons without an icon keep their
    wording and sit next to them as text; a toolbar may well hold both.
    
-   The row of sizes on a freestyle slide is the second place with buttons
-   of this kind, and it is the same shape for the same reason: one icon,
-   pressed to do one thing. */
-.toolbar .tool-icon,
-.place-add .tool-icon {
+   The bar in an element's row is the second place with buttons of this
+   kind, and it is the same bar for the same reason: one icon, pressed to
+   do one thing. */
+.toolbar .tool-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1631,8 +1630,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Pointed at, a tool rises off the sunken bar onto a ground of its own --
    the same white as the field below, so the bar reads as the shelf and the
    button as the thing taken off it. */
-.toolbar .tool-icon:hover:not(:disabled),
-.place-add .tool-icon:hover:not(:disabled) {
+.toolbar .tool-icon:hover:not(:disabled) {
   background: var(--paper);
   color: var(--text);
   box-shadow: var(--lift-1);
@@ -1651,8 +1649,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   color: var(--accent);
 }
 .toolbar .tool-icon:disabled { opacity: 0.35; cursor: default; }
-.toolbar .tool-icon::before,
-.place-add .tool-icon::before {
+.toolbar .tool-icon::before {
   content: "";
   width: 1rem;
   height: 1rem;
@@ -1906,8 +1903,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .toolbar button:disabled { opacity: 0.35; cursor: default; }
 .toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
 .toolbar .tool-icon.is-active { color: var(--accent); }
-.place-add .tool-icon:hover { color: var(--accent); }
-/* Kept for the element dialog's own bar, which is short enough to read in
+/* Kept for the bar in an element's row, which is short enough to read in
    one go and has no groups to separate. */
 .toolbar-divider { width: 1px; height: 18px; margin: 0 var(--s1); background: var(--border); }
 
@@ -2153,37 +2149,225 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 
 /* --- What a freestyle slide is written with ---------------------------
-   Where the text field stands on every other layout: one button, which
-   puts an element on the slide and opens it. How large it is to be is
-   asked in that dialog and only there (views/editor.ejs). */
-.place-add {
+   Where the text field stands on every other layout: the list of the
+   slide's elements, and under it the two buttons that add one
+   (views/editor.ejs).
+
+   A list and not a grid: every row is read -- what this element says,
+   what kind of thing it is -- and a sentence beside an icon is a row.
+   The same shape the library one tab along is, for the same reason. */
+.place-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+.place-head .field-label { margin-bottom: 0; }
+/* How many there are, in the label's own line and at the label's own
+   size: a number nobody reads twice, and the one thing about the list
+   that is true before one has read a single row. */
+.place-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.place-list {
+  list-style: none;
+  margin: var(--s2) 0 0;
+  padding: 0;
+}
+/* A row is a card, not a line in a table: it opens into the element's own
+   editor, and what opens has to look like a thing that has an inside. */
+.place-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  transition: border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
+}
+.place-item + .place-item { margin-top: var(--s1); }
+.place-item:hover { border-color: var(--accent-edge); }
+/* Open, it is the one thing on the panel being worked in: the accent on
+   its edge says so, and the lift takes it off the column the way a dialog
+   used to be taken off the page. */
+.place-item.is-open {
+  border-color: var(--accent-edge);
+  box-shadow: var(--lift-2);
+}
+.place-item-head {
+  display: flex;
+  align-items: center;
+  /* Room between the caret at the end of the line and the two buttons:
+     without it the three glyphs read as one row of three actions, and the
+     caret is not an action at all -- it says which way the next press on
+     the LINE goes. */
+  gap: var(--s3);
+  padding: var(--s1) var(--s1) var(--s1) var(--s2);
+}
+/* The whole line is the button. A row is there to be opened, and a target
+   the width of the column is one nobody has to aim at. */
+.place-item-open {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+  padding: var(--s1) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* What kind of thing this is, as the icon the size buttons wear for it --
+   so the row and the chooser inside it say the same thing the same way.
+   On a ground of its own, because it is read as a badge and not as a
+   piece of the sentence beside it. */
+.place-item-kind {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  color: var(--muted);
+}
+.place-item-kind::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+}
+.place-item-kind[data-kind="h1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
+.place-item-kind[data-kind="h2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
+.place-item-kind[data-kind="h3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
+.place-item-kind[data-kind="text"] { --button-icon: url(../assets/toolbar/md-text.svg); }
+.place-item-kind[data-kind="image"] { --button-icon: url(../assets/image.svg); }
+.place-item-kind[data-kind="list"] { --button-icon: url(../assets/toolbar/md-ul.svg); }
+.place-item-kind[data-kind="code"] { --button-icon: url(../assets/toolbar/md-code.svg); }
+.place-item-kind[data-kind="quote"] { --button-icon: url(../assets/toolbar/md-quote.svg); }
+.place-item.is-open .place-item-kind {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.place-item-words {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+/* The one thing here that can outrun its column. Cut off at the end, with
+   the whole of it in the tooltip (js/editor/index.js). */
+.place-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.place-item-text.is-empty { color: var(--faint); font-style: italic; }
+.place-item-meta { font-size: 12px; color: var(--muted); }
+/* The caret, last in the line whatever the words do -- the same one the
+   header's pills wear, turning the same way when what it opens is open. */
+.place-item-mark {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-left: auto;
+  opacity: 0.7;
+  background: currentColor;
+  color: var(--faint);
+  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
+  mask: url(../assets/dow.svg) center / contain no-repeat;
+  transition: transform var(--base) var(--ease);
+}
+.place-item.is-open .place-item-mark { transform: rotate(180deg); }
+/* The two things one does to an element without opening it. The same pair
+   a slide card carries, in the same shape: this is the same question one
+   step down -- one of the things the slide is made of. */
+.place-item-tools {
+  flex: none;
   display: flex;
   gap: 2px;
 }
-/* The same bare button the toolbar's are: no box of its own, the icon is
-   the button. */
-.place-add button {
-  padding: 3px 8px;
+.place-item-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
+  color: var(--muted);
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              color var(--fast) var(--ease);
 }
-.place-add-button { --button-icon: url(../assets/text.svg); }
-.place-add-image { --button-icon: url(../assets/image.svg); }
-/* The one in the dialog that says how big an element is reuses the row of
-   numbers from the column chooser -- same shape, same question. What it
-   carries is an icon rather than a word: "Zwischenüberschrift" is three
-   times as long as the thing it names, four of them made a row that broke
-   over two lines in a dialog one can pull narrow, and the bar directly
-   under this one already asks its questions in icons. The word is not
-   lost -- it is in the tooltip and in the button's name
-   (views/editor.ejs).
+.place-item-tool::before {
+  content: "";
+  width: 0.875rem;
+  height: 0.875rem;
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+}
+.place-item-copy { --button-icon: url(../assets/duplicate.svg); }
+.place-item-remove { --button-icon: url(../assets/delete.svg); }
+.place-item-tool:hover {
+  border-color: var(--accent-edge);
+  background: var(--paper);
+  color: var(--text);
+}
+.place-item-remove:hover {
+  border-color: var(--danger);
+  background: var(--danger-wash);
+  color: var(--danger);
+}
+/* The element's own editor, inside the row it belongs to. A seam rather
+   than a line around it: head and body are one card, and what is below
+   the seam is the inside of what is above it. */
+.place-item-body {
+  padding: var(--s3);
+  border-top: 1px solid var(--border-soft);
+}
+.place-editor > .field:last-of-type { margin-bottom: var(--s2); }
+.place-editor .hint:last-child { margin-bottom: 0; }
+/* One element is one block, and a block is a sentence or two: a box as
+   tall as the slide's own text field would push every row behind it off
+   the panel to hold three lines. It grows with what is typed into it, up
+   to a height where the rest of the list is still in sight. */
+.place-editor .field-frame {
+  min-height: 0;
+  max-height: 32vh;
+}
+.place-editor .content-field,
+.place-editor .source-field { min-height: 92px; }
+/* The row of sizes reuses the chooser from the column count -- same shape,
+   same question. What it carries is an icon rather than a word:
+   "Zwischenüberschrift" is three times as long as the thing it names, four
+   of them broke over two lines in a column this wide, and the bar directly
+   under it already asks its questions in icons. The word is not lost -- it
+   is in the tooltip and in the button's name (views/editor.ejs).
 
    The three headings wear the icons the toolbar has for those sizes; the
    text block has one of its own, because a block of text is the one size
    the toolbar never had a button for. */
-#element-level .count-option {
+.element-level-field {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+}
+.element-level-field .field-label { margin-bottom: 0; }
+.element-level { margin-left: auto; }
+.element-level .count-option {
   min-width: 0;
   display: inline-flex;
   align-items: center;
@@ -2192,81 +2376,58 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   height: 1.75rem;
   padding: 0;
 }
-#element-level .count-option::before {
+.element-level .count-option::before {
   content: "";
   width: 1rem;
   height: 1rem;
   /* currentColor, so the icon follows the button through its three states
-     without being told: quiet, lit on hover, and white on the accent once
-     it is the chosen one. */
+     without being told: quiet, lit on hover, and marked once it is the
+     chosen one. */
   background: currentColor;
   -webkit-mask: var(--button-icon) center / contain no-repeat;
   mask: var(--button-icon) center / contain no-repeat;
 }
 /* Not on the chosen one: there the colour is what says it is chosen. */
-#element-level .count-option:not(.is-active):hover { color: var(--text); }
-#element-level .count-option[data-level="1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
-#element-level .count-option[data-level="2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
-#element-level .count-option[data-level="3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
-#element-level .count-option[data-level="0"] { --button-icon: url(../assets/toolbar/md-text.svg); }
-#element-text { width: 100%; font-family: inherit; }
-/* The one button in a dialog that takes something away stands apart from
-   the two that finish it. */
-#element-remove { margin-right: auto; }
+.element-level .count-option:not(.is-active):hover { color: var(--text); }
+.element-level .count-option[data-level="1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
+.element-level .count-option[data-level="2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
+.element-level .count-option[data-level="3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
+.element-level .count-option[data-level="0"] { --button-icon: url(../assets/toolbar/md-text.svg); }
+.element-text { width: 100%; font-family: inherit; }
 
-/* --- The element dialog ----------------------------------------------
-   Pullable at the corner like the source dialog, and for a related
-   reason: how much of the text one can see is the point, and the window
-   is pushed aside next to the very element it is writing
-   (js/editor/dialog-aside.js). The same three lines that one needs --
-   a column, a floor, and an overflow that is anything but visible, which
-   is what a CSS resizer wants. */
-#element-dialog[open] {
+/* Nothing on the slide yet. The sentence stands where the rows would, so
+   the panel says the same thing whether there is something to read or
+   not. */
+.place-empty {
+  margin-top: var(--s2);
+  padding: var(--s4) var(--s3);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+/* The two buttons that put something there. Words on them and not bare
+   icons: this is the one thing on the panel that a slide with nothing on
+   it needs, and two 16px glyphs in a corner were the smallest thing in the
+   column saying the most important sentence in it. Side by side and
+   sharing the width, because the two are the same question asked of two
+   materials. */
+.place-add-label { margin-top: var(--s4); }
+.place-add {
   display: flex;
-  flex-direction: column;
-  /* Unmodal, so it is no longer in the browser's top layer: it has to be
-     put over its own veil, and fixed rather than absolute because the
-     numbers written onto it are the ones getBoundingClientRect gave
-     (js/editor/dialog-aside.js).
-
-     inset and margin are what the browser itself writes onto a MODAL
-     dialog and onto no other -- without them an unmodal one is centred
-     sideways and left standing at the top of the page. They only decide
-     where it opens the very first time: from the second time on it opens
-     where it was last pushed to, which is written over these. */
-  position: fixed;
-  z-index: 100;
-  inset: 0;
-  margin: auto;
-  max-height: 88vh;
-  resize: both;
-  overflow: hidden;
-  min-width: 340px;
-  min-height: 300px;
+  gap: var(--s2);
 }
-/* The form takes what is left of the window and the text field takes what
-   is left of the form -- so pulling the corner makes the field bigger,
-   which is the only reason anybody pulls it. */
-#element-dialog .dialog-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: auto;
+.place-add .button { flex: 1; min-width: 0; }
+.place-add .button::before {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
 }
-#element-dialog .element-field {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-#element-dialog .field-frame {
-  flex: 1;
-  min-height: 90px;
-  max-height: none;
-}
-#element-dialog .content-field,
-#element-dialog .source-field { height: 100%; }
+.place-add-button { --button-icon: url(../assets/text.svg); }
+.place-add-image { --button-icon: url(../assets/image.svg); }
 
 /* --- Choosing a column ------------------------------------------------ */
 /* One text field for all the columns, and this says which of them is in it.

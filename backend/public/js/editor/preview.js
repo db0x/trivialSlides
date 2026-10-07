@@ -95,14 +95,9 @@ export function createPreview(iframe, base, onPlaced, onEdit) {
         .then(function (r) { return r.json(); })
         .then(function (d) { sende({ kind: "slide", index: index, html: d.html }); });
     },
-    // Which element the editor has open in its dialog, so that the
-    // preview lets that one be taken hold of and no other. -1 when the
-    // dialog is shut.
-    only: function (block) {
-      sende({ kind: "allein", block: block });
-    },
     // The handles, put on one block without locking the others out: a
-    // picture the editor has just added and nobody has touched yet.
+    // picture the editor has just added and nobody has touched yet, or the
+    // element whose row has just been opened in the form.
     pick: function (block) {
       sende({ kind: "zeigen", block: block });
     },

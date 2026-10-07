@@ -55,7 +55,16 @@ const FOR_BROWSER = [
   "editor.videoUnknown", "editor.urlInvalid",
   // Said when a slide could not be arranged with the mouse after all
   // (js/editor/places.js).
-  "editor.placeLost", "editor.placeNewText", "dialog.elementTitle",
+  "editor.placeLost", "editor.placeNewText",
+  // The list of a freestyle slide's elements, and the editor that opens in
+  // a row of it, are both built in the page out of the slide's own text
+  // (js/editor/index.js) -- so every word in them travels.
+  "editor.placeCount", "editor.placeCountOne", "editor.placeUntitled",
+  "editor.placeDuplicate", "editor.placeAdd0", "editor.placeAdd1",
+  "editor.placeAdd2", "editor.placeAdd3",
+  "editor.placeKind.image", "editor.placeKind.list",
+  "editor.placeKind.code", "editor.placeKind.quote",
+  "dialog.elementFragment", "dialog.elementRemove",
   "card.up", "card.down", "card.indent", "card.outdent",
   "card.duplicate", "card.delete", "card.untitled",
   "message.atLeastOne", "message.deleteSlide", "message.staysSource",

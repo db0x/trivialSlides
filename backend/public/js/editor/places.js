@@ -301,3 +301,92 @@ export function remove(text, n) {
   lines.splice(block.from, last - block.from + 1);
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
+
+// --- What the list in the form shows about an element -------------------
+// The rows over there say three things about a block before it is opened:
+// what KIND of thing it is, what it SAYS, and -- from classes() above --
+// what rides on its comment line. The first two are read here, because
+// what counts as a heading and what counts as a picture is decided by the
+// expressions at the top of this file and nowhere else.
+
+// "h1" | "h2" | "h3" | "text" | "image" | "list" | "code" | "quote".
+// The same question read() asks for its `level`, answered in full: read()
+// has no size to offer for a list or a picture and says null, which is the
+// right answer for a row of size buttons and no answer at all for an icon.
+export function kind(text, n) {
+  var block = nth(blocks(text), n);
+  if (!block) return "text";
+  var own = block.lines.filter(function (l) { return !ELEMENT.test(l); });
+  var first = own[0] || "";
+  if (own.length === 1 && IMAGE.test(first)) return "image";
+  if (FENCE.test(first)) return "code";
+  if (LIST.test(first)) return "list";
+  if (/^[ \t]*>/.test(first)) return "quote";
+  var head = own.length === 1 && HEADING.exec(first);
+  if (head && head[1].length <= 3) return "h" + head[1].length;
+  return "text";
+}
+
+// The one line the row carries: the block's words, with the Markdown that
+// shapes them taken off. Not the body as read() hands it over -- a row is
+// read at a glance and "## Was wir vorhaben" reads worse than what it
+// means. A picture answers with its file name: its alt text is usually
+// empty, and the file is what one recognises it by.
+export function summary(text, n) {
+  var block = nth(blocks(text), n);
+  if (!block) return "";
+  var own = block.lines.filter(function (l) { return !ELEMENT.test(l); }).join(" ");
+  var picture = /!\[([^\]]*)\]\(([^)]*)\)/.exec(own);
+  if (picture) {
+    return picture[1].trim() || String(picture[2]).replace(/^.*\//, "").trim();
+  }
+  return own
+    .replace(/^[ \t]*#{1,6}\s*/, "")
+    .replace(/^[ \t]*>\s*/, "")
+    .replace(/^[ \t]*([-*+]|\d+[.)])\s+/, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// --- A second one of the same -------------------------------------------
+// The copy is the block AND the line that belongs to it: everything the
+// element is -- its words, its size, where it is aligned, whether it waits
+// for a click -- travels with it. Only its place is moved, by a step down
+// and to the right, so that the copy lands BESIDE the original instead of
+// exactly on top of it, where nobody could tell there were two.
+//
+// It goes to the end of the text, which is where add() puts a new one and
+// which makes it the last element on the slide: last in the order the
+// fragments appear in, and topmost where two of them overlap.
+function shifted(at) {
+  var parts = String(at).split(",").map(Number);
+  if (parts.length < 3 || parts.some(function (v) { return !isFinite(v); })) return null;
+  return [Math.min(parts[0] + 4, 95), Math.min(parts[1] + 6, 95), parts[2]].join(",");
+}
+
+export function duplicate(text, n, fallback) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var block = nth(blocks(text), n);
+  if (!block) return null;
+  var last = block.to;
+  block.marks.forEach(function (i) { if (i > last) last = i; });
+  var copy = lines.slice(block.from, last + 1);
+  // Where the original stands, one step on -- or, for an element nobody
+  // has placed yet, wherever the caller would have put a new one.
+  var here = /\bdata-at="([^"]*)"/.exec(copy.join("\n"));
+  var at = (here && shifted(here[1])) || fallback;
+  var written = false;
+  copy = copy.map(function (line) {
+    if (!ELEMENT.test(line) || written) return line;
+    written = true;
+    var bare = line.replace(AT, "");
+    return at ? bare.replace(/\s*-->\s*$/, ' data-at="' + at + '" -->') : bare;
+  });
+  // A block that never had a line of its own gets one, so that the copy
+  // has somewhere of its own to stand.
+  if (!written && at) copy.push('<!-- .element: data-at="' + at + '" -->');
+  var before = lines.join("\n").replace(/\s+$/, "");
+  return (before ? before + "\n\n" : "") + copy.join("\n").replace(/^\n+|\n+$/g, "") + "\n";
+}

@@ -38,7 +38,7 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 <!-- .element: data-at="37,34,26" data-turn="20" -->
 
 ![](trivialslides.svg)
-<!-- .element: data-at="82,11,15" data-turn="345" -->
+<!-- .element: class="fragment" data-at="82,11,15" data-turn="345" -->
 
 ---
 

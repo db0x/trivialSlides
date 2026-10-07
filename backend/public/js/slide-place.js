@@ -42,13 +42,6 @@
   var picked = null;  // the block the handles are on
   var drag = null;    // the gesture in progress
   var lastPicked = -1; // which one, so it survives the slide being redrawn
-  // While an element is open in the editor's dialog, that one and no other
-  // may be taken hold of (js/editor/index.js). -1 when none is. The dialog
-  // is about THAT element: a drag that quietly moved its neighbour would
-  // write into a block the dialog knows nothing about, and the words being
-  // typed would then be applied over the top of it.
-  var only = -1;
-
   function slide() {
     return document.querySelector(".reveal .slides section.present.layout-freestyle");
   }
@@ -248,11 +241,9 @@
 
   // --- The gesture -------------------------------------------------------
   // The way back to the words. Said to the editor, which has the text and
-  // the dialog (js/editor/index.js); this side knows only which block was
-  // asked for.
+  // the row that element is written in (js/editor/index.js); this side
+  // knows only which block was asked for.
   function edit(block) {
-    // Already open, and this is the one it is open on.
-    if (only >= 0) return;
     var all = blocks(slide());
     var n = all.indexOf(block);
     if (n < 0) return;
@@ -273,9 +264,6 @@
       return;
     }
     var block = grip ? picked : blockAt(ev.target);
-    // Locked to one element: a press anywhere else is no press at all, and
-    // the handles stay where they are rather than being put out.
-    if (only >= 0 && block !== blocks(section)[only]) return;
     if (!block) { pick(null); return; }
     var ref = area(block);
     if (!ref || !ref.width) return;
@@ -401,7 +389,6 @@
   // on the thing itself. The same door as the pencil, for whoever does
   // not look for a pencil.
   document.addEventListener("dblclick", function (ev) {
-    if (only >= 0) return;
     var block = blockAt(ev.target);
     if (!block) return;
     pick(block);
@@ -417,18 +404,16 @@
   // Called with the slide that was just drawn, because at that moment it
   // is not yet the one reveal calls present -- it is handed over rather
   // than looked for (views/reveal.ejs).
-  // Which element the editor has open, or -1 for none (views/reveal.ejs).
-  // Setting it picks that block, so the handles are already on it when the
-  // dialog appears -- being allowed to turn and pull it is the whole point
-  // of this, and hunting for a handle first would be half of it.
-  window.slidePlaceOnly = function (n) {
-    only = n == null || n < 0 ? -1 : n;
-    if (only >= 0) handTo(only);
-  };
-
-  // The handles, put on a block without locking anything: a picture just
-  // added, which is about to be dragged and scaled and would otherwise
-  // have to be found on the slide first.
+  // The handles, put on a block: the element whose row the editor has just
+  // opened, or a picture just added -- both are about to be dragged,
+  // scaled and turned, and would otherwise have to be found on the slide
+  // first (views/reveal.ejs).
+  //
+  // Nothing is locked out by it. While a row is open every other element
+  // is still there to be taken hold of, and pressing one opens ITS row:
+  // what is written is written as it is typed (js/editor/index.js), so
+  // there is no half-finished answer anywhere that moving the neighbour
+  // could be applied over the top of.
   window.slidePlacePick = function (n) {
     if (n >= 0) handTo(n);
   };
