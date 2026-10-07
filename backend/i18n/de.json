@@ -408,5 +408,7 @@
   "ai.filesHintNoPdf": "Bilder landen im Vortrag und das Modell sieht sie — die ersten {n}, danach nur noch die Dateinamen. Aus Textdateien (txt, md, csv, json) wird der Text oben ins Material übernommen. PDFs kann diese Instanz nicht lesen.",
   "ai.textTaken": "{name} — Text übernommen",
   "ai.fileEmpty": "„{name}“ ist leer.",
-  "ai.fileKind": "„{name}“ ist weder Bild noch Text — übergangen."
+  "ai.fileKind": "„{name}“ ist weder Bild noch Text — übergangen.",
+  "editor.layoutChange": "ändern",
+  "source.unapplied": "Nicht übernommen — erst übernehmen oder verwerfen, dann geht es zurück zum Editor."
 }

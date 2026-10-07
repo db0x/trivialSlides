@@ -41,13 +41,21 @@
        than <select>s, for the same reason as the preview's format further
        down: a native one brings the operating system's dropdown with it,
        which is the only thing on the page that does not look like the
-       page. The word stays beside the button, the button wears the value,
-       and the value the model reads sits in data-value on it
-       (js/editor/index.js). -->
-  <span class="header-field">
-    <%= t('header.theme') %>
+       page.
+
+       Each is ONE control now rather than a word with a box beside it: the
+       name of the setting is inside the pill, small and grey, and the value
+       stands next to it in the text colour. A label floating to the left of
+       a field is how a form from 2008 asks a question, and two of them side
+       by side left the header reading as four things instead of two.
+
+       The name rides on data-label and is drawn by the stylesheet, NOT
+       written into the button: index.js sets the value with textContent,
+       which would wipe any element put inside. A ::before survives that. -->
+  <div class="head-group head-deck">
     <details id="deck-theme-menu" class="menu header-menu">
-      <summary id="deck-theme" class="button header-value" data-value="<%= deck.theme %>"
+      <summary id="deck-theme" class="header-value" data-value="<%= deck.theme %>"
+               data-label="<%= t('header.theme') %>"
                aria-label="<%= t('header.theme') %>"><%= deck.theme %></summary>
       <div class="menu-content menu-scroll" role="menu">
         <% themes.forEach(function (name) { %>
@@ -57,12 +65,10 @@
         <% }); %>
       </div>
     </details>
-  </span>
 
-  <span class="header-field">
-    <%= t('header.transition') %>
     <details id="deck-transition-menu" class="menu header-menu">
-      <summary id="deck-transition" class="button header-value" data-value="<%= deck.transition %>"
+      <summary id="deck-transition" class="header-value" data-value="<%= deck.transition %>"
+               data-label="<%= t('header.transition') %>"
                aria-label="<%= t('header.transition') %>"><%= deck.transition %></summary>
       <div class="menu-content" role="menu">
         <% transitions.forEach(function (name) { %>
@@ -72,29 +78,77 @@
         <% }); %>
       </div>
     </details>
-  </span>
+  </div>
 
   <!-- Only there while autosave is off (js/autosave.js, js/editor/index.js).
        With autosave on it would be a button for something that has already
        happened; off, it is the only thing that writes the file, which is
        why it sits here beside the word that says whether anything is owed
        rather than in the text bar, which is for formatting. -->
-  <button type="button" id="deck-save" class="button button-icon header-save" hidden
-          data-tip="<%= t('header.save') %>" aria-label="<%= t('header.save') %>"></button>
   <span id="save-state" class="save-state" role="status"></span>
+  <button type="button" id="deck-save" class="button-icon icon-ghost header-save" hidden
+          data-tip="<%= t('header.save') %>" aria-label="<%= t('header.save') %>"></button>
 
-  <!-- Presenting is two things: from the top, or from wherever the editor
-       stands. On the first slide those two are the same thing, so there the
-       button stays the plain link it always was and the menu keeps out of
-       the way -- a choice between one thing is a click for nothing.
-       index.js swaps the two as the slide changes and writes the address of
-       the current slide into the second entry. -->
-  <a class="button button-icon header-present present-direct" data-tip="<%= t('header.presentKey') %>"
-     aria-label="<%= t('header.present') %>"
-     href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"></a>
+  <!-- Everything that works on the whole DECK rather than on the slide in
+       front, in one tray: the file itself, the two strips, the instruction
+       and the three ways out of here. They are one group because they
+       answer one question -- what happens to this deck - and a group of
+       five loose icon buttons spread along a header is five decisions
+       instead of one. The tray is the sunken ground they sit in; the
+       buttons inside carry no edge of their own, or there would be six
+       outlines where one shape would do. -->
+  <div class="head-group head-tools">
+    <!-- The file itself, to be read and written. It stood in the menu while
+         it could only be looked at; now that it can be edited it is one of
+         the things one reaches for while working
+         (js/editor/deck-source.js). -->
+    <button type="button" id="deck-source-open" class="button-icon icon-ghost header-source"
+            aria-expanded="false" aria-controls="deck-source-view"
+            data-tip="<%= t('header.deckSource') %>" aria-label="<%= t('header.deckSource') %>"></button>
+    <!-- The two strips that stand on every slide (partials/bands.ejs). They
+         belong to the DECK, like the theme and the transition at the other
+         end of this header, and they are looked at again while a talk is
+         being written -- a colour changed, a logo swapped -- rather than
+         set once per browser, which is what the settings menu is for. -->
+    <button type="button" id="bands-open" class="button-icon icon-ghost header-bands"
+            data-tip="<%= t('header.bands') %>" aria-label="<%= t('header.bands') %>"></button>
+    <!-- This deck, changed by instruction (partials/ai.ejs). Rendered only
+         where a key is configured: without one this is not a feature that is
+         switched off, it is a feature the instance does not have -- the same
+         way the PDF export is absent where no browser was found.
+         BUILDING a deck out of material is the other half of the job and sits
+         on the overview, where talks begin (views/index.ejs). -->
+    <% if (ai) { %>
+      <button type="button" id="ai-open" class="button-icon icon-ghost header-ai"
+              data-tip="<%= t('ai.changeOpen') %>" aria-label="<%= t('ai.changeOpen') %>"></button>
+    <% } %>
+    <details class="menu">
+      <summary class="button-icon icon-ghost header-download" data-tip="<%= t('header.download') %>" aria-label="<%= t('header.download') %>"></summary>
+      <div class="menu-content">
+        <a href="<%= BASE %>/d/<%= slug %>/export.html"><%= t('editor.exportHtml') %></a>
+        <a href="<%= BASE %>/d/<%= slug %>/export.pdf"><%= t('editor.exportPdf') %></a>
+        <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
+      </div>
+    </details>
+  </div>
+
+  <!-- Presenting is what the whole editor is for, so it is the one filled
+       button on the page and it says its word rather than hiding behind a
+       triangle. A header full of same-sized grey squares has no answer to
+       "and now what?"; this one does.
+
+       It is two things: from the top, or from wherever the editor stands.
+       On the first slide those two are the same thing, so there the button
+       stays the plain link it always was and the menu keeps out of the way
+       -- a choice between one thing is a click for nothing. index.js swaps
+       the two as the slide changes and writes the address of the current
+       slide into the second entry. -->
+  <a class="button button-haupt header-present present-direct" data-tip="<%= t('header.presentKey') %>"
+     href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"><span
+     class="present-mark" aria-hidden="true"></span><%= t('header.present') %></a>
   <details class="menu present-menu" hidden>
-    <summary class="button button-icon header-present" data-tip="<%= t('header.presentKey') %>"
-             aria-label="<%= t('header.present') %>"></summary>
+    <summary class="button button-haupt header-present" data-tip="<%= t('header.presentKey') %>"><span
+             class="present-mark" aria-hidden="true"></span><%= t('header.present') %></summary>
     <div class="menu-content" role="menu">
       <a class="menu-item present-from-start" role="menuitem"
          href="<%= BASE %>/d/<%= slug %>/present" target="_blank" rel="noopener"><span
@@ -104,41 +158,7 @@
          class="menu-item-icon" aria-hidden="true"></span><%= t('header.presentFromCurrent') %></a>
     </div>
   </details>
-  <details class="menu">
-    <summary class="button button-icon header-download" data-tip="<%= t('header.download') %>" aria-label="<%= t('header.download') %>"></summary>
-    <div class="menu-content">
-      <a href="<%= BASE %>/d/<%= slug %>/export.html"><%= t('editor.exportHtml') %></a>
-      <a href="<%= BASE %>/d/<%= slug %>/export.pdf"><%= t('editor.exportPdf') %></a>
-      <a href="<%= BASE %>/d/<%= slug %>/deck.md"><%= t('editor.exportMd') %></a>
-    </div>
-  </details>
-  <!-- The file itself, to be read and written. It stood in the menu while
-       it could only be looked at; now that it can be edited it is one of
-       the things one reaches for while working, and that belongs in the
-       header beside presenting and downloading rather than two clicks
-       away (js/editor/deck-source.js). -->
-  <button type="button" id="deck-source-open" class="button button-icon header-source"
-          data-tip="<%= t('header.deckSource') %>" aria-label="<%= t('header.deckSource') %>"></button>
-  <!-- The two strips that stand on every slide (partials/bands.ejs). Here
-       and not in the settings menu beside it: they belong to the DECK, like
-       the theme and the transition at the other end of this header, and
-       they are looked at again while a talk is being written -- a colour
-       changed, a logo swapped -- rather than set once per browser, which is
-       what that menu is for. -->
-  <button type="button" id="bands-open" class="button button-icon header-bands"
-          data-tip="<%= t('header.bands') %>" aria-label="<%= t('header.bands') %>"></button>
-  <!-- This deck, changed by instruction (partials/ai.ejs). Rendered only
-       where a key is configured: without one this is not a feature that is
-       switched off, it is a feature the instance does not have -- the same
-       way the PDF export is absent where no browser was found. It stands
-       beside the file and the bands because it is the third thing here that
-       works on the whole DECK rather than on the slide in front.
-       BUILDING a deck out of material is the other half of the job and sits
-       on the overview, where talks begin (views/index.ejs). -->
-  <% if (ai) { %>
-    <button type="button" id="ai-open" class="button button-icon header-ai"
-            data-tip="<%= t('ai.changeOpen') %>" aria-label="<%= t('ai.changeOpen') %>"></button>
-  <% } %>
+
   <%- include("partials/settings") %>
 </header>
 
@@ -167,29 +187,54 @@
   <!-- Middle: the form for the selected slide. Nowhere here is there any
        Markdown syntax -- that is the whole point of the exercise. -->
   <section id="slide-form" class="column form">
-    <fieldset class="fieldset">
-      <legend><%= t('editor.structure') %></legend>
-      <div id="layout-tiles" class="layout-tiles">
-        <% layouts.forEach(function (l) { %>
-          <button type="button" class="layout-tile" data-layout="<%= l.id %>" data-tip="<%= l.hint %>">
-            <span class="mini mini-<%= l.id %>" aria-hidden="true"></span>
-            <span class="layout-name"><%= l.label %></span>
-          </button>
-        <% }); %>
-      </div>
-      <p id="layout-hint" class="hint"></p>
-      <!-- Why the tiles are dead on a slide that already says something.
-           A disabled button has no tooltip to explain itself with, so the
-           reason stands here (js/editor/index.js). -->
-      <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
-      <!-- How many columns the text runs in. Here and not in the text bar
-           for the same reason as the switch below it: it is a question
-           about the shape of the slide, not about its wording -- and the
-           two belong next to each other, because one asks how many columns
-           there are and the other how they are filled.
+    <!-- What the slide is BUILT of. Three questions, and the first of them
+         used to take a third of the column: eleven tiles standing open all
+         day for a choice one makes once per slide and then lives with.
 
-           It sits under the tiles rather than among them because it is not
-           a layout: the tiles are dead as soon as the slide has text on it
+         So the tiles moved into a sheet behind the thing they decide. What
+         stands here is the ANSWER -- the picture of the layout in force and
+         its name -- and pressing it opens the eleven at the size they need
+         to be read at. The form got some 180 pixels back, and they went to
+         the text field, which is what one actually spends the day in. -->
+    <fieldset class="fieldset shape-box">
+      <legend><%= t('editor.structure') %></legend>
+
+      <details id="layout-menu" class="menu layout-menu">
+        <summary id="layout-current" class="layout-current"
+                 aria-label="<%= t('editor.structure') %>">
+          <span id="layout-current-mini" class="mini" aria-hidden="true"></span>
+          <span id="layout-current-name" class="layout-current-name"></span>
+          <span class="layout-current-change"><%= t('editor.layoutChange') %></span>
+        </summary>
+        <div class="menu-content layout-sheet" role="menu"
+             aria-label="<%= t('editor.structure') %>">
+          <div id="layout-tiles" class="layout-tiles">
+            <% layouts.forEach(function (l) { %>
+              <button type="button" class="layout-tile" role="menuitemradio"
+                      aria-checked="false" data-layout="<%= l.id %>" data-tip="<%= l.hint %>">
+                <span class="mini mini-<%= l.id %>" aria-hidden="true"></span>
+                <span class="layout-name"><%= l.label %></span>
+              </button>
+            <% }); %>
+          </div>
+          <!-- Why the tiles are dead on a slide that already says something.
+               A disabled button has no tooltip to explain itself with, so the
+               reason stands here (js/editor/index.js). It is in the sheet
+               rather than in the form because that is where the dead tiles
+               are: an explanation of something one cannot see is noise. -->
+          <p id="layout-locked" class="hint" hidden><%= t('editor.layoutLocked') %></p>
+        </div>
+      </details>
+      <p id="layout-hint" class="hint"></p>
+
+      <!-- How many columns the text runs in, and how they are filled. The
+           two belong next to each other, because one asks how many columns
+           there are and the other how they are filled -- and both are
+           questions about the SHAPE of the slide, which is why they are
+           here and not in the text bar.
+
+           They sit outside the sheet above because they are not a layout:
+           the tiles are dead as soon as the slide has text on it
            (js/editor/index.js), and the number has to stay changeable --
            that is the whole reason it is a field. -->
       <div id="field-column-count" class="field-column-count" role="group" hidden
@@ -204,11 +249,9 @@
         </div>
       </div>
 
-      <!-- And how they are filled. It decides how many text fields there
-           are below, which is a question about the structure of the slide,
-           not about its wording. Off (and that is how every deck written
-           so far reads) the slide has one text and the browser distributes
-           it. Only there once the slide stands in more than one column. -->
+      <!-- Off (and that is how every deck written so far reads) the slide
+           has one text and the browser distributes it. Only there once the
+           slide stands in more than one column. -->
       <label class="field field-columns" hidden
              data-tip="<%= t('editor.columnsSplitHint') %>">
         <input type="checkbox" id="slide-columns-split" class="switch">
@@ -360,13 +403,17 @@
             <% }); %>
           </div>
           <div class="toolbar" id="text-toolbar" role="toolbar" aria-label="<%= t('editor.toolbar') %>">
+            <div class="toolbar-group">
             <button type="button" class="tool-icon" data-command="bold" data-tip="<%= t('tool.boldTip') %>" aria-label="<%= t('tool.bold') %>"></button>
             <button type="button" class="tool-icon" data-command="italic" data-tip="<%= t('tool.italicTip') %>" aria-label="<%= t('tool.italic') %>"></button>
             <button type="button" class="tool-icon" data-command="strikeThrough" data-tip="<%= t('tool.strikethrough') %>" aria-label="<%= t('tool.strikethrough') %>"></button>
+            </div>
+            <div class="toolbar-group">
             <button type="button" class="tool-icon" data-command="insertUnorderedList" data-tip="<%= t('tool.bulletList') %>" aria-label="<%= t('tool.bulletList') %>"></button>
             <button type="button" class="tool-icon" data-command="insertOrderedList" data-tip="<%= t('tool.numberedList') %>" aria-label="<%= t('tool.numberedList') %>"></button>
             <button type="button" class="tool-icon" data-command="link" data-tip="<%= t('tool.link') %>" aria-label="<%= t('tool.link') %>"></button>
-            <span class="toolbar-divider"></span>
+            </div>
+            <div class="toolbar-group">
             <!-- Where the text stands. Unlike the two menus further along
                  this bar, these are NOT slide-wide: they mark the paragraph
                  the cursor is in, or every one the selection touches. The
@@ -379,7 +426,8 @@
                       data-tip="<%= t('tool.' + a[1]) %> — <%= t('tool.alignTip') %>"
                       aria-label="<%= t('tool.' + a[1]) %>"></button>
             <% }); %>
-            <span class="toolbar-divider"></span>
+            </div>
+            <div class="toolbar-group">
             <!-- Colour for a few words. Not a button but a field, because the
                  picker is the one the colour choices further down use and it
                  hangs itself on a field (js/editor/index.js). Coloris wraps
@@ -392,7 +440,8 @@
               <input id="text-color-tool" class="color-field" type="text" value=""
                      aria-label="<%= t('tool.color') %>">
             </span>
-            <span class="toolbar-divider"></span>
+            </div>
+            <div class="toolbar-group">
             <!-- "Reveal on a click", and the question is WHAT. One block of
                  the text says so for itself, with a class of its own in the
                  .md; the box around the whole text cannot -- the renderer
@@ -448,7 +497,8 @@
                 <div id="emoji-grid" class="emoji-grid"></div>
               </div>
             </details>
-            <span class="toolbar-divider"></span>
+            </div>
+            <div class="toolbar-group">
             <!-- Where the text sits in relation to the player, on a video
                  slide. In the bar it is the icon of the side in force and
                  nothing else; the words are in the menu, where there is room
@@ -519,8 +569,10 @@
                 <% }); %>
               </div>
             </details>
-            <span class="toolbar-divider"></span>
+            </div>
+            <div class="toolbar-group toolbar-end">
             <button type="button" id="source-toggle" class="tool-icon" data-tip="<%= t('tool.sourceTip') %>" aria-label="<%= t('tool.source') %>"></button>
+          </div>
           </div>
           <!-- The frame, not the field, is what scrolls: OverlayScrollbars
                builds its own DOM inside whatever it is attached to, and the
@@ -678,6 +730,62 @@
     </div>
   </section>
 
+  <!-- The whole deck as it stands in the file. It takes the place of the
+       slide list and the form rather than floating over them in a dialog:
+       what one does here IS the editing, for as long as it lasts, and the
+       preview beside it is the thing one is checking the typing against.
+
+       A dialog had to make room for that preview by cutting a hole in its
+       own veil and being dragged aside -- a lot of machinery to arrive at
+       what two columns and a seam do by standing still.
+
+       Nothing arrives with the page: the file is fetched when the panel
+       opens, so it shows what was last SAVED rather than a copy that goes
+       stale with the next keystroke (js/editor/deck-source.js).
+
+       The colouring comes from the server (source.js): the editor carries
+       no highlighter, and the one in the presentation belongs to
+       reveal.js. -->
+  <!-- tabindex=-1 so that leaving a block with Escape has somewhere to put
+       the focus: the textarea it was in is removed on the way out, and a
+       focus left on a removed element falls to <body>, which is nowhere.
+       Not reachable by Tab -- -1 is exactly the difference. -->
+  <section id="deck-source-view" class="column source-view" hidden tabindex="-1"
+           aria-label="<%= t('dialog.sourceTitle') %>">
+    <!-- One row per block of the file, each with its mark on the left
+         (source.js). A click turns one block into a field; the rest keep
+         their colours. role=status: while the file is on its way, and if it
+         never comes, this box says so itself -- and a screen reader hears it
+         without the focus having to travel there. -->
+    <div class="deck-source">
+      <div id="deck-source-code" role="status"></div>
+    </div>
+    <!-- What the file would cost if it were saved as it stands (check.js).
+         Only there when there is something to say; each row leads to its
+         line. -->
+    <div id="deck-source-findings" class="deck-source-findings" hidden>
+      <p class="hint"><%= t('source.findings') %></p>
+      <ul></ul>
+    </div>
+    <!-- Only there once something has been typed and not yet applied, which
+         is the only moment there is anything to decide. It sits at the FOOT
+         and under the findings on purpose: the findings are what shut the
+         apply button, and an answer belongs next to its reason.
+
+         The line beside the two buttons says what the state is. It also
+         answers the question the button in the header raises while this
+         bar is up -- pressing it does not go back, because going back with
+         unapplied text here and a live form over there would let the two
+         write the same file past each other. -->
+    <div id="deck-source-actions" class="source-actions" hidden>
+      <p class="hint"><%= t('source.unapplied') %></p>
+      <span class="source-actions-buttons">
+        <button type="button" id="deck-source-discard" class="button"><%= t('dialog.sourceDiscard') %></button>
+        <button type="button" id="deck-source-apply" class="button button-haupt"><%= t('dialog.sourceApply') %></button>
+      </span>
+    </div>
+  </section>
+
   <!-- The line between the form and the preview, to be taken hold of. Both
        sides want room at different moments -- a long text wants the form
        wide, a layout one is judging by eye wants the preview wide -- and
@@ -819,46 +927,6 @@
       <button class="button button-haupt" value="ok" autofocus><%= t('dialog.understood') %></button>
     </div>
   </form>
-</dialog>
-
-<!-- The whole deck as it stands in the file. To be read, not typed in:
-     the file is written from the form, and a second place to write it would
-     be a second truth. Nothing arrives with the page either -- it is
-     fetched when the dialog opens, so it shows what was last SAVED rather
-     than a copy that goes stale with the next keystroke
-     (js/editor/deck-source.js).
-
-     The colouring comes from the server (source.js): the editor carries no
-     highlighter, and the one in the presentation belongs to reveal.js. -->
-<dialog id="deck-source-dialog" class="dialog dialog-wide dialog-aside">
-  <form method="dialog" class="dialog-head">
-    <h2><%= t('dialog.sourceTitle') %></h2>
-    <!-- Three buttons, never more than two at a time: while nothing is
-         changed there is only the way out, and once something is, the way
-         out is called what it does (js/editor/deck-source.js). Applying is
-         a submit of nothing -- it must not close the dialog, so it is a
-         plain button like the other one. -->
-    <span class="dialog-head-buttons">
-      <button type="button" id="deck-source-discard" class="button" hidden><%= t('dialog.sourceDiscard') %></button>
-      <button type="button" id="deck-source-apply" class="button button-haupt" hidden><%= t('dialog.sourceApply') %></button>
-      <button id="deck-source-close" class="button button-quiet" value="close"><%= t('dialog.close') %></button>
-    </span>
-  </form>
-  <!-- One row per block of the file, each with its mark on the left
-       (source.js). A click turns one block into a field; the rest keep
-       their colours. role=status: while the file is on its way, and if it
-       never comes, this box says so itself -- and a screen reader hears it
-       without the focus having to travel there. -->
-  <div class="dialog-content deck-source">
-    <div id="deck-source-code" role="status"></div>
-  </div>
-  <!-- What the file would cost if it were saved as it stands (check.js).
-       Only there when there is something to say; each row leads to its
-       line. -->
-  <div id="deck-source-findings" class="deck-source-findings" hidden>
-    <p class="hint"><%= t('source.findings') %></p>
-    <ul></ul>
-  </div>
 </dialog>
 
 <!-- One element of a freestyle slide: what it says, how big it is, and

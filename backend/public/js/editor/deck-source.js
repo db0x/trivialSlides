@@ -1,5 +1,12 @@
-// The whole deck as Markdown, in a dialog (views/editor.ejs) -- and
-// editable there, block by block.
+// The whole deck as Markdown, in place of the slide list and the form
+// (views/editor.ejs) -- and editable there, block by block.
+//
+// It is a COLUMN of the editor and not a dialog. Working on the file is a
+// mode one is in for a while, not a question one answers and dismisses, and
+// the one thing that has to stay visible while it lasts is the preview --
+// which is exactly what a modal covers up. The dialog had to buy that
+// preview back by cutting a hole in its own veil and letting itself be
+// dragged aside; two columns and a seam give it for nothing.
 //
 // Why block by block and not the whole file in one field: the marks and the
 // colours are what make a file of a few hundred lines readable at all, and
@@ -18,27 +25,25 @@
 // so applying is a deliberate act; what runs while typing is the check
 // (check.js), and until it is quiet, applying stays shut.
 import { $, $$, t, schreibHead, verzoegert } from "./base.js";
-import { setupAside } from "./dialog-aside.js";
 
-// An object rather than five arguments in a row: base is the deck's
+// An object rather than four arguments in a row: base is the deck's
 // address, flush settles what the delayed save still owes, adopt hands a
-// freshly written deck back to the editor, preview drives the frame behind
-// the dialog (js/editor/preview.js), and frame is the box that frame
-// stands in -- the one piece of the page the dialog's veil is kept off.
+// freshly written deck back to the editor, and preview drives the frame
+// beside the panel (js/editor/preview.js).
 export function setupDeckSource(parts) {
   var base = parts.base;
   var flush = parts.flush;
   var adopt = parts.adopt;
   var preview = parts.preview;
-  var frame = parts.frame;
   var button = $("#deck-source-open");
-  var dialog = $("#deck-source-dialog");
-  if (!button || !dialog) return;
+  var view = $("#deck-source-view");
+  var editor = document.querySelector(".editor");
+  if (!button || !view || !editor) return;
 
   var code = $("#deck-source-code");
   var applyButton = $("#deck-source-apply");
   var discardButton = $("#deck-source-discard");
-  var closeButton = $("#deck-source-close");
+  var actions = $("#deck-source-actions");
   var findingList = $("#deck-source-findings");
 
   // The file as it last came from the server, to go back to. Kept as
@@ -48,7 +53,7 @@ export function setupDeckSource(parts) {
   var dirty = false;
   var findings = [];
 
-  // --- What the dialog says for itself ---------------------------------
+  // --- What the panel says for itself -----------------------------------
   function say(text, cls) {
     code.textContent = text;
     code.className = cls || "";
@@ -63,10 +68,12 @@ export function setupDeckSource(parts) {
     drawButtons();
   }
 
+  // One strip, there or not: while nothing has been typed there is nothing
+  // to decide and the file stands on its own. The apply button inside it is
+  // shut while the check has anything to say -- which is written right
+  // above it, so the button has to say nothing itself.
   function drawButtons() {
-    closeButton.hidden = dirty;
-    discardButton.hidden = !dirty;
-    applyButton.hidden = !dirty;
+    actions.hidden = !dirty;
     applyButton.disabled = findings.length > 0;
   }
 
@@ -134,7 +141,7 @@ export function setupDeckSource(parts) {
   // by the time that click is handled there is no open block left to ask.
   var lastSlide = null;
 
-  // The preview stands behind the dialog, and while a slide is being
+  // The preview stands beside the panel, and while a slide is being
   // written in it should be showing that slide. Only a jump: what the
   // frame holds is the saved file, and the typing has not been saved.
   function showInPreview(block) {
@@ -312,17 +319,80 @@ export function setupDeckSource(parts) {
     if (spot) edit(spot.block, spot.offset);
   });
 
-  // --- Opening, applying, discarding -----------------------------------
+  // --- Opening and closing the column ----------------------------------
+  // The panel does not appear OVER the editor, it takes the place of two
+  // of its columns: the list and the form go, the preview stays where it
+  // is. is-sourcing on the editor is what rearranges the grid, and the
+  // button that opened it stays lit for as long as it lasts -- it is a
+  // mode now, and a mode has to say that it is on (app.css).
+  function open() {
+    if (editor.classList.contains("is-sourcing")) return;
+    view.hidden = false;
+    editor.classList.add("is-sourcing");
+    button.setAttribute("aria-expanded", "true");
+  }
+
+  // Shut while anything is unapplied. Closing over typed text would not
+  // merely throw it away: the form on the other side is live again the
+  // moment this column goes, and a deck saved from there would be a file
+  // this text was never written against. The strip at the foot says so and
+  // carries the two buttons that answer.
+  function close() {
+    if (dirty) return;
+    editor.classList.remove("is-sourcing");
+    view.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+    // Back to what opened it, or the focus is left standing in a column
+    // that is no longer on the screen.
+    button.focus();
+  }
+
+  // Escape goes out one layer at a time, which is the only way it ever
+  // reads right: out of the block being typed in first, and only then out
+  // of the column. Leaving a block costs nothing -- the lines underneath
+  // hold the text either way (see `leave`) -- so this works while something
+  // is unapplied as well.
+  //
+  // Leaving the column does not: that guard is the same one the button
+  // beside it keeps, and while anything is unapplied nothing closes.
+  view.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Escape") return;
+    if (ev.target.closest(".source-input")) {
+      ev.preventDefault();
+      // Only move the focus off it. Taking the field down is focusout's
+      // job and nobody else's (see above) -- a second path doing the same
+      // removal races the first and tries to detach a node that is already
+      // gone. Moving the focus to the column asks for exactly one teardown
+      // and gets it.
+      view.focus();
+      return;
+    }
+    if (dirty) return;
+    ev.preventDefault();
+    close();
+  });
+
+  // --- Fetching, applying, discarding ------------------------------------
+  // The one button is the way in and the way out: it opens the file and
+  // closes it again, and it stays lit in between. There is no second way
+  // out any more -- a column that replaces half the editor is a mode, and a
+  // mode is left by the same switch that was used to enter it.
   button.addEventListener("click", function () {
-    // Open first, fetch after: the dialog is the answer to the click, and
+    if (editor.classList.contains("is-sourcing")) {
+      // Shut while anything is unapplied, and the foot strip is where that
+      // is said. Sending the focus there turns a press that did nothing
+      // into a press that points at the two buttons which do.
+      if (dirty) return applyButton.focus();
+      return close();
+    }
+    // Open first, fetch after: the column is the answer to the click, and
     // waiting for the network with nothing on the screen would look like
     // the click had missed.
     say(t("source.loading"));
     dirty = false;
     showFindings([]);
     drawButtons();
-    dialog.showModal();
-    aside.opened();
+    open();
     Promise.resolve(flush())
       .then(function () { return fetch(base + "/source.html"); })
       .then(function (r) {
@@ -368,27 +438,6 @@ export function setupDeckSource(parts) {
     render(saved);
   });
 
-  // --- Standing beside the preview --------------------------------------
-  // Dragged by its head, pulled at its corner, put back where it was left,
-  // and the preview kept out of its veil -- all of it the same for the
-  // other dialog that is worked in while the preview is watched
-  // (js/editor/dialog-aside.js). Pullable, because what this one shows is
-  // a file and how much of it one can see is the whole point.
-  var aside = setupAside(dialog, {
-    key: "trivialslides:source-box",
-    frame: frame,
-    resizable: true,
-  });
-
-  // Escape closes a dialog, and here it would close it over unapplied
-  // text. The editor guards the same thing on leaving the page
-  // (beforeunload in index.js); this is that guard for this dialog. The
-  // way out is not blocked, only named: while anything is unapplied, the
-  // head carries "Discard" instead of "Close".
-  dialog.addEventListener("cancel", function (ev) {
-    if (dirty) ev.preventDefault();
-  });
-
   // --- A file that is not on disk ---------------------------------------
   // A deck a model has just written (js/editor/ai.js) is shown here and
   // nowhere else, and that is the whole safety of that feature: it arrives
@@ -405,10 +454,7 @@ export function setupDeckSource(parts) {
     dirty = false;
     showFindings([]);
     drawButtons();
-    if (!dialog.open) {
-      dialog.showModal();
-      aside.opened();
-    }
+    open();
     return Promise.resolve(flush())
       .then(function () { return fetch(base + "/source.html"); })
       .then(function (r) {

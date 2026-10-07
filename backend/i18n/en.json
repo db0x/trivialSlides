@@ -408,5 +408,7 @@
   "ai.filesHintNoPdf": "Pictures go into the talk and the model sees them -- the first {n}, after that only their file names. From text files (txt, md, csv, json) the text is taken into the material above. This instance cannot read PDFs.",
   "ai.textTaken": "{name} -- text taken",
   "ai.fileEmpty": "\"{name}\" is empty.",
-  "ai.fileKind": "\"{name}\" is neither a picture nor text -- skipped."
+  "ai.fileKind": "\"{name}\" is neither a picture nor text -- skipped.",
+  "editor.layoutChange": "change",
+  "source.unapplied": "Not applied yet — apply or discard, and the editor comes back."
 }

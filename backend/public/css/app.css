@@ -1,5 +1,14 @@
-/* The editor's surface. Deliberately quiet and undecorated: the only area
-   meant to carry colour is the slide preview. */
+/* The editor's surface. Soft rather than loud: the ground is a warm
+   off-white, the things standing on it are white cards with a little depth,
+   and the one saturated colour in the furniture is the accent -- which marks
+   what is chosen and nothing else. The slide preview still carries whatever
+   colour the deck itself has; nothing here competes with it.
+
+   Everything below is said in tokens, and the tokens are the whole design:
+   a radius, a step of space, a lift and a duration are each written down
+   once. A rule that wants to look like the rest of the editor reaches for
+   one instead of inventing a number -- that is what keeps 2000 lines of
+   stylesheet looking like one thing. */
 
 /* Two palettes, three ways of choosing between them: the system setting by
    default, and data-theme on <html> when the user has picked one by hand
@@ -9,25 +18,114 @@
    blocks below merely point the live tokens at them -- otherwise the same
    palette would sit in two places and drift apart on the first change. */
 :root {
+  /* --- Ground ---------------------------------------------------------
+     Four grounds, and the order of them is a depth: what is sunk into the
+     page, the page, what stands on it, and what is being pointed at. A box
+     is told apart from the page by its ground and its lift, not by a line
+     around it -- which is why the borders below are as quiet as they are. */
   --paper: #ffffff;
-  --surface: #f4f5f7;
-  --border: #d8dbe0;
-  --text: #1c1f23;
-  --muted: #666c75;
-  --accent: #2b6cb0;
-  --accent-text: #ffffff;
-  --danger: #b03030;
-  --radius: 6px;
+  --surface: #f6f6f4;
+  --sunken: #f1f1ee;
+  --raised: #fbfbfa;
+  --border: #e4e3de;
+  /* A seam INSIDE a card, between two things that belong together. Louder
+     than nothing and quieter than the line around the card itself. */
+  --border-soft: #eeedea;
+  --text: #2a2824;
+  --muted: #74706a;
+  /* The small capitals over a column and the hint under a field: present,
+     but never the first thing read. */
+  --faint: #a09b93;
 
-  /* The dark palette, not in use until one of the blocks below points at it. */
-  --d-paper: #1b1e22;
-  --d-surface: #15171a;
-  --d-border: #343a41;
-  --d-text: #e7e9ec;
-  --d-muted: #9aa1aa;
-  --d-accent: #5a9bd8;
-  --d-accent-text: #10151a;
-  --d-danger: #e06b6b;
+  /* The accent is the logo's azure, taken down just enough that a whole row
+     of it is still comfortable to look at. */
+  --accent: #1a86c9;
+  --accent-text: #ffffff;
+  /* What a soft palette uses where a hard one would fill a button blue: a
+     tinted ground with a tinted edge. It says "this one is chosen" without
+     putting a block of saturated colour in the middle of a form. */
+  --accent-wash: #e9f3fb;
+  --accent-edge: #b3d9f1;
+  --danger: #c0534a;
+  --danger-wash: #fbeceb;
+
+  /* --- Radius ----------------------------------------------------------
+     Four sizes and a pill. The rule is the size of the thing: the smaller
+     it is, the tighter its corners, or a 14px radius on a 24px button
+     leaves no straight edge at all. --radius is the middle one and the
+     default, because most of what is here is a field or a button. */
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* --- Space -----------------------------------------------------------
+     A scale rather than whatever number looked right that afternoon. Gaps
+     inside a control come off the bottom of it, the distance between two
+     boxes off the top. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 28px;
+  --s7: 40px;
+
+  /* --- Depth -----------------------------------------------------------
+     Four lifts, and each says how far off the page a thing is: a card lies
+     on it, a hovered card has just been picked up, a menu floats over it
+     and a dialog over everything. Two shadows each -- a tight one for the
+     contact and a wide one for the fall -- because a single blur at this
+     opacity reads as dirt rather than as light. */
+  --lift-1: 0 1px 2px rgba(31, 28, 23, 0.04), 0 1px 3px rgba(31, 28, 23, 0.06);
+  --lift-2: 0 2px 4px rgba(31, 28, 23, 0.05), 0 4px 12px rgba(31, 28, 23, 0.08);
+  --lift-3: 0 4px 8px rgba(31, 28, 23, 0.06), 0 12px 28px rgba(31, 28, 23, 0.14);
+  --lift-4: 0 8px 16px rgba(31, 28, 23, 0.08), 0 24px 60px rgba(31, 28, 23, 0.22);
+  /* The ring a focused control wears. Soft and outside the edge, so it
+     never moves anything by a pixel the way a border swap does. */
+  --ring: 0 0 0 3px rgba(26, 134, 201, 0.22);
+
+  /* --- Motion ----------------------------------------------------------
+     One curve for nearly everything: quick off the mark and slow into
+     place, which is what makes a thing look like it was placed rather than
+     snapped. --fast is for what answers a finger (a hover, a press),
+     --base for what moves or changes size, --slow for what appears. */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --fast: 110ms;
+  --base: 180ms;
+  --slow: 260ms;
+
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* The dark palette, not in use until one of the blocks below points at it.
+     Not black: a warm near-black, so a white card on it is a step up rather
+     than a hole punched in it. */
+  --d-paper: #1e2025;
+  --d-surface: #16181b;
+  --d-sunken: #121316;
+  --d-raised: #262930;
+  --d-border: #2f323a;
+  --d-border-soft: #262930;
+  --d-text: #e9e8e5;
+  --d-muted: #9b9790;
+  --d-faint: #6e716f;
+  --d-accent: #55b4ee;
+  --d-accent-text: #0a1a24;
+  --d-accent-wash: #1a2c39;
+  --d-accent-edge: #2d5a76;
+  --d-danger: #e8827a;
+  --d-danger-wash: #33201e;
+  /* Deeper and darker than the light ones: on a dark ground a shadow at 6 %
+     is invisible, and what separates two dark surfaces is mostly the fall
+     under the upper one. */
+  --d-lift-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --d-lift-2: 0 2px 4px rgba(0, 0, 0, 0.34), 0 4px 12px rgba(0, 0, 0, 0.3);
+  --d-lift-3: 0 4px 8px rgba(0, 0, 0, 0.4), 0 12px 28px rgba(0, 0, 0, 0.45);
+  --d-lift-4: 0 8px 16px rgba(0, 0, 0, 0.45), 0 24px 60px rgba(0, 0, 0, 0.6);
+  --d-ring: 0 0 0 3px rgba(85, 180, 238, 0.26);
 
   /* Scrollbars, form controls and the like follow along. */
   color-scheme: light dark;
@@ -46,18 +144,31 @@
   --d-source-value: #85c7a2;
 }
 
-/* No explicit choice: follow the system. The :not() is what lets a manual
-   "light" win over a dark system setting. */
+/* The dark palette, written once and pointed at from the two blocks below.
+   A custom property cannot be set conditionally any other way, and saying
+   it twice is how the two drifted apart last time. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: var(--d-paper);
     --surface: var(--d-surface);
+    --sunken: var(--d-sunken);
+    --raised: var(--d-raised);
     --border: var(--d-border);
+    --border-soft: var(--d-border-soft);
     --text: var(--d-text);
     --muted: var(--d-muted);
+    --faint: var(--d-faint);
     --accent: var(--d-accent);
     --accent-text: var(--d-accent-text);
+    --accent-wash: var(--d-accent-wash);
+    --accent-edge: var(--d-accent-edge);
     --danger: var(--d-danger);
+    --danger-wash: var(--d-danger-wash);
+    --lift-1: var(--d-lift-1);
+    --lift-2: var(--d-lift-2);
+    --lift-3: var(--d-lift-3);
+    --lift-4: var(--d-lift-4);
+    --ring: var(--d-ring);
     --source-mark: var(--d-source-mark);
     --source-value: var(--d-source-value);
     --icon-toggle: url(../assets/light.svg);
@@ -68,12 +179,24 @@
 :root[data-theme="dark"] {
   --paper: var(--d-paper);
   --surface: var(--d-surface);
+  --sunken: var(--d-sunken);
+  --raised: var(--d-raised);
   --border: var(--d-border);
+  --border-soft: var(--d-border-soft);
   --text: var(--d-text);
   --muted: var(--d-muted);
+  --faint: var(--d-faint);
   --accent: var(--d-accent);
   --accent-text: var(--d-accent-text);
+  --accent-wash: var(--d-accent-wash);
+  --accent-edge: var(--d-accent-edge);
   --danger: var(--d-danger);
+  --danger-wash: var(--d-danger-wash);
+  --lift-1: var(--d-lift-1);
+  --lift-2: var(--d-lift-2);
+  --lift-3: var(--d-lift-3);
+  --lift-4: var(--d-lift-4);
+  --ring: var(--d-ring);
   --source-mark: var(--d-source-mark);
   --source-value: var(--d-source-value);
   --icon-toggle: url(../assets/light.svg);
@@ -82,6 +205,22 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
+}
+
+/* Whoever has asked the system for less movement gets none of it. Said once,
+   here, rather than in every rule that animates: the durations are tokens,
+   so emptying them switches the whole stylesheet off at the source. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fast: 0ms;
+    --base: 0ms;
+    --slow: 0ms;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -93,7 +232,13 @@
 
 body {
   margin: 0;
-  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.5 var(--font-ui);
+  /* Kerning and ligatures on, numerals tabular. The last of the three is the
+     one that shows: a width in the text bar and a slide number in the list
+     stop twitching as the digits change. */
+  font-feature-settings: "kern" 1, "liga" 1, "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   color: var(--text);
   background: var(--surface);
   /* Nothing here is text to be taken away: the labels, the words on the
@@ -116,28 +261,181 @@ textarea,
   user-select: text;
 }
 
+/* --- The pieces everything else is built from ------------------------- */
+/* A field is a shape one can write in, and it says so by being a shade
+   darker than the card it stands on rather than by the line around it. The
+   line is still there -- it is what gives the shape an edge on a ground of
+   nearly the same lightness -- but it is the quiet one.
+
+   On focus the ground goes white, the edge takes the accent and a soft ring
+   appears outside it. Three signals and not one, because only the ring is
+   visible at a glance from across the room, and only the ground is visible
+   to someone who cannot tell the two blues apart. */
+input, select, textarea, button { font: inherit; color: inherit; }
+input, select, textarea {
+  background: var(--sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
+}
+input:hover, textarea:hover { border-color: var(--accent-edge); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  background: var(--paper);
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+input::placeholder, textarea::placeholder { color: var(--faint); }
+
+/* Every control in this editor that is reached by the keyboard wears the
+   same ring, so that tabbing through the form is one shape travelling
+   rather than a different outline per widget. Said here, once, for
+   everything the rules below do not already answer themselves. */
+:focus-visible { outline: none; box-shadow: var(--ring); }
+
+/* A button answers a finger in three steps: it lightens under the pointer,
+   it sinks a hair when it is held, and it lets go again. The movement is a
+   single pixel -- enough to be felt, too little to be read as the layout
+   shifting -- and it is the one thing in this editor that makes a click
+   feel like it landed. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--lift-1);
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease),
+              transform var(--fast) var(--ease),
+              color var(--fast) var(--ease);
+}
+.button:hover { background: var(--raised); border-color: var(--accent-edge); box-shadow: var(--lift-2); }
+.button:active { transform: translateY(1px); box-shadow: var(--lift-1); }
+.button:disabled, .button[aria-disabled="true"] {
+  opacity: 0.45;
+  box-shadow: none;
+  cursor: default;
+  transform: none;
+}
+
+/* The one button on a surface that is to be pressed rather than merely
+   found. It is the only place in the furniture where the accent is a FILL
+   and not a wash -- which is what makes it the loudest thing on the page it
+   stands on, and why there is never more than one of it. */
+.button-haupt {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  box-shadow: var(--lift-2);
+}
+.button-haupt:hover { background: var(--accent); border-color: var(--accent); color: var(--accent-text); filter: brightness(1.08); }
+
+/* No ground and no edge until it is pointed at: for the second of two
+   buttons, the one that merely goes back. */
+.button-quiet {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+.button-quiet:hover { background: var(--sunken); border-color: transparent; box-shadow: none; color: var(--text); }
+.button-small { padding: 4px 10px; font-size: 13px; border-radius: var(--radius-sm); }
+.button-wide { display: flex; width: 100%; margin-top: var(--s2); }
+
+/* A square button carrying nothing but an icon. Which icon is decided by
+   --button-icon at the point of use; the file is a mask, so it takes the
+   button's colour instead of its own baked-in grey -- painted directly it
+   would disappear against the dark palette. */
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Bigger than the icon inside it by half again: 34px is about the
+     smallest square a finger hits reliably, and the icon stays 16. */
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius);
+  color: var(--muted);
+}
+.button-icon:hover { color: var(--text); }
+.button-icon::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+  transition: transform var(--fast) var(--ease);
+}
+.button-icon:active::before { transform: scale(0.9); }
+
 /* --- Header ----------------------------------------------------------- */
+/* One bar, four groups, and the order of them is the order of the
+   questions: whose deck is this (the mark and the title), what does it look
+   like (the two pills), what do I do to it (the tray), and what is it all
+   for (presenting). The space that used to sit in the middle doing nothing
+   now sits between the title and the first group, which is where a gap
+   says something: everything after it belongs to the deck rather than
+   naming it. */
 .head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
+  gap: var(--s3);
+  padding: var(--s2) var(--s4);
   background: var(--paper);
   border-bottom: 1px solid var(--border);
+  /* The bar is the only horizontal edge in the editor, so it is also the
+     only one allowed a shadow -- a hairline alone disappears against the
+     columns below it in the dark palette. */
+  box-shadow: 0 1px 0 rgba(31, 28, 23, 0.03);
+  position: relative;
+  z-index: 30;
 }
+/* Things that belong together sit in one group with a small gap; the groups
+   themselves are a step further apart. Two numbers and the whole bar is
+   legible without a single rule drawn between anything. */
+.head-group { display: flex; align-items: center; gap: var(--s1); }
+
 /* In rem, so the mark scales with the browser's text size rather than
    staying pinned to a pixel count. 1rem is 16px here: the 15px on <body>
    does not enter into it, rem always refers to the root element. */
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
+  padding: var(--s1) var(--s2);
+  margin-left: calc(var(--s2) * -1);
+  border-radius: var(--radius);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   text-decoration: none;
   color: var(--text);
+  transition: background var(--fast) var(--ease);
 }
-.brand img { width: 2rem; height: 2rem; }
+.brand:hover { background: var(--sunken); }
+.brand img {
+  width: 2rem;
+  height: 2rem;
+  transition: transform var(--base) var(--ease);
+}
+/* The one piece of play in the furniture, and it is on the way OUT of the
+   deck: the mark turns a little when the pointer rests on the way back to
+   the list of talks. */
+.brand:hover img { transform: rotate(-8deg) scale(1.04); }
 /* Name and version as one column, so the version sits under the name
    without pushing the logo out of the middle. */
 .brand-word {
@@ -149,120 +447,125 @@ textarea,
   font-size: 0.65rem;
   font-weight: 400;
   letter-spacing: 0.04em;
-  color: var(--muted);
+  color: var(--faint);
 }
-.header-field {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: var(--muted);
-}
-/* The look and the transition are menus of this app's own, not <select>s
-   (views/editor.ejs). The button wears the value at the height the
-   header's other buttons have -- and at a width that holds the longest of
-   them, so it does not dance from "none" to "black-contrast" and back. */
-.header-value {
-  display: flex;
-  align-items: center;
-  height: 2rem;
-  min-width: 7.5rem;
-  padding: 0 8px;
-  color: var(--text);
-  font-size: 13px;
-  cursor: pointer;
-  list-style: none;
-}
-.header-value:hover { border-color: var(--accent); }
-.header-menu[open] > .header-value { border-color: var(--accent); color: var(--accent); }
-/* Hangs from the left edge of its button and is at least as wide as it. */
-.header-menu .menu-content { left: 0; right: auto; min-width: 100%; }
+
+/* The deck's name, and it has to look like a name rather than like a field:
+   no ground and no edge until it is pointed at, the size of a heading, and
+   the whole free width of the bar so that a long title is not read through
+   a slot. Pointed at it offers a ground, clicked it becomes an ordinary
+   field with the ring every other field has. */
 .deck-title-field {
   flex: 1;
   min-width: 120px;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
-  padding: 5px 8px;
+  letter-spacing: -0.01em;
+  padding: 6px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
   color: inherit;
 }
-.deck-title-field:hover { border-color: var(--border); }
-.deck-title-field:focus { border-color: var(--accent); background: var(--surface); outline: none; }
+.deck-title-field:hover { background: var(--sunken); border-color: transparent; }
+.deck-title-field:focus { background: var(--paper); border-color: var(--accent); box-shadow: var(--ring); }
+
+/* The look and the transition (views/editor.ejs). One pill each, holding
+   the name of the setting and its value: the name small and grey through
+   ::before, because index.js writes the value with textContent and would
+   wipe anything made of elements.
+
+   A caret at the end, likewise drawn rather than written, so the pill says
+   it opens. The width is held from below so the bar does not twitch as the
+   value goes from "none" to "black-contrast" and back. */
+.header-value {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 34px;
+  min-width: 9.5rem;
+  padding: 0 var(--s2) 0 var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
+}
+.header-value::before {
+  content: attr(data-label);
+  color: var(--faint);
+  font-weight: 400;
+}
+/* The caret, and it is the last thing in the pill whatever the value does:
+   margin-left:auto pins it to the right edge rather than to the end of the
+   word. */
+.header-value::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  margin-left: auto;
+  background: currentColor;
+  color: var(--faint);
+  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
+  mask: url(../assets/dow.svg) center / contain no-repeat;
+  transition: transform var(--base) var(--ease);
+}
+.header-value:hover { background: var(--paper); border-color: var(--accent-edge); box-shadow: var(--lift-1); }
+.header-menu[open] > .header-value {
+  background: var(--accent-wash);
+  border-color: var(--accent-edge);
+  color: var(--accent);
+}
+/* Open, the caret has turned: the pill says which way the next click goes. */
+.header-menu[open] > .header-value::after { transform: rotate(180deg); }
+/* Hangs from the left edge of its button and is at least as wide as it. */
+.header-menu .menu-content { left: 0; right: auto; min-width: 100%; }
 
 .save-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .save-state.is-open { color: var(--text); }
 .save-state.is-error { color: var(--danger); font-weight: 600; }
 
-input, select, textarea, button { font: inherit; color: inherit; }
-input, select, textarea {
-  background: var(--paper);
+/* The tray the deck's tools sit in. One sunken shape instead of five
+   outlined squares: the group reads as a single piece of furniture, and the
+   buttons inside it only draw a ground when they are pointed at. */
+.head-tools {
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px 8px;
 }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
-.button {
-  display: inline-block;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--paper);
-  text-decoration: none;
-  color: inherit;
+/* An icon button with no edge of its own: it belongs to whatever it stands
+   in, and only answers under the pointer. Everywhere in the header, and in
+   any other tray built the same way. */
+.icon-ghost {
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  white-space: nowrap;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
 }
-.button:hover { border-color: var(--accent); }
-.button-haupt { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-.button-quiet { border-color: transparent; color: var(--muted); }
-.button-small { padding: 3px 8px; font-size: 13px; }
-.button-wide { display: block; width: 100%; margin-top: 8px; }
+.icon-ghost:hover { background: var(--paper); color: var(--text); box-shadow: var(--lift-1); }
+.head-tools .icon-ghost { width: 30px; height: 30px; }
+.menu[open] > .icon-ghost { background: var(--accent-wash); color: var(--accent); }
 
-/* The theme switch, top right. margin-left:auto pushes it to the edge on
-   the overview, where the header has room to spare; in the editor the deck
-   title already eats the space, so it simply ends up last.
-
-   The icons are files with a fixed dark grey fill, so they are used as a
-   mask and coloured by the button -- painted directly they would disappear
-   against the dark palette. */
-/* A square button carrying nothing but an icon. Which icon is decided by
-   --button-icon at the point of use; the file is a mask, so it takes the
-   button's colour instead of its own baked-in grey. */
-.button-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  color: var(--muted);
-}
-.button-icon:hover { color: var(--text); }
-.button-icon::before {
-  content: "";
-  width: 1rem;
-  height: 1rem;
-  background: currentColor;
-  -webkit-mask: var(--button-icon) center / contain no-repeat;
-  mask: var(--button-icon) center / contain no-repeat;
-}
 /* Language and light/dark live in one menu at the right end of the header
    (partials/settings.ejs) -- two switches that are set once do not need to
-   stand there permanently. It takes the auto margin the language button
-   used to have, so the header's right-hand group ends where it always
-   ended. */
-.head > .head-menu { margin-left: auto; }
+   stand there permanently. */
 .head-settings { --button-icon: url(../assets/menu.svg); }
 /* Two rows, each a whole sentence: they read as one line or not at all.
    The menu hangs from the right edge of a header that is wider than they
    are, so there is room for it. */
 .head-menu .menu-content { white-space: nowrap; }
 
-/* Only in the header does the icon button push itself to the right edge. */
-.head > .button-icon { margin-left: auto; }
 /* The icon of the light/dark row follows the choice: --icon-toggle is the
    one the click leads TO (see the palette at the top of this file). */
 #theme-toggle { --button-icon: var(--icon-toggle); }
@@ -279,59 +582,114 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   text-align: center;
 }
 
-/* The two header actions carry an icon instead of a word. They keep the
-   .button border so they quiet read as buttons; only their label moves into
-   title/aria-label. Presenting stays the accent-coloured one -- it is what
-   the whole editor is for. */
-.header-present { --button-icon: url(../assets/play.svg); color: var(--accent); }
-.header-present:hover { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+/* Presenting: the one filled button in the editor, and the only one that
+   says a word. Its triangle is a mask like every other icon here, so it
+   takes the button's own colour rather than the grey baked into the file. */
+.header-present {
+  height: 34px;
+  padding: 0 var(--s4);
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.present-mark {
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url(../assets/play.svg) center / contain no-repeat;
+  mask: url(../assets/play.svg) center / contain no-repeat;
+  transition: transform var(--fast) var(--ease);
+}
+.header-present:hover .present-mark { transform: translateX(1px) scale(1.08); }
+.present-menu[open] > .header-present { filter: brightness(1.08); }
 .header-download { --button-icon: url(../assets/download.svg); }
 .header-save { --button-icon: url(../assets/save.svg); }
 /* While something is owed it is the one button in the header that asks to
    be pressed, so it says so -- the accent, as the present button does. */
-.header-save.is-owed { color: var(--accent); }
-/* The file itself. It sits between downloading and the menu, and it must
-   NOT take an auto margin of its own: the rule below hands one to every
-   icon button in the header, and a second one would split the free space
-   between the two and tear the right-hand group apart. The group's margin
-   belongs to whatever stands at its left end (presenting), not to each of
-   its members. */
+.header-save.is-owed { color: var(--accent); background: var(--accent-wash); }
 .header-source { --button-icon: url(../assets/toolbar/code.svg); }
-.head > .header-source { margin-left: 0; }
-/* The deck's two strips (partials/bands.ejs). Same reasoning as the line
-   above: it stands inside the right-hand group and must not take a second
-   auto margin, which would split the free space and tear the group apart. */
 .header-bands { --button-icon: url(../assets/bands.svg); }
-.head > .header-bands { margin-left: 0; }
-/* Presenting is either the plain button -- which the rule above already
-   pushes to the right edge -- or, where there is a choice, a menu around
-   it. Inside the <details> that rule no longer reaches the button, so the
-   menu has to carry the margin itself. Only ever one of the two is there
-   (index.js), so the two margins never meet. */
-.head > .present-menu { margin-left: auto; }
+/* The settings menu is the last thing in the bar on both pages, and on the
+   overview it is the only thing -- so it, and not whatever happens to
+   precede it, takes the margin that pushes the right-hand end apart. */
+.head > .head-menu { margin-left: auto; }
+/* In the editor the tray and the present button stand before it, and the
+   gap belongs in front of THEM -- otherwise the settings button drifts off
+   on its own and the group it ends falls apart. */
+.head > .head-tools { margin-left: auto; }
+.head > .head-tools ~ .head-menu { margin-left: 0; }
 
 .menu { position: relative; }
 .menu summary { list-style: none; }
 .menu summary::-webkit-details-marker { display: none; }
+/* A menu floats, so it is lifted off the page rather than ruled off it: the
+   shadow is what says "this is over the form", and the border is only there
+   to give it an edge where the shadow is too faint to find one -- against a
+   white card in the light palette, mostly.
+
+   It arrives rather than appearing: a sixth of a second, a few pixels up
+   and a touch of scale. The animation is on the open state because a
+   <details> has no other moment to hang one on. */
 .menu-content {
   position: absolute;
   right: 0;
   z-index: 20;
-  margin-top: 4px;
-  padding: 4px;
+  margin-top: var(--s2);
+  padding: var(--s1);
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-3);
   width: max-content;
   max-width: 290px;
 }
+.menu[open] > .menu-content { animation: menu-in var(--base) var(--ease); }
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
 .menu-content a {
   display: block;
-  padding: 7px 10px;
-  border-radius: 4px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
   color: inherit;
   text-decoration: none;
+  transition: background var(--fast) var(--ease);
+}
+/* A menu floats, so it is lifted off the page rather than ruled off it: the
+   shadow is what says "this is over the form", and the border is only there
+   to give it an edge where the shadow is too faint to find one -- against a
+   white card in the light palette, mostly.
+
+   It arrives rather than appearing: a sixth of a second, a few pixels up
+   and a touch of scale. The animation is on the open state because a
+   <details> has no other moment to hang one on. */
+.menu-content {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  margin-top: var(--s2);
+  padding: var(--s1);
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-3);
+  width: max-content;
+  max-width: 290px;
+}
+.menu[open] > .menu-content { animation: menu-in var(--base) var(--ease); }
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.menu-content a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--fast) var(--ease);
 }
 .menu-content a:hover { background: var(--surface); }
 /* An entry with an icon beside its word is a row, not a block. */
@@ -340,22 +698,35 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .present-from-current { --button-icon: url(../assets/number.svg); }
 
 /* --- Overview page ---------------------------------------------------- */
-.page-overview .content { max-width: 820px; margin: 24px auto; padding: 0 14px; }
+.page-overview .content { max-width: 820px; margin: var(--s7) auto; padding: 0 var(--s4); }
 .empty { color: var(--muted); }
 .deck-list { list-style: none; margin: 0; padding: 0; }
+/* A talk is a card, and a card one can open answers the pointer by rising:
+   the lift goes up a step and the whole row moves a pixel towards the
+   reader. It is the clearest way a list has of saying every row of it is a
+   door. */
 .deck-list li {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  margin-bottom: 8px;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s2);
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-1);
+  transition: box-shadow var(--base) var(--ease),
+              transform var(--base) var(--ease),
+              border-color var(--base) var(--ease);
+}
+.deck-list li:hover {
+  border-color: var(--accent-edge);
+  box-shadow: var(--lift-2);
+  transform: translateY(-1px);
 }
 .deck-list li > a { flex: 1; text-decoration: none; color: inherit; }
-.deck-title { display: block; font-weight: 600; }
-.deck-meta { display: block; font-size: 13px; color: var(--muted); }
+.deck-title { display: block; font-weight: 600; font-size: 15px; }
+.deck-meta { display: block; margin-top: 2px; font-size: 13px; color: var(--faint); }
 .deck-actions { display: flex; gap: 6px; }
 .deck-vorfuehren { --button-icon: url(../assets/play.svg); }
 .deck-vorfuehren:hover { color: var(--accent); }
@@ -368,7 +739,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   border-style: dashed;
   background: none;
 }
-.deck-list li.deck-fresh:hover { border-color: var(--accent); border-style: solid; }
+.deck-list li.deck-fresh { box-shadow: none; }
+.deck-list li.deck-fresh:hover {
+  border-color: var(--accent);
+  border-style: solid;
+  background: var(--accent-wash);
+  box-shadow: var(--lift-1);
+}
 .deck-fresh-button {
   display: flex;
   align-items: center;
@@ -395,7 +772,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   height: 1.75rem;
   border: 1px solid currentColor;
   border-radius: 50%;
+  transition: transform var(--base) var(--ease);
 }
+.deck-fresh-button:hover .deck-fresh-zeichen { transform: rotate(90deg); }
 .deck-fresh-zeichen::before {
   content: "";
   width: 0.75rem;
@@ -551,10 +930,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   height: 28px;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
-  color: var(--muted);
+  color: var(--faint);
   cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
 }
 .slides-step[hidden] { display: none; }
 .slides-step[data-dir="up"] { margin-bottom: 4px; --cards-icon: url(../assets/up.svg); }
@@ -571,21 +951,29 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 }
 .slides-step:hover { color: var(--text); background: var(--paper); }
 .slides-step:disabled { opacity: 0.35; background: none; cursor: default; }
-.slides-step:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.slides-step:focus-visible { outline: none; box-shadow: var(--ring); }
 .slide-card {
   /* The shape of the screen the talk is meant for. The picture inside the
      frame is cut to the same shape, and the two have to agree -- see
      css/thumb.css, which states it from the inside. */
   --thumb-shape: 19 / 9;
   position: relative;
-  margin-bottom: 6px;
+  margin-bottom: var(--s2);
   background: var(--paper);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--lift-1);
   /* The picture has square corners and the card has not. */
   overflow: hidden;
   cursor: pointer;
+  transition: box-shadow var(--base) var(--ease),
+              transform var(--base) var(--ease),
+              border-color var(--base) var(--ease);
 }
+/* The card answers the pointer the way the talks on the overview do: a
+   step of lift and a pixel towards the reader. It is the cheapest way a
+   list of pictures has of saying that each of them can be picked up. */
+.slide-card:hover { box-shadow: var(--lift-2); transform: translateY(-1px); }
 /* A ring around the whole card rather than a mark along one edge of it.
    The card is a picture now and nothing else, and a picture in full
    colour beside twelve others in full colour needs the louder of the two:
@@ -599,7 +987,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .slide-card.is-active {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
+  box-shadow: var(--lift-2);
 }
+.slide-card.is-active:hover { transform: none; }
 .slide-card.is-vertical { margin-left: 18px; }
 .slide-card.wird-gezogen { opacity: 0.4; }
 .slide-card.is-target { border-color: var(--accent); }
@@ -634,20 +1024,27 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 /* The number, in the corner of the picture. It carries its own small
    ground: what is behind it is a slide, and a slide may be any colour at
    all -- the same reason the buttons opposite have one. */
+/* The number rides on the picture, and the picture may be any colour at
+   all -- so the badge brings its own ground rather than trusting the one
+   underneath. Nearly opaque, because at 78 % a white slide left grey
+   digits on near-white and the number was gone on exactly the slides one
+   most often counts through. */
 .card-number {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  min-width: 18px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--paper) 78%, transparent);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 16px;
+  top: var(--s2);
+  left: var(--s2);
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
   text-align: center;
+  box-shadow: var(--lift-1);
 }
-.slide-card.is-active .card-number { color: var(--accent); }
+.slide-card.is-active .card-number { background: var(--accent); color: var(--accent-text); }
 
 /* The heading and the layout, for a reader that cannot see the picture
    (js/editor/slide-list.js). Out of the way of the eye and in the way of
@@ -668,11 +1065,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    buttons that are not there most of the time. */
 .card-buttons {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: var(--s2);
+  right: var(--s2);
   display: flex;
   gap: 2px;
   opacity: 0;
+  transition: opacity var(--fast) var(--ease);
 }
 .slide-card:hover .card-buttons,
 .slide-card.is-active .card-buttons { opacity: 1; }
@@ -683,14 +1081,20 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 22px;
+  width: 26px;
+  height: 24px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  /* Nearly opaque for the same reason the number is: these sit on the
+     picture, and the picture is whatever the slide happens to look like. */
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
   color: var(--muted);
   cursor: pointer;
+  box-shadow: var(--lift-1);
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              color var(--fast) var(--ease);
 }
 .card-button::before {
   content: "";
@@ -705,20 +1109,25 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .card-button[data-action="indent"] { --cards-icon: url(../assets/sub.svg); }
 .card-button[data-action="duplicate"] { --cards-icon: url(../assets/duplicate.svg); }
 .card-button[data-action="delete"] { --cards-icon: url(../assets/delete.svg); }
-.card-button:hover { border-color: var(--accent); color: var(--text); }
+.card-button:hover { background: var(--paper); border-color: var(--accent-edge); color: var(--text); }
 /* Already hanging vertically: the button undoes that, so it reads as
    engaged instead of as a fresh action. */
 .card-button.is-active { border-color: var(--accent); color: var(--accent); }
-.card-button[data-action="delete"]:hover { border-color: var(--danger); color: var(--danger); }
+.card-button[data-action="delete"]:hover { background: var(--danger-wash); border-color: var(--danger); color: var(--danger); }
 
 /* --- Form ------------------------------------------------------------- */
+/* A box of the form is a card: a white ground, a soft edge and just enough
+   lift to say it lies ON the column rather than being cut out of it. The
+   lift is what does the work in the dark palette, where a hairline between
+   two near-black surfaces is a rumour. */
 .fieldset {
   position: relative;
-  margin: 21px 0 14px;
-  padding: 10px 12px 12px;
+  margin: 22px 0 var(--s4);
+  padding: var(--s4);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--paper);
+  box-shadow: var(--lift-1);
 }
 /* The legend sits ABOVE the box, not in a notch of its border. Riding the
    border, it pushed everything inside the middle column down by its own
@@ -728,14 +1137,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .fieldset legend,
 .columns-head {
   position: absolute;
-  top: -21px;
+  top: -22px;
   left: 0;
   padding: 0;
-  line-height: 17px;
-  font-size: 12px;
+  line-height: 18px;
+  font-size: 11px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
+  letter-spacing: 0.08em;
+  color: var(--faint);
 }
 /* The outer columns have no box to hang a label off, so theirs is placed
    normally and simply takes up the same 21px. */
@@ -800,38 +1210,50 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
    full-strength type say "this one" clearly enough, and the bar on the
    dividing line only tied the button back to the box it is standing on. */
 .tabbed {
-  margin: 21px 0 14px;
+  margin: 22px 0 var(--s4);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--paper);
+  box-shadow: var(--lift-1);
   /* Deliberately NOT overflow: hidden, however much the rounded corners
      would like it -- the menus in the text bar below open out of their
      box, and the emoji panel is taller than the form. The strip rounds its
      own top corners instead, minus the border it sits inside. */
 }
+/* The strip is a segmented control: one sunken track with the chosen half
+   riding on it as a raised card. It is the shape every operating system
+   now uses for "one of these", which is the whole argument for it -- nobody
+   has to learn what it means.
+
+   It no longer spans the box edge to edge. Inset by the box's own padding
+   with a radius of its own, it reads as a CONTROL sitting in the card
+   rather than as a header bar glued to the top of it. */
 .tab-row {
   display: flex;
-  gap: 2px;
-  /* The same four pixels on every side, so the button in front stands ON
-     the strip with air all round rather than sitting in a corner of it. */
-  padding: 4px;
-  border-bottom: 1px solid var(--border);
-  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
-  background: var(--surface);
+  gap: var(--s1);
+  padding: var(--s1);
+  margin: var(--s3) var(--s3) 0;
+  border-radius: var(--radius);
+  background: var(--sunken);
 }
 .tab {
-  padding: 6px 12px;
+  flex: 1;
+  padding: 7px 12px;
   border: 0;
-  border-radius: calc(var(--radius) - 2px);
+  border-radius: var(--radius-sm);
   background: none;
   /* A button brings its own typeface; `font` takes it back in one word.
      It takes the line height with it, so the two that this strip's height
      rests on are said again after it, not before. */
   font: inherit;
   font-size: 13px;
+  font-weight: 500;
   line-height: 18px;
   color: var(--muted);
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
 /* The one behind only brightens its type. A ground on hover as well and
    the strip would answer every passing mouse with the very thing that is
@@ -846,15 +1268,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tab[aria-selected="true"] {
   background: var(--paper);
   color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--lift-1);
   cursor: default;
 }
-.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 /* The box is the wrapper now, so the panel is nothing but padding. */
-.tab-panel { padding: 10px 12px 12px; }
+.tab-panel { padding: var(--s4); }
 
-.field { display: block; margin-bottom: 10px; }
+.field { display: block; margin-bottom: var(--s4); }
 .field:last-child { margin-bottom: 0; }
-.field-label { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+/* The name of a field, and it is not the field: smaller, heavier and grey,
+   so a column of them reads as a list of questions rather than as more
+   text. */
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--muted);
+}
 .field > input, .field > textarea { width: 100%; }
 .field-schmal > input { width: auto; }
 /* A field with a control at its end -- the heading and its alignment
@@ -865,11 +1298,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .field-row {
   display: flex;
   align-items: stretch;
-  background: var(--paper);
+  /* The same sunken ground every other field has: it IS a field, it just
+     happens to be made of two elements. White here and a shade darker two
+     rows down was the form asking the same question in two voices. */
+  background: var(--sunken);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
-.field-row:has(> input:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.field-row:hover { border-color: var(--accent-edge); }
+.field-row:has(> input:focus) { background: var(--paper); }
+.field-row:has(> input:focus) { border-color: var(--accent); box-shadow: var(--ring); }
 .field-row > input {
   flex: 1;
   min-width: 0;
@@ -877,8 +1318,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   border-radius: 0;
   background: none;
 }
-/* The ring belongs to the row now, or there would be two of them. */
-.field-row > input:focus { outline: none; }
+/* The ring belongs to the row now, or there would be two of them -- and
+   the inner one would be drawn INSIDE the row, which is the worst place
+   for it. */
+.field-row > input:focus { outline: none; box-shadow: none; background: none; }
 /* Nothing but a hairline between the two, and the row decides the height.
    100% and not auto: the flex item here is the <details>, which the row
    stretches -- the summary inside it would otherwise be as tall as its
@@ -914,27 +1357,109 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tool-band-place[data-place="right"] { --button-icon: url(../assets/toolbar/format-right.svg); }
 .band-place .menu-content { min-width: 0; white-space: nowrap; }
 input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; }
-.hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+/* What a field says about itself once it has been read: a size down and a
+   shade quieter than the label, because it is the LAST thing one needs. */
+.hint { margin: 6px 0 0; font-size: 12px; line-height: 1.45; color: var(--faint); }
+
+/* The layout in force, standing in for the eleven behind it. It is a field
+   rather than a button -- the same sunken ground as everything else one
+   reaches into -- because that is what it is: a value one can change, not a
+   command. The picture to the left is the same CSS thumbnail the tile in
+   the sheet carries, so the two are visibly the same thing. */
+.layout-current {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--sunken);
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
+}
+.layout-current:hover { background: var(--paper); border-color: var(--accent-edge); box-shadow: var(--lift-1); }
+.layout-menu[open] > .layout-current {
+  background: var(--accent-wash);
+  border-color: var(--accent-edge);
+}
+.layout-current-name { font-weight: 600; }
+/* The word that says the row opens, at the right edge with a caret after
+   it. Quiet until the row is pointed at: it is a prompt, not a label. */
+.layout-current-change {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--faint);
+  transition: color var(--fast) var(--ease);
+}
+.layout-current-change::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
+  mask: url(../assets/dow.svg) center / contain no-repeat;
+  transition: transform var(--base) var(--ease);
+}
+.layout-current:hover .layout-current-change { color: var(--accent); }
+.layout-menu[open] .layout-current-change { color: var(--accent); }
+.layout-menu[open] .layout-current-change::after { transform: rotate(180deg); }
+
+/* The sheet the eleven live in. It hangs from both edges of the row rather
+   than from one of them, so the grid inside gets the whole width of the
+   form -- a menu 290px wide would have put the tiles in two columns and
+   made the choice longer to read than it was as a wall. */
+.layout-sheet {
+  left: 0;
+  right: 0;
+  width: auto;
+  max-width: none;
+  padding: var(--s3);
+}
 
 /* Layout tiles: the thumbnails are pure CSS -- one image per layout would
    be another file, forgotten the next time a layout changes. */
-.layout-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
+.layout-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--s2); }
 .layout-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
-  border: 1px solid var(--border);
+  gap: var(--s2);
+  padding: var(--s2) var(--s1);
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--sunken);
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              border-color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease),
+              transform var(--fast) var(--ease);
 }
-.layout-tile:hover:not(:disabled) { border-color: var(--accent); }
-.layout-tile.is-active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.layout-tile:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: var(--accent-edge);
+  box-shadow: var(--lift-2);
+  transform: translateY(-1px);
+}
+/* The one in force wears the wash rather than a ring: on a grid of eleven
+   small shapes an outline reads as a twelfth edge, and the tinted ground is
+   seen before any of them. */
+.layout-tile.is-active {
+  background: var(--accent-wash);
+  border-color: var(--accent-edge);
+  color: var(--accent);
+}
+.layout-tile.is-active .mini::before,
+.layout-tile.is-active .mini::after { background: var(--accent); }
 /* Out of reach while the slide already says something (js/editor/index.js).
    The same 0.35 every other switched-off control in this editor wears. */
 .layout-tile:disabled { opacity: 0.35; cursor: default; }
+.layout-tile:disabled:hover { transform: none; box-shadow: none; }
 .layout-name { font-size: 11px; text-align: center; line-height: 1.2; }
 
 .mini {
@@ -1025,7 +1550,21 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .mini-quote::before { left: 15%; right: 15%; top: 10px; height: 8px; opacity: 0.3; }
 .mini-quote::after { left: 40%; right: 15%; top: 22px; height: 3px; }
 
-/* Text tools */
+/* Text tools.
+
+   Seventeen icons in one row, all the same size and all the same grey, is a
+   row nobody reads -- one hunts along it every single time. So the bar is
+   built of GROUPS, and the groups are the sentence it makes: what a word is
+   (bold, italic, struck), what a line is (a bullet, a number, a link),
+   where it stands, what colour it is, what appears on a click, what the
+   layout adds, and -- at the far end, where nothing else is -- the switch
+   to the file itself.
+
+   The grouping is drawn with space and nothing else. The hairlines that
+   used to stand between them were five more vertical lines on a surface
+   that already had enough, and a gap says the same thing without drawing
+   anything: things near each other belong together. That is the oldest
+   rule in the book and it costs no ink. */
 .toolbar {
   /* The containing block for the emoji panel further down -- which hangs
      from the BAR and not from its own button, see there. */
@@ -1033,20 +1572,36 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 3px;
-  padding: 4px;
+  /* The one number that does the grouping: between groups, and 1px inside
+     them. Less down the page than across it -- a wrapped bar is still one
+     bar, and two rows a group's width apart would read as two. */
+  gap: var(--s2) var(--s4);
+  padding: var(--s2);
   border: 1px solid var(--border);
   border-bottom: 0;
-  border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--sunken);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
+.toolbar-group { display: flex; align-items: center; gap: 1px; }
+/* A group whose every member belongs to another layout leaves no gap
+   behind: without this the bar keeps a hole where the video and the
+   picture tools would be on a slide that has neither. */
+.toolbar-group:not(:has(> *:not([hidden]))) { display: none; }
+/* The last group does not queue up behind the others. It is the one thing
+   in the bar that does not format anything -- it swaps the field for the
+   file -- so it stands alone at the right-hand end. */
+.toolbar-end { margin-left: auto; }
 .toolbar button {
   padding: 3px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   font-size: 13px;
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
 /* The icon buttons of the toolbar. The files carry a fixed dark fill, so
    they are masks coloured by the button -- the same treatment as every
@@ -1061,11 +1616,41 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  /* 30px: the smallest square that is still comfortably hit, and the
+     largest that keeps seven groups on one line in a narrow form. */
+  width: 30px;
+  height: 30px;
   padding: 0;
-  color: var(--text);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
+/* Pointed at, a tool rises off the sunken bar onto a ground of its own --
+   the same white as the field below, so the bar reads as the shelf and the
+   button as the thing taken off it. */
+.toolbar .tool-icon:hover:not(:disabled),
+.place-add .tool-icon:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--text);
+  box-shadow: var(--lift-1);
+}
+.toolbar .tool-icon:active:not(:disabled) { box-shadow: none; }
+/* In force on the text the cursor is in. The wash and the accent, as
+   everywhere else in this editor that something is CHOSEN rather than
+   merely pressed. */
+.toolbar .tool-icon.is-active {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.toolbar .menu[open] > .tool-icon,
+.toolbar .menu[open] > .tool-word {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.toolbar .tool-icon:disabled { opacity: 0.35; cursor: default; }
 .toolbar .tool-icon::before,
 .place-add .tool-icon::before {
   content: "";
@@ -1133,7 +1718,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    what the bar gives its buttons has to be said again for this one. */
 .toolbar .menu-tool > summary {
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
   list-style: none;
@@ -1155,7 +1740,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   width: 100%;
   padding: 7px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -1166,14 +1751,23 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    It scrolls rather than reaching past the bottom of the window, with the
    scrollbar this app uses everywhere (js/scrollbars.js). */
 .menu-scroll { max-height: 46vh; overflow-y: auto; }
-.menu-content .menu-item:hover { background: var(--surface); }
-.menu-content .menu-item.is-active { color: var(--accent); }
+.menu-content .menu-item:hover { background: var(--sunken); }
+.menu-content a:hover { background: var(--sunken); }
+/* The one in force. The wash and not the word alone: in a menu of fourteen
+   themes a line of blue type among thirteen grey ones is something one has
+   to hunt for, and a tinted row is seen before it is read. */
+.menu-content .menu-item.is-active,
+.menu-content .menu-item[aria-checked="true"] {
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-weight: 600;
+}
 /* Said again with .toolbar in front, exactly as before: the bar's own
    button:hover would otherwise put a border on a menu row. The active row
    keeps taking its border and its paper from .toolbar button.is-active --
    in the bar that is what a chosen row has always looked like. */
-.toolbar .menu-content .menu-item:hover { border-color: transparent; background: var(--surface); }
-.toolbar .menu-content .menu-item.is-active { color: var(--accent); }
+.toolbar .menu-content .menu-item:hover { border-color: transparent; background: var(--sunken); }
+.toolbar .menu-content .menu-item.is-active { background: var(--accent-wash); color: var(--accent); }
 /* The emoji panel: a grid rather than the rows the other menus have -- a
    few hundred characters as a list would be a column several screens long,
    and an emoji needs no word beside it. Ten to a row, and the panel itself
@@ -1217,7 +1811,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   height: 1.75rem;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   /* The emoji themselves, a touch larger than the text around them -- and
      from the fonts that actually hold them, or a system without the colour
@@ -1286,7 +1880,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   transform: none;
   width: 1.75rem;
   height: 1.75rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: currentColor;
   -webkit-mask: url(../assets/toolbar/color.svg) center / 1.125rem no-repeat;
   mask: url(../assets/toolbar/color.svg) center / 1.125rem no-repeat;
@@ -1299,7 +1893,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   position: absolute;
   inset: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
 }
 .tool-color .clr-field.is-empty input.color-field { background: none; }
@@ -1313,21 +1907,32 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .toolbar button.is-active { border-color: var(--accent); background: var(--paper); }
 .toolbar .tool-icon.is-active { color: var(--accent); }
 .place-add .tool-icon:hover { color: var(--accent); }
-.toolbar-divider { width: 1px; height: 18px; margin: 0 3px; background: var(--border); }
+/* Kept for the element dialog's own bar, which is short enough to read in
+   one go and has no groups to separate. */
+.toolbar-divider { width: 1px; height: 18px; margin: 0 var(--s1); background: var(--border); }
 
 .field-frame {
   min-height: 180px;
   max-height: 46vh;
   overflow-y: auto;
   border: 1px solid var(--border);
-  border-radius: 0 0 var(--radius) var(--radius);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background: var(--paper);
+  transition: border-color var(--fast) var(--ease);
 }
-/* The focus ring belongs on the frame, because the field inside it no
-   longer touches the edge once OverlayScrollbars has moved it into its
-   viewport. */
+/* The bar and the field are one well, so they take focus together: a ring
+   around the lower half alone would cut the thing in two at exactly the
+   moment one is working in it. Both edges go to the accent instead -- which
+   is the same signal every field in this editor gives, drawn round a shape
+   that happens to be made of two elements.
+
+   It is said on the FIELD and not on what is inside it, because the field
+   no longer touches its own edge once OverlayScrollbars has moved it into
+   a viewport of its own. */
+.field:has(.content-field:focus) > .toolbar,
+.field:has(.source-field:focus) > .toolbar { border-color: var(--accent); }
 .field-frame:has(.content-field:focus),
-.field-frame:has(.source-field:focus) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.field-frame:has(.source-field:focus) { border-color: var(--accent); }
 .content-field, .source-field {
   display: block;
   width: 100%;
@@ -1338,7 +1943,23 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   color: inherit;
   font: inherit;
 }
-.content-field:focus, .source-field:focus { outline: none; }
+/* These two do not carry their own ground, edge or ring: the frame around
+   them does (.field-frame, and the bar above it). The global field rules
+   hand every <textarea> all three on focus, which would draw a second ring
+   INSIDE the first -- so they are given back here. Two classes beat
+   `textarea:focus` whatever the order of the file.
+
+   A contenteditable is not an input and escapes those rules, but not the
+   one ring this stylesheet puts on everything the keyboard reaches
+   (:focus-visible, far above). It is turned off here for the same reason. */
+.content-field:focus, .source-field:focus,
+.content-field:focus-visible, .source-field:focus-visible,
+.source-field:hover {
+  outline: none;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
 .content-field:empty::before { content: attr(data-placeholder); color: var(--muted); }
 .content-field p { margin: 0 0 0.7em; }
 .content-field ul, .content-field ol { margin: 0 0 0.7em; padding-left: 1.4em; }
@@ -1422,39 +2043,44 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   appearance: none;
   -webkit-appearance: none;
   flex: 0 0 auto;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 24px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
+  border-radius: var(--radius-pill);
+  background: var(--sunken);
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition: background-color var(--base) var(--ease),
+              border-color var(--base) var(--ease);
 }
 /* The knob. A pseudo-element OF the input, which a checkbox only draws
    once it has given up its own appearance -- hence the line above. */
 .switch::after {
   content: "";
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   margin: 2px;
   border-radius: 50%;
   background: var(--muted);
-  transition: transform 0.15s, background-color 0.15s;
+  /* The knob carries a lift of its own, so it reads as lying IN the track
+     rather than as a second colour painted on it. */
+  box-shadow: var(--lift-1);
+  transition: transform var(--base) var(--ease),
+              background-color var(--base) var(--ease);
 }
-.switch:hover:not(:disabled) { border-color: var(--accent); }
+.switch:hover:not(:disabled) { border-color: var(--accent-edge); }
 .switch:checked {
   border-color: var(--accent);
   background: var(--accent);
 }
 .switch:checked::after {
-  /* 36 across, less two borders, less the knob and its two margins. */
+  /* 40 across, less two borders, less the knob and its two margins. */
   transform: translateX(16px);
   background: var(--accent-text);
 }
-.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch:focus-visible { outline: none; box-shadow: var(--ring); }
 .switch:disabled { cursor: default; opacity: 0.5; }
 /* The form gives every input standing in a field the whole width of it
    (.field > input, far above). A switch is not that kind of input: it is
@@ -1491,27 +2117,40 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   margin-top: 8px;
 }
 .field-column-count .field-label { margin-bottom: 0; }
-.count-choice { display: flex; gap: 4px; }
+/* The two values in one sunken track, the chosen one riding on it: the
+   same segmented control the form's tabs are, at the size of two digits.
+   One shape for "one of these", wherever the question is asked. */
+.count-choice {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: var(--sunken);
+}
 /* The same small, quiet button the column chooser over the text field
    wears (.column-tab): one shape for choosing among a handful of things. */
 .count-option {
-  min-width: 26px;
-  padding: 1px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--paper);
+  min-width: 28px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--muted);
   font-size: 13px;
-  line-height: 19px;
+  font-weight: 500;
+  line-height: 20px;
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              box-shadow var(--fast) var(--ease);
 }
-.count-option:hover { border-color: var(--accent); }
+.count-option:hover { color: var(--text); }
 .count-option.is-active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
+  background: var(--paper);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: var(--lift-1);
 }
-.count-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* --- What a freestyle slide is written with ---------------------------
    Where the text field stands on every other layout: one button, which
@@ -1526,7 +2165,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .place-add button {
   padding: 3px 8px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
 }
@@ -1637,16 +2276,20 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    the only sign of what is in the columns one cannot see. */
 .column-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
 .column-tab {
-  padding: 1px 8px;
+  padding: 2px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   font-size: 13px;
-  line-height: 19px;
+  font-weight: 500;
+  line-height: 20px;
   cursor: pointer;
+  transition: background var(--fast) var(--ease),
+              color var(--fast) var(--ease),
+              border-color var(--fast) var(--ease);
 }
-.column-tab:hover { border-color: var(--border); background: var(--paper); }
+.column-tab:hover { border-color: transparent; background: var(--sunken); color: var(--text); }
 .column-tab.is-empty { opacity: 0.5; }
 .column-tab.is-active {
   border-color: var(--accent);
@@ -1730,14 +2373,21 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    The heading is the ordinary field label with a line under it: enough to
    gather three fields into one answer, not so much that the panel grows a
    second kind of box inside the box it already is. */
-.color-group + .color-group { margin-top: 16px; }
+.color-group + .color-group { margin-top: var(--s6); }
+/* The heading over a group of fields. It is not a field label -- it names
+   the QUESTION the three fields under it are three answers to -- so it is
+   the size of the box headings outside, in small capitals, and the line
+   under it gathers them without drawing a second box inside the box. */
 .group-label {
   display: block;
-  margin-bottom: 8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--text);
+  margin-bottom: var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
 }
 /* On its own line, like the gradient and the effect under it. */
 .color-group > .color-choice { display: block; margin-bottom: 10px; }
@@ -1838,13 +2488,14 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   background-color: var(--paper);
   cursor: pointer;
 }
-.gradient-probe:hover { border-color: var(--accent); }
+.gradient-probe { transition: box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.gradient-probe:hover { border-color: var(--accent-edge); box-shadow: var(--lift-2); transform: translateY(-1px); }
 /* The chosen one is named by a ring outside the swatch: a border of its own
-   would sit on top of the gradient and change what the sample shows. */
+   would sit on top of the gradient and change what the sample shows. A gap
+   between the two, so the ring is read as a ring and not as a thick edge. */
 .gradient-probe.is-active {
-  border-color: var(--accent);
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  border-color: var(--paper);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 /* "No gradient" carries the same struck-through circle as a colour dot
    without a colour -- the same statement, so the same picture. */
@@ -1876,9 +2527,10 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   background-color: var(--paper);
   cursor: pointer;
 }
-.effect-tile:hover { border-color: var(--accent); }
+.effect-tile { transition: box-shadow var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.effect-tile:hover { border-color: var(--accent-edge); box-shadow: var(--lift-2); transform: translateY(-1px); }
 .effect-tile.is-active {
-  border-color: var(--accent);
+  border-color: var(--paper);
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
@@ -1982,16 +2634,18 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 2rem;
-  padding: 0 8px;
+  height: 34px;
+  padding: 0 var(--s3);
+  border-radius: var(--radius-pill);
   color: var(--muted);
   cursor: pointer;
   list-style: none;
   /* It stands on a slide that may be any colour at all, so it carries its
      own shadow to sit off it rather than in it. */
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--lift-2);
+  transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease);
 }
-.preview-format-value:hover { color: var(--text); border-color: var(--accent); }
+.preview-format-value:hover { color: var(--text); border-color: var(--accent-edge); }
 .preview-format[open] > .preview-format-value { border-color: var(--accent); color: var(--accent); }
 /* The icon file carries a fixed dark grey fill, so it serves as a mask and
    takes the button's colour -- the same treatment every other icon here
@@ -2063,71 +2717,152 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   position: fixed;
   z-index: 100;
   max-width: 260px;
-  padding: 5px 9px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--paper);
   color: var(--text);
   font-size: 12px;
   line-height: 1.35;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--lift-3);
   /* It must never swallow the hover that summoned it. */
   pointer-events: none;
   opacity: 0;
-  transition: opacity 120ms ease;
+  /* It rises the last two pixels into place rather than switching on. The
+     transform is on the hidden state, so going away is the same move
+     backwards without a second rule. */
+  transform: translateY(2px);
+  transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease);
 }
-.tooltip.is-visible { opacity: 1; }
+.tooltip.is-visible { opacity: 1; transform: none; }
 
 /* --- Dialog ----------------------------------------------------------- */
+/* A dialog is the furthest thing from the page there is, so it takes the
+   largest radius and the deepest lift. It arrives rather than appearing:
+   the same few pixels and the same touch of scale as a menu, over a little
+   longer, because it is a bigger thing to put on the screen. */
 .dialog {
   width: min(680px, 92vw);
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   background: var(--paper);
   color: var(--text);
+  box-shadow: var(--lift-4);
 }
-.dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.dialog[open] { animation: dialog-in var(--slow) var(--ease); }
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+/* Blurred rather than merely darkened: at this opacity a flat black veil
+   leaves the page underneath legible enough to go on reading, which is the
+   one thing a modal is for stopping. */
+.dialog::backdrop {
+  background: rgba(20, 18, 15, 0.38);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
 .dialog-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--s4);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--border-soft);
 }
-.dialog-head h2 { margin: 0; font-size: 16px; }
-.dialog-content { padding: 14px; }
+.dialog-head h2 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.dialog-content { padding: var(--s5); }
 /* A dialog holding a single field has no business being as wide as the
    image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
-/* And the other way for the one dialog that shows a whole file: as much of
-   the window as a dialog may take without ceasing to be one. */
-.dialog-wide { width: min(1080px, 94vw); }
+/* The two buttons a dialog's head may carry beside its title
+   (partials/ai.ejs). The source column builds its own the same way at its
+   foot -- see .source-actions-buttons, which is this rule in the one place
+   that is not a dialog. */
+.dialog-head-buttons { display: flex; align-items: center; gap: var(--s2); }
 /* --- The deck as Markdown --------------------------------------------- */
-/* A head that stays and the file scrolling under it -- a source text that
-   pushed the dialog's own title off the top would be a strange thing to
-   offer. [open] and not the plain id: a <dialog> is hidden by display:none
-   from the browser itself, and a display of ours with an id's weight
-   behind it would leave the dialog standing on the page for good. */
-#deck-source-dialog[open] {
+/* A column of the editor, standing where the slide list and the form
+   stand the rest of the time (js/editor/deck-source.js). A head that stays
+   and the file scrolling under it -- a source text that pushed its own
+   title off the top would be a strange thing to offer. */
+.source-view {
   display: flex;
   flex-direction: column;
-  max-height: 88vh;
-  /* Pullable at the corner by the browser's own resizer, which needs the
-     overflow to be anything but visible. Both halves inside scroll on
-     their own, so there is nothing here for it to cut off. The floor keeps
-     a pull from leaving a window too small to hold a line of the file. */
-  resize: both;
+  /* The three rules below undo what .column hands every column: this one
+     holds a head, a scrolling middle and a foot, and it is the middle that
+     scrolls, not the column. */
   overflow: hidden;
-  min-width: 340px;
-  min-height: 220px;
+  padding: 0;
+  background: var(--paper);
 }
+/* There is no head. The column held a title saying what one is plainly
+   looking at and a button repeating what the one in the header already
+   does -- two strips of furniture over a file that is the whole reason for
+   being here. The file starts at the top of the column instead, and the
+   way back is the same switch that was used to come in.
+
+   What the head did carry and could not go are the two buttons that settle
+   typed text. They are at the foot now, under the findings that shut one
+   of them -- an answer belongs next to its reason -- and they are only
+   there at all once there is something to settle. */
+.source-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  flex: 0 0 auto;
+  padding: var(--s3) var(--s4);
+  border-top: 1px solid var(--border);
+  background: var(--paper);
+}
+.source-actions .hint { margin: 0; }
+.source-actions-buttons { display: flex; align-items: center; gap: var(--s2); flex: 0 0 auto; }
+/* The file runs to the top edge of the column now; the padding it had above
+   it belonged to the head that is gone. */
+.source-view > .deck-source:first-child { padding-top: var(--s4); }
+/* Focused only ever by the keyboard leaving a block, never by Tab, so it
+   draws no ring: a 700-pixel column lighting up blue says nothing about
+   where the caret went. */
+.source-view:focus { outline: none; box-shadow: none; }
+
+/* While the file is open, the two columns it replaces are not there and
+   the preview moves up into the second track. The seam keeps its own
+   track, which is the preview's, exactly as it does the rest of the time.
+
+   The width is the source column's own (js/column-split.js): a form is as
+   wide as its fields need and a file as wide as its longest line, so the
+   two remember different numbers. */
+.editor.is-sourcing {
+  grid-template-columns:
+    minmax(360px, var(--source-width, 1.15fr))
+    minmax(320px, 1fr);
+}
+.editor.is-sourcing > .slide-list,
+.editor.is-sourcing > .column.form { display: none; }
+.editor.is-sourcing > .source-view { grid-column: 1; grid-row: 1; }
+.editor.is-sourcing > .column.preview,
+.editor.is-sourcing > .column-split { grid-column: 2; grid-row: 1; }
+/* The button that opened it stays lit for as long as it is open: this is a
+   mode, and a mode that does not say it is on is one nobody finds the way
+   out of. */
+.header-source[aria-expanded="true"] {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
 /* --- A dialog that stands beside the preview --------------------------- */
-/* Two of them: the deck as Markdown and the deck's two bands. Both are
-   dragged aside and worked in WHILE the preview behind them is watched
-   (js/editor/dialog-aside.js), and both want the same two things of a
+/* Three of them: the deck's two bands, one element of a freestyle slide,
+   and the instruction a deck is changed by. Each is dragged aside and
+   worked in WHILE the preview behind it is watched
+   (js/editor/dialog-aside.js), and each wants the same two things of a
    <dialog> that neither gets by itself.
+
+   The deck's source used to be a fourth. It is a column of the editor now
+   (see above): it stands BESIDE the preview rather than over it, so none
+   of this applies to it any more -- which is the argument for the change
+   in one line.
 
    The first is a lighter veil -- the usual one would leave the preview
    under 45% of black. Light enough to see the page through, dark enough to
@@ -2216,9 +2951,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 14px 0;
-  background: var(--surface);
-  border-radius: 0 0 9px 9px;
+  padding: var(--s3) 0;
+  background: var(--sunken);
 }
 /* One row per block of the file: the mark on the left, the lines on the
    right. The narrow column is the same width in every row, so the rule
@@ -2289,10 +3023,24 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   background: color-mix(in srgb, var(--accent) 28%, transparent);
   color: transparent;
 }
-/* The rule beside an open block is the accent already; a focus ring around
-   it as well would box in a block that is meant to read as part of the
-   file. */
-.source-input:focus { outline: none; }
+/* This one is a SHEET OF GLASS laid over the coloured lines, and the three
+   things the global field rules give every <textarea> on focus -- a ground,
+   an edge and a ring -- are each exactly wrong for it. The ground is the
+   worst: an opaque white rectangle over the lines leaves nothing on the
+   screen at all, because the field's own letters are transparent by design
+   (see the colour above). It is given back in full, and for hover too.
+
+   The rule beside an open block is the accent already; a ring around it as
+   well would box in a block that is meant to read as part of the file. */
+.source-input,
+.source-input:hover,
+.source-input:focus,
+.source-input:focus-visible {
+  outline: none;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
 /* The rule has moved to the cell around this; the indent stays here and is
    repeated on the field, for the reason given up there. */
 .source-lines {
@@ -2362,10 +3110,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   max-height: 28vh;
   overflow-y: auto;
   margin: 0;
-  padding: 10px 14px;
+  padding: var(--s3) var(--s4);
   border-top: 1px solid var(--border);
   background: var(--paper);
-  border-radius: 0 0 9px 9px;
 }
 /* Shut while anything was found. What it is waiting for stands right
    underneath, so the button itself needs to say nothing -- only to look
@@ -2382,7 +3129,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   width: 100%;
   padding: 3px 6px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text);
   font: inherit;
@@ -2438,7 +3185,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   height: 1.25rem;
   padding: 0;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--muted);
   cursor: pointer;
@@ -2502,7 +3249,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   border-radius: var(--radius);
   cursor: pointer;
 }
-.band-logo-row .band-place > summary:hover { border-color: var(--accent); }
+.band-logo-row .band-place > summary:hover { border-color: var(--accent-edge); }
 .band-logo-row .band-place[open] > summary { border-color: var(--accent); color: var(--accent); }
 
 /* The two switches at the foot of each band's box: the dividing line and
@@ -2624,13 +3371,14 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .library-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px;
+  gap: var(--s3);
+  padding: var(--s2);
   border: 1px solid transparent;
   border-radius: var(--radius);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
 }
 .library-row + .library-row { margin-top: 2px; }
-.library-row:hover { border-color: var(--border); background: var(--surface); }
+.library-row:hover { border-color: transparent; background: var(--sunken); }
 /* Fitted, not cropped, and on a ground of its own -- the same reasoning as
    the preview in the image field: this is where one asks WHICH picture
    this is, and half of one answers that badly. */
@@ -2640,8 +3388,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   height: 40px;
   object-fit: contain;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
 }
 .library-words { display: flex; flex-direction: column; min-width: 0; }
 /* The one thing here that can outrun its column. Cut off at the end with
@@ -2673,7 +3421,7 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   margin-left: auto;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
@@ -2718,15 +3466,15 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 @keyframes enter-drop { from { opacity: 0; transform: translateY(-8px); } }
 @keyframes enter-fade { from { opacity: 0; } }
 
-[data-enter] .head { animation: enter-drop 240ms ease-out backwards; }
-[data-enter] .columns-head { animation: enter-fade 240ms ease-out 60ms backwards; }
+[data-enter] .head { animation: enter-drop 240ms var(--ease) backwards; }
+[data-enter] .columns-head { animation: enter-fade 240ms var(--ease) 60ms backwards; }
 
 /* The cards. Which of them take part, and in what order, is js/entrance.js'
    business: only those standing in the visible part of the list do, because
    a stagger running on down a list of eighty is a thing nobody sees and
    everybody's processor pays for. */
 [data-enter] .slide-card.is-entering {
-  animation: enter-from-left 240ms ease-out backwards;
+  animation: enter-from-left 240ms var(--ease) backwards;
   animation-delay: calc(var(--enter-index, 0) * 45ms);
 }
 /* The furniture of that column comes last, after the cards it belongs to. */
@@ -2762,5 +3510,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
      back to taking the row it is given. */
   .column-split { display: none; }
   .column.preview { grid-column: 1; grid-row: auto; }
+  /* The file stacks with the rest. Said again here because the rule that
+     puts it beside the preview names the editor and so outweighs the one
+     above -- and two tracks of 360 and 320 do not fit in a window this
+     narrow whatever they are asked to do. */
+  .editor.is-sourcing { grid-template-columns: 1fr; }
+  .editor.is-sourcing > .source-view,
+  .editor.is-sourcing > .column.preview { grid-column: 1; grid-row: auto; }
+  .source-view { overflow: visible; }
   .head { flex-wrap: wrap; }
 }

@@ -76,6 +76,9 @@ var el = {
   imageRemove: $("#image-remove"),
   layoutHint: $("#layout-hint"),
   layoutLocked: $("#layout-locked"),
+  layoutMenu: $("#layout-menu"),
+  layoutMini: $("#layout-current-mini"),
+  layoutName: $("#layout-current-name"),
   state: $("#save-state"),
   saveButton: $("#deck-save"),
   customColor: $("#background-custom"),
@@ -554,9 +557,18 @@ function showSlide() {
   showVideo();
 
   $$(".layout-tile").forEach(function (k) {
-    k.classList.toggle("is-active", k.dataset.layout === slide.layout);
+    var here = k.dataset.layout === slide.layout;
+    k.classList.toggle("is-active", here);
+    k.setAttribute("aria-checked", here ? "true" : "false");
   });
-  el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
+  // The tiles live in a sheet behind the row now, so the row has to say
+  // which of them is in force -- the same picture and the same word the
+  // tile carries, because they are the one thing the sheet was opened to
+  // choose. Without this the form would show a layout nobody can see.
+  var chosen = layoutsById[slide.layout] || {};
+  el.layoutMini.className = "mini mini-" + slide.layout;
+  el.layoutName.textContent = chosen.label || slide.layout || "";
+  el.layoutHint.textContent = chosen.hint || "";
 
   var def = layoutsById[slide.layout] || { fields: [] };
   // The layout that has no heading puts the whole field away -- an input
@@ -1120,6 +1132,9 @@ document.addEventListener("click", function (ev) {
 $$(".layout-tile").forEach(function (tile) {
   tile.addEventListener("click", function () {
     harvest();
+    // The sheet has done its job the moment one of the eleven is pressed:
+    // leaving it open would hide the form it has just changed.
+    el.layoutMenu.open = false;
     var slide = deck.slides[active];
     slide.layout = tile.dataset.layout;
     // A layout without columns -- or with one single column -- cannot keep
@@ -2213,12 +2228,10 @@ var deckSource = setupDeckSource({
   base: BASE,
   flush: window.trivialSlidesSave,
   adopt: adoptDeck,
-  // The frame behind the dialog: while a slide is written in over there,
-  // it is the one the preview shows.
+  // The frame beside the panel: while a slide is written in over there, it
+  // is the one the preview shows. No frame has to be handed over any more
+  // -- the preview keeps its own column and nothing is laid over it.
   preview: preview,
-  // And the box it stands in, which the dialog's veil is kept off -- a
-  // slide seen through a veil is a slide judged wrongly.
-  frame: $(".preview-frame"),
 });
 
 // This deck, changed by instruction, where the server has a key for it
