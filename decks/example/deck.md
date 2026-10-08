@@ -30,15 +30,22 @@ Every <span style="color:#e100ff">slide</span> layout, once 👀
 - FREESTYLE ...
 - syxdcvsdx
 - lala
-- test
+- test🥰
 
 <!-- .element: data-at="5,31,28" data-turn="350" -->
 
-# Test
+# **Test**
 <!-- .element: data-at="37,34,26" data-turn="20" -->
 
 ![](trivialslides.svg)
-<!-- .element: class="fragment" data-at="82,11,15" data-turn="345" -->
+<!-- .element: data-at="75,11,25" data-turn="345" -->
+
+```java hl=github-dark
+public void hello() {
+  System.out.println("hello");
+}
+```
+<!-- .element: data-at="58,77,46" data-turn="345" -->
 
 ---
 
@@ -49,7 +56,6 @@ and *italic* text, and a [link](https://revealjs.com).
 
 - Lists work the way you expect
 - Every point is plain Markdown
-- TEST
 - This one only appears on click
 <!-- .element: class="fragment" -->
 
@@ -92,6 +98,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 - Venus
 - Earth
 - Mars
+- Vulkan
 
 <!-- .column -->
 

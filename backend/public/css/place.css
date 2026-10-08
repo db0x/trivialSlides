@@ -7,74 +7,132 @@
 
 /* The block under the mouse says so quietly: this is something one can
    take hold of. Outline and not border, because a border would take room
-   and move the very thing it is drawn around. */
+   and move the very thing it is drawn around.
+
+   It is held a little OFF the block -- a line drawn on the edge of a text
+   sits in the words. That gap is --place-ring, and it is a number the
+   handles have to know as well: they are placed on the line one sees, and
+   the line one sees is not the block's own edge. Measured in
+   --place-scale like everything else here, so the gap stays the same
+   width on the screen whatever size the preview is. */
+:root { --place-ring: calc(4px * var(--place-scale, 1)); }
 .is-preview .layout-freestyle .slide-text > *:hover {
-  outline: 1px dashed color-mix(in srgb, currentColor 40%, transparent);
-  outline-offset: 4px;
+  outline: calc(1px * var(--place-scale, 1)) dashed color-mix(in srgb, currentColor 40%, transparent);
+  outline-offset: var(--place-ring);
   cursor: move;
 }
 .is-preview .layout-freestyle .slide-text > .is-picked,
 .is-preview .layout-freestyle .slide-text > .is-picked:hover {
-  outline: 1px solid var(--place-accent, #2b7cd3);
-  outline-offset: 4px;
+  outline: calc(1px * var(--place-scale, 1)) solid var(--place-accent, #2b7cd3);
+  outline-offset: var(--place-ring);
 }
 
-/* The two grips sit INSIDE the block, so they travel with it -- through
+/* The three grips sit INSIDE the block, so they travel with it -- through
    its place and through its rotation, which is what keeps the width grip
-   on the right edge however far the block has been turned. */
+   on the right edge however far the block has been turned.
+
+   Each one is its own picture and nothing else: a pencil, a double arrow,
+   a turning arrow (assets/edit.svg, resize.svg, rotate.svg). No disc under
+   them. A dot with a tiny picture in it is two things fighting for the
+   same twelve pixels and neither wins -- the picture is what says what the
+   handle does, so the picture gets the whole room.
+
+   The colour is the opposite of what the handle stands on, worked out per
+   slide (js/slide-place.js, keepInk) -- the two values below are what it
+   writes, and the fallback for a page where it has not run. The halo is
+   that same opposite the other way round: on a photograph or a starfield a
+   bare glyph would otherwise fall into whatever it crosses.
+
+   --place-scale is what makes a picture in a handle possible at all. These
+   are drawn inside the slide, and reveal scales the slide down to fit the
+   frame: at the size a preview usually has, a grip of 26 pixels arrives as
+   13 and anything drawn in it as a smudge. The factor undoes exactly that
+   scaling (js/slide-place.js), so the handles are the same size under the
+   hand whether the preview is a strip beside the form or the whole window
+   -- and every measurement here is counted in it. */
+/* On the root and not on the handle itself: what js/slide-place.js writes
+   lands on the root, and a declaration on the element would beat what it
+   inherits from there -- the handles would then wear these two for ever.
+   So these are the starting point and the answer for a slide nobody has
+   measured yet. */
+:root {
+  --place-ink: #ffffff;
+  --place-halo: rgba(0, 0, 0, 0.65);
+}
 .place-grip {
+  --g: calc(26px * var(--place-scale, 1));
   position: absolute;
-  width: 12px;
-  height: 12px;
-  box-sizing: border-box;
-  border: 1px solid #fff;
-  border-radius: 50%;
-  background: var(--place-accent, #2b7cd3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-  /* The slide's type is stepped by em in places; a grip is a piece of
+  width: var(--g);
+  height: var(--g);
+  /* The slide's type is stepped by em in places; a handle is a piece of
      furniture and keeps its size. */
   font-size: 0;
   z-index: 2;
 }
-/* The way back to the words: above the top left corner, as far from the
-   two that change the shape as the block allows. */
+.place-grip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--place-ink);
+  -webkit-mask: var(--place-icon) center / contain no-repeat;
+  mask: var(--place-icon) center / contain no-repeat;
+  filter: drop-shadow(0 0 calc(2px * var(--place-scale, 1)) var(--place-halo));
+}
+/* Each handle is centred on the point it belongs to -- the pencil on the
+   top left corner, the turning arrow on the top right one, the double
+   arrow on the middle of the right edge. Half of each picture lies inside
+   the frame and half outside it, which is what makes the corner read as
+   the thing being held: a picture floating NEAR a corner has to be
+   related to it by eye, one sitting ON it does not.
+   The point is on the LINE one sees, so each offset is half the handle
+   plus the gap that line is held at (--place-ring above) -- without that
+   second half the handles sat a few pixels inside the frame, which is
+   exactly the kind of near-miss one cannot stop seeing. */
 .place-grip-edit {
-  left: -6px;
-  top: -22px;
+  --place-icon: url(../assets/edit.svg);
+  left: calc(var(--g) * -0.5 - var(--place-ring));
+  top: calc(var(--g) * -0.5 - var(--place-ring));
   cursor: pointer;
 }
-.place-grip-edit::after {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  background: #fff;
-  -webkit-mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
-  mask: url(../assets/toolbar/edit.svg) center / 8px 8px no-repeat;
-}
-/* Width: on the right edge, in the middle of it. */
+/* Width: on the right edge, exactly half way down it -- the edge it
+   moves. */
 .place-grip-width {
-  right: -6px;
+  --place-icon: url(../assets/resize.svg);
+  right: calc(var(--g) * -0.5 - var(--place-ring));
   top: 50%;
-  margin-top: -6px;
+  margin-top: calc(var(--g) * -0.5);
   cursor: ew-resize;
 }
-/* Turning: above the top right corner, where it cannot be mistaken for
-   the one that changes the width. */
+/* Turning: held off the top right corner, the way one holds a thing away
+   from itself before turning it. It used to hang there on a little stem,
+   which was there to tell it from a second dot that looked exactly like
+   it; with a turning arrow drawn on it there is no second dot and nothing
+   left for a stem to explain -- it was just a blue mark in the corner. */
 .place-grip-turn {
-  right: -6px;
-  top: -22px;
+  --place-icon: url(../assets/rotate.svg);
+  right: calc(var(--g) * -0.5 - var(--place-ring));
+  top: calc(var(--g) * -0.5 - var(--place-ring));
   cursor: crosshair;
-  background: var(--place-accent, #2b7cd3);
 }
-.place-grip-turn::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 11px;
-  width: 1px;
-  height: 10px;
-  background: var(--place-accent, #2b7cd3);
-}
+
+/* Where the slide's own edge leaves no room for a handle, it is turned
+   inwards and sits on the block's corner rather than off it
+   (js/slide-place.js, keepInside). The stem goes with it: a knob standing
+   on the corner it belongs to needs nothing to say so. */
+.place-grip-edit.is-inside { left: 0; top: 0; }
+.place-grip-turn.is-inside { right: 0; top: 0; }
+.place-grip-width.is-inside { right: 0; }
+
+/* A block that only appears on a click is shown at half strength in the
+   preview (css/slides.css) -- and opacity is inherited by everything
+   inside the block, which is where the grips live. So the three handles on
+   such a block came out half there as well: the one for turning, a knob
+   off the corner, was then a grey smudge in the sky and nobody found it.
+   Nothing can win that back from inside; the block itself has to stand at
+   full strength. While it is the block being arranged, it should anyway --
+   one cannot judge where a thing sits by looking at half of it, and the
+   row in the form says what it is well enough. */
+.is-preview .reveal .fragment.is-picked { opacity: 1; }
 
 /* While something is being dragged nothing else may be selected: a text
    box full of selected words follows the mouse badly and looks broken. */

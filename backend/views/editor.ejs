@@ -81,13 +81,10 @@
   </div>
 
   <!-- Only there while autosave is off (js/autosave.js, js/editor/index.js).
-       With autosave on it would be a button for something that has already
-       happened; off, it is the only thing that writes the file, which is
-       why it sits here beside the word that says whether anything is owed
-       rather than in the text bar, which is for formatting. -->
+       With autosave on the word says nothing: writing the file is the
+       normal course of things. Off, it stands immediately before the tray
+       whose first button writes it. -->
   <span id="save-state" class="save-state" role="status"></span>
-  <button type="button" id="deck-save" class="button-icon icon-ghost header-save" hidden
-          data-tip="<%= t('header.save') %>" aria-label="<%= t('header.save') %>"></button>
 
   <!-- Everything that works on the whole DECK rather than on the slide in
        front, in one tray: the file itself, the two strips, the instruction
@@ -98,6 +95,15 @@
        buttons inside carry no edge of their own, or there would be six
        outlines where one shape would do. -->
   <div class="head-group head-tools">
+    <!-- Writing the file, and only there while autosave is off
+         (js/editor/index.js). It belongs in the tray with the rest: it does
+         something to the whole deck, which is what this tray is, and
+         standing outside it was a bare icon on the header beside four that
+         sat on a ground -- the one button in the bar that looked like an
+         oversight. First in the row, because it is the file itself and the
+         button after it opens that same file to be read. -->
+    <button type="button" id="deck-save" class="button-icon icon-ghost header-save" hidden
+            data-tip="<%= t('header.save') %>" aria-label="<%= t('header.save') %>"></button>
     <!-- The file itself, to be read and written. It stood in the menu while
          it could only be looked at; now that it can be edited it is one of
          the things one reaches for while working
@@ -378,6 +384,12 @@
           </div>
           <ul class="place-list" id="place-list" aria-labelledby="place-list-label"></ul>
           <p class="hint place-empty" id="place-empty" hidden><%= t('editor.placeEmpty') %></p>
+          <!-- What the order of these rows MEANS, said where the two arrows
+               that change it are. On a freestyle slide the blocks are drawn
+               in the order they stand in the file, so the last of them is
+               the one on top -- and that is not something anybody guesses
+               from a list. -->
+          <p class="hint place-order" id="place-order" hidden><%= t('editor.placeOrder') %></p>
 
           <!-- Two buttons, for the two things an element can be. The SIZE
                is not asked here: it is asked in the row that opens with
@@ -464,6 +476,37 @@
                   <button type="button" class="tool-icon" data-align="<%= a[0] %>"
                           data-tip="<%= t('tool.' + a[1]) %>" aria-label="<%= t('tool.' + a[1]) %>"></button>
                 <% }); %>
+                <span class="toolbar-divider"></span>
+                <!-- The three that put something IN rather than format what
+                     is there: a colour on a few words, a block of code, a
+                     character. The same three the slide's own bar carries,
+                     acting on this row's field instead -- they ask where
+                     they stand rather than knowing it (js/editor/index.js,
+                     writtenIn).
+
+                     They were missing here, and for no reason anybody could
+                     name: this bar was built as the short version of that
+                     one, and the three that are not execCommand simply did
+                     not get copied. An element is as much a text as a slide
+                     is; on a freestyle slide it is the ONLY text, because
+                     the slide's own field is not there at all. -->
+                <span class="tool-color" data-tip="<%= t('tool.colorTip') %>">
+                  <input class="color-field element-color" type="text" value=""
+                         aria-label="<%= t('tool.color') %>">
+                </span>
+                <button type="button" class="tool-icon tool-code element-code"
+                        data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
+                <!-- The panel is the same 450 keys the slide's bar offers,
+                     copied in the first time this one is opened: written
+                     out per row they would be 30 kB of markup for something
+                     most rows never ask for. -->
+                <details class="menu menu-tool emoji-menu element-emoji" data-keep-open>
+                  <summary class="tool-icon tool-emoji" data-tip="<%= t('tool.emojiTip') %>"
+                           aria-label="<%= t('tool.emoji') %>"></summary>
+                  <div class="menu-content emoji-panel" role="menu">
+                    <div class="emoji-grid"></div>
+                  </div>
+                </details>
               </div>
               <div class="field-frame element-frame">
                 <div class="content-field element-content" contenteditable="true" spellcheck="true"
@@ -477,6 +520,26 @@
               <p class="hint element-source-note" hidden><%= t('dialog.elementSource') %></p>
             </div>
 
+            <!-- A picture instead of the line that describes it. Same row
+                 as the picture of a layout that has one (field-image
+                 above): the picture itself, and the one button there is
+                 anything to say about it with. The field above and this
+                 one take each other's place -- an element is words or it
+                 is a picture (js/editor/index.js, showElementText).
+
+                 No button to remove it here. An element with nothing in it
+                 is no element, so removing the picture IS removing the
+                 element, and the row's own bin says that plainly. -->
+            <div class="field element-image-field" hidden>
+              <span class="field-label"><%= t('editor.image') %></span>
+              <div class="image-row">
+                <img class="image-preview element-image-preview" alt="">
+                <div class="image-buttons">
+                  <button type="button" class="button element-image-choose"><%= t('editor.imageChoose') %></button>
+                </div>
+              </div>
+            </div>
+
             <!-- A property of the element, like its place: this one block
                  waits for a click while the rest of the slide is already
                  standing. -->
@@ -484,7 +547,8 @@
               <input type="checkbox" class="switch element-fragment">
               <span><%= t('dialog.elementFragment') %></span>
             </label>
-            <p class="hint"><%= t('dialog.elementNote') %></p>
+            <p class="hint element-note"><%= t('dialog.elementNote') %></p>
+            <p class="hint element-image-note" hidden><%= t('dialog.elementImageNote') %></p>
           </div>
         </template>
 
@@ -581,14 +645,14 @@
             <!-- Code is the one thing in this bar that the rich-text field
                  cannot hold, so it does not run through execCommand and it
                  stays usable in source mode -- that is where it lands. -->
-            <button type="button" id="code-insert" class="tool-icon" data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
+            <button type="button" id="code-insert" class="tool-icon tool-code" data-tip="<%= t('tool.codeTip') %>" aria-label="<%= t('tool.code') %>"></button>
             <!-- Emoji. Like the code button this is not a formatting command
                  but something inserted, so it keeps working in source mode --
                  there the character goes into the textarea at the cursor.
                  A handful and not all of Unicode (emoji.js); the system's own
                  picker is still there for the rest and still works in the
                  field. -->
-            <details id="emoji-menu" class="menu menu-tool" data-keep-open>
+            <details id="emoji-menu" class="menu menu-tool emoji-menu" data-keep-open>
               <summary class="tool-icon tool-emoji" data-tip="<%= t('tool.emojiTip') %>"
                        aria-label="<%= t('tool.emoji') %>"></summary>
               <!-- Filled by the page from the table at the end of this file:

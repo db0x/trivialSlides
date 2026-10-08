@@ -13,6 +13,14 @@
 // happens -- below that it stops being a form one can work in -- and the
 // preview keeps the same quarter for the same reason, from the other side.
 //
+// ONE width, and the deck's source column shares it. That column stands in
+// the tracks the list and the form leave behind (app.css) rather than in a
+// grid of its own, so the seam is in the same place whether the form or
+// the file is open -- and the preview beside it keeps its width across the
+// switch. A second number for the file moved the preview every time the
+// mode changed, which is the one thing it must not do: a slide cannot be
+// judged in a frame that resizes under the eye.
+//
 // A plain script, not a module: it touches one element and needs nothing
 // from the editor's own files.
 (function () {
@@ -23,36 +31,41 @@
   var MAX = 75;
   var STEP = 2;
 
+  var PROP = "--form-width";
+  var KEY = "trivialslides:form-width";
+
   var editor = document.querySelector(".editor");
   var handle = document.getElementById("column-split");
-  var form = document.getElementById("slide-form");
-  var source = document.getElementById("deck-source-view");
-  if (!editor || !handle || !form) return;
+  if (!editor || !handle) return;
 
-  // The seam divides whatever is to the LEFT of the preview, and that is
-  // two different things: the form most of the time, the file while the
-  // source column is open (js/editor/deck-source.js). Each keeps a width
-  // of its own, because they are not the same question -- a form is as
-  // wide as its fields need, a file as wide as its longest line -- and one
-  // number serving both would move the seam every time the mode changed.
-  function mode() {
-    if (source && editor.classList.contains("is-sourcing")) {
-      return { pane: source, prop: "--source-width", key: "trivialslides:source-width" };
-    }
-    return { pane: form, prop: "--form-width", key: "trivialslides:form-width" };
+  // The middle track of the grid and the one before it, in pixels as the
+  // browser has worked them out. Read off the GRID rather than off the
+  // form: while the file is open the form is not displayed and has no
+  // width to measure, and the track it leaves behind is the very one the
+  // seam still divides.
+  function tracks() {
+    var list = getComputedStyle(editor).gridTemplateColumns.split(" ").map(parseFloat);
+    return { before: list[0] || 0, width: list[1] || 0 };
+  }
+
+  // The seam between the two is the grid's gap, and the drag has to count
+  // it in -- one pixel, but one pixel is what the eye catches on a line it
+  // put somewhere itself.
+  function gap() {
+    return parseFloat(getComputedStyle(editor).columnGap) || 0;
   }
 
   function clamp(percent) {
     return Math.min(MAX, Math.max(MIN, percent));
   }
 
-  // What the form takes at this moment, read off the page rather than
-  // remembered: that way the untouched default -- which is no stored value
-  // at all, just the fallback in the stylesheet -- can answer too.
+  // What the middle track takes at this moment, read off the page rather
+  // than remembered: that way the untouched default -- which is no stored
+  // value at all, just the fallback in the stylesheet -- can answer too.
   function share() {
     var total = editor.clientWidth;
     if (!total) return MIN;
-    return (mode().pane.getBoundingClientRect().width / total) * 100;
+    return (tracks().width / total) * 100;
   }
 
   function told(percent) {
@@ -61,11 +74,10 @@
 
   function apply(percent, remember) {
     var p = clamp(percent);
-    var m = mode();
-    editor.style.setProperty(m.prop, p.toFixed(2) + "%");
+    editor.style.setProperty(PROP, p.toFixed(2) + "%");
     told(p);
     if (remember) {
-      try { localStorage.setItem(m.key, p.toFixed(2)); } catch (e) { /* private window */ }
+      try { localStorage.setItem(KEY, p.toFixed(2)); } catch (e) { /* private window */ }
     }
   }
 
@@ -73,23 +85,17 @@
   // rather than being set to some number that merely looks like the
   // default.
   function reset() {
-    var m = mode();
-    editor.style.removeProperty(m.prop);
+    editor.style.removeProperty(PROP);
     told(share());
-    try { localStorage.removeItem(m.key); } catch (e) { /* private window */ }
+    try { localStorage.removeItem(KEY); } catch (e) { /* private window */ }
   }
 
-  // Both widths are read back at the start, not just the one in force: the
-  // source column can be opened at any moment, and a seam that jumped to
-  // the default the first time it was would lose what was set last visit.
-  // A value from an older version, or one edited by hand, is not allowed to
-  // take either pane below its quarter.
-  [["trivialslides:form-width", "--form-width"],
-   ["trivialslides:source-width", "--source-width"]].forEach(function (pair) {
-    var stored = NaN;
-    try { stored = parseFloat(localStorage.getItem(pair[0])); } catch (e) { /* private window */ }
-    if (stored >= MIN && stored <= MAX) editor.style.setProperty(pair[1], stored.toFixed(2) + "%");
-  });
+  // What was set last visit, back on the page. A value from an older
+  // version, or one edited by hand, is not allowed to take either pane
+  // below its quarter.
+  var stored = NaN;
+  try { stored = parseFloat(localStorage.getItem(KEY)); } catch (e) { /* private window */ }
+  if (stored >= MIN && stored <= MAX) editor.style.setProperty(PROP, stored.toFixed(2) + "%");
   told(share());
 
   handle.addEventListener("pointerdown", function (ev) {
@@ -107,7 +113,11 @@
     if (!handle.classList.contains("is-dragging")) return;
     var total = editor.clientWidth;
     if (!total) return;
-    var left = mode().pane.getBoundingClientRect().left;
+    // Where the track being resized begins: the editor's own left edge,
+    // plus the slide list in front of it and the seam between the two --
+    // which is where the form starts, and where the file starts in its
+    // place.
+    var left = editor.getBoundingClientRect().left + tracks().before + gap();
     apply(((ev.clientX - left) / total) * 100, false);
   });
 

@@ -367,13 +367,23 @@ function inlineZuMd(knoten) {
     if (k.nodeType === 3) { out += mdEscape(k.nodeValue); return; }
     if (k.nodeType !== 1) return;
     var tag = k.tagName.toLowerCase();
-    if (tag === "br") out += "\n";
-    else if (tag === "strong" || tag === "b") out += "**" + inlineZuMd(k) + "**";
-    else if (tag === "em" || tag === "i") out += "*" + inlineZuMd(k) + "*";
+    // A colour can sit on ANY of these, not only on a span: ask the browser
+    // to colour words that are already bold and it puts the style on the
+    // <strong> rather than wrapping one more element around it. Read off
+    // every element and written out around whatever the element itself
+    // becomes, the two can no longer miss each other -- before this, a
+    // colour on a run that was entirely bold, italic, struck through or a
+    // link was shown in the field and then dropped on the way to the file,
+    // which looked like the colour button simply not working.
+    var farbe = farbeVon(k);
+    var md;
+    if (tag === "br") md = "\n";
+    else if (tag === "strong" || tag === "b") md = "**" + inlineZuMd(k) + "**";
+    else if (tag === "em" || tag === "i") md = "*" + inlineZuMd(k) + "*";
     // The browser writes <strike>, marked reads ~~ and renders <del> -- all
     // three mean the same thing and meet here.
-    else if (tag === "s" || tag === "strike" || tag === "del") out += "~~" + inlineZuMd(k) + "~~";
-    else if (tag === "a") out += "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
+    else if (tag === "s" || tag === "strike" || tag === "del") md = "~~" + inlineZuMd(k) + "~~";
+    else if (tag === "a") md = "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
     else {
       // span, font and friends -- which the browser creates on paste, and
       // which the colour button creates on purpose. Only a colour of ours
@@ -382,10 +392,10 @@ function inlineZuMd(knoten) {
       // what makes clearing a colour work: the browser leaves the span
       // standing with "currentcolor" in it, and a span with no colour of
       // ours is not written at all.
-      var farbe = farbeVon(k);
-      var inner = inlineZuMd(k);
-      out += farbe ? '<span style="color:' + farbe + '">' + inner + "</span>" : inner;
+      md = inlineZuMd(k);
     }
+    // A line break carries nothing and must not be wrapped in anything.
+    out += farbe && tag !== "br" ? '<span style="color:' + farbe + '">' + md + "</span>" : md;
   });
   return out;
 }

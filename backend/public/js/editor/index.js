@@ -109,6 +109,7 @@ var el = {
   placeList: $("#place-list"),
   placeCount: $("#place-count"),
   placeEmpty: $("#place-empty"),
+  placeOrder: $("#place-order"),
   slideBands: $("#slide-bands"),
   headerOn: $("#slide-header-on"),
   footerOn: $("#slide-footer-on"),
@@ -1183,6 +1184,11 @@ var elementBox = null;
 // same question the slide's own text field asks (contentSimple), asked of
 // a single block.
 var elementSourceMode = false;
+// And the third answer: the element is a picture. Then neither field is
+// shown -- the picture is -- and this is what the row holds in their
+// stead, { alt, src }, until it is written back as a line
+// (js/editor/places.js, image).
+var elementPicture = null;
 
 // The word under a row's text. The three headings and the text block have
 // one already -- it is what the size buttons are named after -- and the
@@ -1210,6 +1216,11 @@ function drawPlaceRow(row, slide, n) {
   // the CSS, with the whole of it in the tooltip.
   $(".place-item-open", row).dataset.tip = said || t("editor.placeUntitled");
   $(".place-item-meta", row).textContent = meta.join(" · ");
+  // The first row has nothing above it and the last nothing below: a
+  // button that cannot do anything says so rather than doing nothing.
+  var count = places.count(slide.content);
+  $(".place-item-up", row).disabled = n === 0;
+  $(".place-item-down", row).disabled = n === count - 1;
 }
 
 function placeRow(slide, n) {
@@ -1242,15 +1253,16 @@ function placeRow(slide, n) {
   meta.className = "place-item-meta";
   words.appendChild(meta);
   open.appendChild(words);
-  var mark = document.createElement("span");
-  mark.className = "place-item-mark";
-  mark.setAttribute("aria-hidden", "true");
-  open.appendChild(mark);
   head.appendChild(open);
 
   var tools = document.createElement("span");
   tools.className = "place-item-tools";
-  [["copy", t("editor.placeDuplicate")], ["remove", t("dialog.elementRemove")]].forEach(function (b) {
+  // Up and down before the other two, the way a slide card carries them
+  // (js/editor/slide-list.js): the same pair of questions one step down.
+  // Here they do a second thing besides ordering a list -- they are what
+  // decides which block lies over which (places.js, move).
+  [["up", t("editor.placeUp")], ["down", t("editor.placeDown")],
+   ["copy", t("editor.placeDuplicate")], ["remove", t("dialog.elementRemove")]].forEach(function (b) {
     var button = document.createElement("button");
     button.type = "button";
     button.className = "place-item-tool place-item-" + b[0];
@@ -1285,6 +1297,9 @@ function drawPlaceList() {
   for (var n = 0; n < count; n++) el.placeList.appendChild(placeRow(slide, n));
   el.placeList.hidden = !count;
   el.placeEmpty.hidden = !!count;
+  // What the order of the rows means. Only where there are two of them to
+  // order: on a slide with one block nothing lies over anything.
+  el.placeOrder.hidden = count < 2;
   el.placeCount.textContent = count
     ? t(count === 1 ? "editor.placeCountOne" : "editor.placeCount", { n: count })
     : "";
@@ -1295,17 +1310,47 @@ function drawPlaceList() {
 // into: nothing in there is an id, because there is a copy of it per
 // element (views/editor.ejs).
 function elementBody(box) {
+  if (elementPicture) return places.imageLine(elementPicture);
   return elementSourceMode
     ? $(".element-text", box).value
     : rt.htmlToMd($(".element-content", box));
 }
 
+// The picture on the row, from whatever the file says it is.
+function showElementPicture() {
+  $(".element-image-preview", elementBox).src = imageUrl(elementPicture.src);
+}
+
 function showElementText(body) {
+  // A block that is nothing but a picture is SHOWN, not spelled out:
+  // ![](logo.svg) is a file name dressed as Markdown, and a row that
+  // offers it as text asks to have the one thing typed in it that cannot
+  // be seen going wrong. The picture and the button to swap it take the
+  // field's place, and the sentence under them changes with it -- blank
+  // lines and what is "written along" say nothing about a photograph.
+  elementPicture = places.image(body);
+  $(".element-field", elementBox).hidden = !!elementPicture;
+  $(".element-image-field", elementBox).hidden = !elementPicture;
+  $(".element-note", elementBox).hidden = !!elementPicture;
+  $(".element-image-note", elementBox).hidden = !elementPicture;
+  if (elementPicture) {
+    elementSourceMode = false;
+    showElementPicture();
+    return;
+  }
   elementSourceMode = !rt.isSimple(body);
   $(".element-frame", elementBox).hidden = elementSourceMode;
   $(".element-source", elementBox).hidden = !elementSourceMode;
   $(".element-source-note", elementBox).hidden = !elementSourceMode;
-  $$(".element-toolbar button", elementBox).forEach(function (b) { b.disabled = elementSourceMode; });
+  // Only the commands that need a rich field. The four alignments are
+  // marks on the element and not commands on its text, so they work in
+  // either mode; the code button writes a fence and works in either mode
+  // too, which is the whole reason it is not an execCommand. The colour
+  // paints marked words and has none to paint in a textarea.
+  $$(".element-toolbar button[data-command]", elementBox).forEach(function (b) {
+    b.disabled = elementSourceMode;
+  });
+  $(".element-color", elementBox).disabled = elementSourceMode;
   if (elementSourceMode) $(".element-text", elementBox).value = body;
   else $(".element-content", elementBox).innerHTML = rt.mdToHtml(body);
 }
@@ -1366,6 +1411,19 @@ function elementWritten(slide) {
 
 function elementChanged() {
   if (elementAt < 0) return;
+  // The row of sizes belongs to what stands in the field NOW. Press the
+  // list button over a text element and it is a list from that moment: it
+  // has no heading size any more, and a row left standing over it offers
+  // four buttons that do nothing (places.js, write, refuses the one that
+  // would do harm). Empty the bullets back into a sentence and the sizes
+  // come back. A picture answers no to the same question, which is how it
+  // keeps the row it never had.
+  //
+  // Asked here and not only when the row opens, because that is the whole
+  // of the difference somebody notices: a list made in this row used to
+  // keep the sizes of the text it was a minute ago, while the same list
+  // opened again the next day had none.
+  $(".element-level-field", elementBox).hidden = !places.sized(elementBody(elementBox));
   remember();
   var slide = deck.slides[active];
   var row = elementBox && elementBox.closest(".place-item");
@@ -1399,6 +1457,61 @@ function wireElement(box) {
       elementChanged();
     });
   });
+  // The three that write into the field rather than formatting it. Each
+  // one is the slide bar's tool pointed at this row (see writtenIn): the
+  // panel of characters, the dialog that builds a code block, and the
+  // picker that paints a few words.
+  //
+  // The emoji panel is filled the first time it is opened and not before:
+  // 450 keys per row, for rows that mostly never ask for one, is a cost
+  // paid every time a line is clicked.
+  var emoji = $(".element-emoji", box);
+  var filled = false;
+  emoji.addEventListener("toggle", function () {
+    if (!emoji.open || filled) return;
+    filled = true;
+    fillEmojiGrid($(".emoji-grid", emoji));
+    // The panel is measured to be placed, and it has just been given
+    // something to measure.
+    placeEmojiPanel(emoji);
+  });
+  wireEmojiPanel(emoji);
+  $(".element-code", box).addEventListener("click", function () { codeDialogOeffnen(null); });
+  // A code block in this field is opened by a click on it, exactly as one
+  // in the slide's field is: the block is sealed, so the click lands on it
+  // rather than inside it.
+  $(".element-content", box).addEventListener("click", function (ev) {
+    if (!ev.target.closest) return;
+    var block = ev.target.closest(".code-block");
+    if (!block || !$(".element-content", box).contains(block)) return;
+    if (ev.target.closest(".code-remove")) {
+      block.remove();
+      elementChanged();
+      return;
+    }
+    codeDialogOeffnen(block);
+  });
+  // The colour picker hangs itself on the field, and this one was stamped
+  // out after the picker was set up -- so it is handed over by name. Its
+  // listeners are on the document and find it by themselves (Coloris,
+  // bindFields).
+  var colour = $(".element-color", box);
+  Coloris.wrap(colour);
+  colour.addEventListener("mousedown", rememberRange);
+  $(".element-content", box).addEventListener("keyup", rememberRange);
+  $(".element-content", box).addEventListener("mouseup", rememberRange);
+  // The picture, swapped for another out of the same picker the rest of
+  // the editor uses. What it says about itself -- its alt text -- is
+  // carried over: the picker asks for a file and nothing else, and this
+  // is not the place to quietly drop a line the file already had.
+  $(".element-image-choose", box).addEventListener("click", function () {
+    askForImage(function (name) {
+      if (!elementPicture || elementBox !== box) return;
+      elementPicture = { alt: elementPicture.alt, src: name };
+      showElementPicture();
+      elementChanged();
+    });
+  });
   // Per keystroke, exactly as the slide's own text field is read
   // (el.content above): what holds the keystrokes back from the preview is
   // remember()'s own delay, which is one delay for the whole editor.
@@ -1426,11 +1539,15 @@ function closeElement() {
   var box = elementBox;
   var n = elementAt;
   var on = elementOn;
+  // Read before the row is let go of: a picture's body is held here and
+  // nowhere else, so emptying this first would make every picture look
+  // like an emptied row and take it off the slide.
+  var empty = box ? !elementBody(box).trim() : true;
   elementBox = null;
   elementAt = -1;
   elementOn = -1;
+  elementPicture = null;
   if (!box) return -1;
-  var empty = !elementBody(box).trim();
   var row = box.closest(".place-item");
   box.remove();
   if (row) {
@@ -1499,6 +1616,10 @@ function openElement(n, fresh) {
   // element would be an invitation to drag it.
   if (places.placeable(slide.content)) preview.pick(n);
   row.scrollIntoView({ block: "nearest" });
+  // A picture has no field to type in, so the focus goes to the one thing
+  // there is to do with it. (A fresh element is never a picture: one
+  // chosen in the picker lands on the slide without a row opening at all.)
+  if (elementPicture) { $(".element-image-choose", elementBox).focus(); return; }
   var field = elementSourceMode ? $(".element-text", elementBox) : $(".element-content", elementBox);
   field.focus();
   if (fresh) {
@@ -1519,12 +1640,48 @@ el.placeList.addEventListener("click", function (ev) {
   var row = ev.target.closest(".place-item");
   if (!row) return;
   var n = Number(row.dataset.block);
+  if (ev.target.closest(".place-item-up")) return placeMove(n, -1);
+  if (ev.target.closest(".place-item-down")) return placeMove(n, 1);
   if (ev.target.closest(".place-item-copy")) return placeCopy(n);
   if (ev.target.closest(".place-item-remove")) return placeRemove(n);
   // Anything else inside the row is the open editor minding its own
   // business.
   if (ev.target.closest(".place-item-open")) openElement(n);
 });
+
+// One place up or down the list, which on the slide is one step back or
+// forward: the blocks are drawn in the order they stand, so the row at the
+// bottom is the block on top (places.js, move). Nothing else about either
+// element changes -- not its words, not where it stands, not how far it is
+// turned. This is the only way to say what covers what, and without it two
+// blocks that overlap are stacked in the order they happened to be typed.
+function placeMove(n, dir) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  harvest();
+  n = settle(n);
+  if (n < 0) return;
+  var text = places.move(slide.content, n, dir);
+  // No neighbour that way. The button is shut in that case (drawPlaceRow),
+  // so this is the keyboard and the list redrawing under it.
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+  var now = n + (dir < 0 ? -1 : 1);
+  // The hands stay on the element: one step is rarely the whole ordering,
+  // and the handles over there have to follow the block they are on.
+  if (places.placeable(slide.content)) preview.pick(now);
+  // And the focus stays on the button that was pressed -- it has just
+  // moved to another row with the element it belongs to. At the end of
+  // the list that button is shut, and then the row itself takes the
+  // focus rather than leaving it on the body.
+  var row = $('.place-item[data-block="' + now + '"]', el.placeList);
+  if (!row) return;
+  var again = $(dir < 0 ? ".place-item-up" : ".place-item-down", row);
+  if (again && !again.disabled) again.focus();
+  else $(".place-item-open", row).focus();
+}
 
 // A second one of the same, standing a step away from it: everything the
 // element is travels with it -- its words, its size, where it is aligned,
@@ -1665,7 +1822,8 @@ function rememberRange() {
   var sel = window.getSelection();
   if (!sel || !sel.rangeCount) return;
   var range = sel.getRangeAt(0);
-  if (el.content.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
+  var field = writtenIn().rich;
+  if (field && field.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
 }
 
 // While the picker is open the field is not focused, so nothing else moves
@@ -1677,16 +1835,21 @@ el.content.addEventListener("mouseup", rememberRange);
 // coloris:pick comes with every change while the picker is open, so the
 // colour is seen on the words as it is chosen rather than after the fact.
 document.addEventListener("coloris:pick", function (ev) {
-  if (!ev.detail || ev.detail.currentEl !== el.textColorTool) return;
-  if (sourceMode || !markedRange) return;
+  // Any of the bar's colour tools -- the slide's or an element row's --
+  // and none of the pickers that set a colour of the SLIDE: those write a
+  // value into a field, this one paints the words that are marked.
+  var tool = ev.detail && ev.detail.currentEl;
+  if (!tool || !tool.closest || !tool.closest(".tool-color")) return;
+  var where = writtenIn();
+  if (where.plain || !markedRange) return;
   var sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(markedRange);
-  rt.farbe(el.content, ev.detail.color);
+  rt.farbe(where.rich, ev.detail.color);
   // The command leaves a selection of its own over the same words; it is
   // the one the next change has to act on.
   if (sel.rangeCount) markedRange = sel.getRangeAt(0).cloneRange();
-  remember();
+  where.changed();
 });
 
 // The button wears the colour of the text the caret is in, the way the
@@ -1694,17 +1857,19 @@ document.addEventListener("coloris:pick", function (ev) {
 // own reads as the field's own colour -- which is what an empty field
 // means here, so the drop goes back to grey rather than to near-black.
 function drawTextColor() {
-  if (document.activeElement !== el.content) return;
+  var where = writtenIn();
+  var tool = where.tool;
+  if (!tool || document.activeElement !== where.rich) return;
   var here = "";
   try { here = String(document.queryCommandValue("foreColor") || ""); } catch (e) { /* not asked */ }
-  var own = window.getComputedStyle(el.content).color;
+  var own = window.getComputedStyle(where.rich).color;
   var value = !here || here === own ? "" : rt.farbeVon({ style: { color: here }, tagName: "span" });
-  if (value === el.textColorTool.value) return;
-  el.textColorTool.value = value;
+  if (value === tool.value) return;
+  tool.value = value;
   // quiet: this follows the caret, it is not somebody choosing a colour.
-  el.textColorTool.dataset.quiet = "1";
-  el.textColorTool.dispatchEvent(new Event("input", { bubbles: true }));
-  delete el.textColorTool.dataset.quiet;
+  tool.dataset.quiet = "1";
+  tool.dispatchEvent(new Event("input", { bubbles: true }));
+  delete tool.dataset.quiet;
 }
 
 document.addEventListener("selectionchange", drawTextColor);
@@ -1796,6 +1961,36 @@ function codeDialogOeffnen(block) {
 
 el.codeButton.addEventListener("click", function () { codeDialogOeffnen(null); });
 
+// --- The field that is being written in --------------------------------
+// Three of the bar's tools do not format a selection, they put something
+// where the cursor is: a character, a block of code, a colour on a few
+// words. Which field that is depends on which bar they were pressed in --
+// the slide's own, or the bar of the one element row that is open. On a
+// freestyle slide there is no third answer: the slide's text field is not
+// on the screen at all while the elements are (setContentMode).
+//
+// `changed` is the pair's other half: the slide's field tells the editor
+// it has been written in by remember(), an element's row by its own
+// elementChanged(), which also redraws the line in the list.
+function writtenIn() {
+  if (elementBox) {
+    return {
+      rich: $(".element-content", elementBox),
+      plainField: $(".element-text", elementBox),
+      plain: elementSourceMode,
+      tool: $(".element-color", elementBox),
+      changed: elementChanged,
+    };
+  }
+  return {
+    rich: el.content,
+    plainField: el.sourceText,
+    plain: sourceMode,
+    tool: el.textColorTool,
+    changed: remember,
+  };
+}
+
 // --- Emoji -------------------------------------------------------------
 // An emoji is a character, not a formatting: it goes in where the cursor
 // is and into the .md as itself -- no attribute, no class, nothing for the
@@ -1805,8 +2000,7 @@ var emojiMenu = $("#emoji-menu");
 // The panel is built once, from the table the page carries (emoji.js).
 // Groups with their word above them, so 450 characters can be scanned
 // instead of searched.
-(function buildEmojiPanel() {
-  var grid = $("#emoji-grid");
+function fillEmojiGrid(grid) {
   var groups = [];
   try { groups = JSON.parse($("#data-emoji").textContent); } catch (e) { /* no panel then */ }
   groups.forEach(function (group) {
@@ -1825,24 +2019,35 @@ var emojiMenu = $("#emoji-menu");
       grid.appendChild(key);
     });
   });
-})();
+}
+fillEmojiGrid($("#emoji-grid"));
 
 // mousedown with preventDefault throughout, on the summary as well as on
 // the keys: that keeps the focus -- and with it the place the character is
 // meant to go -- in the text field. A <summary> still opens its menu on
 // the click that follows, so the menu loses nothing by it.
-$("#emoji-menu > summary").addEventListener("mousedown", function (ev) {
-  ev.preventDefault();
-});
-
-// One listener for all of them, on the panel: 450 buttons with a listener
-// each would be 450 listeners for the same three lines.
-$(".emoji-panel").addEventListener("mousedown", function (ev) {
-  var key = ev.target.closest(".emoji-key");
-  if (!key) return;
-  ev.preventDefault();
-  insertEmoji(key.textContent);
-});
+//
+// Said once for both panels: the slide's, and the one in the bar of an
+// element row (views/editor.ejs). Everything about them is the same bar
+// twice over, and a second copy of these three handlers is a second place
+// for them to drift.
+function wireEmojiPanel(menu) {
+  menu.querySelector("summary").addEventListener("mousedown", function (ev) {
+    ev.preventDefault();
+  });
+  // One listener for all of them, on the panel: 450 buttons with a
+  // listener each would be 450 listeners for the same three lines.
+  menu.querySelector(".emoji-panel").addEventListener("mousedown", function (ev) {
+    var key = ev.target.closest(".emoji-key");
+    if (!key) return;
+    ev.preventDefault();
+    insertEmoji(key.textContent);
+  });
+  menu.addEventListener("toggle", function () {
+    if (!menu.open) return;
+    placeEmojiPanel(menu);
+  });
+}
 
 // Under the button, and inside the column. Those two pull against each
 // other: the panel is ten keys wide, and the bar wraps at narrow widths so
@@ -1854,11 +2059,11 @@ $(".emoji-panel").addEventListener("mousedown", function (ev) {
 // where there is room to the right, from its RIGHT edge where there is
 // not (which is what every menu does), and flush left if even that does
 // not fit.
-emojiMenu.addEventListener("toggle", function () {
-  if (!emojiMenu.open) return;
-  var panel = $(".emoji-panel");
-  var bar = emojiMenu.closest(".toolbar");
-  var button = $("#emoji-menu > summary");
+function placeEmojiPanel(menu) {
+  var panel = menu.querySelector(".emoji-panel");
+  var bar = menu.closest(".toolbar");
+  var button = menu.querySelector("summary");
+  if (!panel || !bar || !button) return;
   var barBox = bar.getBoundingClientRect();
   var buttonBox = button.getBoundingClientRect();
   var width = panel.offsetWidth;
@@ -1866,24 +2071,27 @@ emojiMenu.addEventListener("toggle", function () {
   var left = buttonBox.left - barBox.left;
   if (left > room) left = buttonBox.right - barBox.left - width;
   panel.style.left = Math.max(0, Math.min(left, room)) + "px";
-});
+}
+
+wireEmojiPanel(emojiMenu);
 
 function insertEmoji(character) {
-  if (sourceMode) {
-    // The same place the code button writes to when a slide is source.
-    var field = el.sourceText;
+  var where = writtenIn();
+  if (where.plain) {
+    // The same place the code button writes to when the text is source.
+    var field = where.plainField;
     var start = field.selectionStart;
     var end = field.selectionEnd;
     field.value = field.value.slice(0, start) + character + field.value.slice(end);
     field.selectionStart = field.selectionEnd = start + character.length;
     field.focus();
   } else {
-    el.content.focus();
+    where.rich.focus();
     // insertText and not innerHTML: it lands at the cursor, and the
     // browser's own undo knows about it.
     document.execCommand("insertText", false, character);
   }
-  remember();
+  where.changed();
 }
 
 // In a code field Tab is indentation, not "on to the next control". Shift
@@ -1926,13 +2134,24 @@ el.codeDialog.addEventListener("close", function () {
 
 function codeUebernehmen(language, style, sourceText, fragment) {
   harvest();
-  var slide = deck.slides[active];
+  var where = writtenIn();
 
-  // A slide that is in source mode for some OTHER reason -- a table, say --
-  // has no field to put a block into. There the fence goes in as text.
-  if (sourceMode) {
+  // A text that is in source mode for some OTHER reason -- a table, say --
+  // has no rich field to put a block into. There the fence goes in as text.
+  if (where.plain) {
     var zaun = "```" + language + (style ? " hl=" + style : "");
     var block = zaun + "\n" + sourceText + "\n```" + (fragment ? "\n" + rt.FRAGMENT : "");
+    // An element's source is a field and is written straight; the slide's
+    // is a copy of the model, so there the model is written and the field
+    // is filled from it again.
+    if (elementBox) {
+      var field = where.plainField;
+      var text = field.value.replace(/\s+$/, "");
+      field.value = text ? text + "\n\n" + block : block;
+      elementChanged();
+      return;
+    }
+    var slide = deck.slides[active];
     var before = (slide.content || "").replace(/\s+$/, "");
     slide.content = before ? before + "\n\n" + block : block;
     setContentMode(slide);
@@ -1943,17 +2162,17 @@ function codeUebernehmen(language, style, sourceText, fragment) {
   var huelle = document.createElement("div");
   huelle.innerHTML = rt.codeBlockHtml(language, style, sourceText, fragment);
   var fresh = huelle.firstElementChild;
-  if (codeBearbeitet && el.content.contains(codeBearbeitet)) {
+  if (codeBearbeitet && where.rich.contains(codeBearbeitet)) {
     codeBearbeitet.replaceWith(fresh);
   } else {
-    el.content.appendChild(fresh);
+    where.rich.appendChild(fresh);
     // Something to carry on typing in: after a sealed block at the very end
     // of the field there is otherwise nowhere for the caret to go.
     var danach = document.createElement("p");
     danach.appendChild(document.createElement("br"));
-    el.content.appendChild(danach);
+    where.rich.appendChild(danach);
   }
-  remember();
+  where.changed();
 }
 
 // --- Colours -----------------------------------------------------------
@@ -2148,7 +2367,12 @@ function pickForSlide(name) {
 // The address a picture in this deck's folder has. One place for it: the
 // form shows it, the library shows it and so does the band dialog.
 function imageUrl(name) {
-  return BASE + "/assets/" + encodeURIComponent(name);
+  var s = String(name == null ? "" : name);
+  // What the renderer does with the same name (render.js, imageUrl): a
+  // picture written into the file by hand may point anywhere, and the
+  // folder of this deck is only where the picker's answers live.
+  if (/^(https?:)?\/\//i.test(s) || s.indexOf("data:") === 0) return s;
+  return BASE + "/assets/" + encodeURIComponent(s.replace(/^.*\//, ""));
 }
 
 function showImage(name) {

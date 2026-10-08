@@ -461,7 +461,11 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
   font-size: 17px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  padding: 6px 10px;
+  /* The same 34 as the pills and the buttons. Left to its padding and its
+     line height it came to 39.5, which put the ground it draws on hover
+     three pixels proud of everything beside it. */
+  height: 34px;
+  padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
@@ -533,10 +537,18 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 
 /* The tray the deck's tools sit in. One sunken shape instead of five
    outlined squares: the group reads as a single piece of furniture, and the
-   buttons inside it only draw a ground when they are pointed at. */
+   buttons inside it only draw a ground when they are pointed at.
+
+   It stands 34 pixels tall like everything else in the bar, and that is
+   counted from the outside in: one pixel of border and two of padding
+   either side leave 28 for the buttons. It used to be 3 and 30, which came
+   to 38 -- four pixels taller than the pills beside it and the button after
+   it, enough for the row to read as two rows that nearly line up. The
+   buttons inside a tray are the one place where a hair under the usual 34
+   is right: the tray around them is the hit area that matters. */
 .head-tools {
   gap: 2px;
-  padding: 3px;
+  padding: 2px;
   border-radius: var(--radius-pill);
   background: var(--sunken);
   border: 1px solid var(--border);
@@ -554,7 +566,13 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
   transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
 }
 .icon-ghost:hover { background: var(--paper); color: var(--text); box-shadow: var(--lift-1); }
-.head-tools .icon-ghost { width: 30px; height: 30px; }
+.head-tools .icon-ghost { width: 28px; height: 28px; }
+/* The download button is a <summary> inside a <details>, and a block with
+   an inline-flex child gets a line box with the font's descender under it
+   -- half a pixel the three plain buttons beside it do not carry, and half
+   a pixel is all it takes to make the tray taller than the row. The
+   details holds its one button as a flex item instead. */
+.head-tools > .menu { display: flex; }
 .menu[open] > .icon-ghost { background: var(--accent-wash); color: var(--accent); }
 
 /* Language and light/dark live in one menu at the right end of the header
@@ -1699,7 +1717,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-align="fill"] { --button-icon: url(../assets/toolbar/format-fill.svg); }
 #source-toggle.tool-icon { --button-icon: url(../assets/toolbar/code.svg); }
 .tool-emoji { --button-icon: url(../assets/toolbar/md-emoji.svg); }
-#code-insert.tool-icon { --button-icon: url(../assets/toolbar/md-code.svg); }
+/* A class and not the id it used to be: the same button stands in the bar
+   over an element's own text (views/editor.ejs). */
+.tool-code { --button-icon: url(../assets/toolbar/md-code.svg); }
 
 /* --- Where the text sits on a video slide ------------------------------
    One set of icons for two places: the bar shows nothing but the icon of
@@ -1800,8 +1820,15 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    keys are too wide to get away with it. The bar spans the column, so
    under its left edge is always inside.
    Prefixed like the rule it overrides a few lines above; .emoji-panel
-   alone would lose to it. */
-#emoji-menu { position: static; }
+   alone would lose to it.
+
+   A class and not the id it used to be: there are two of these bars now,
+   the slide's and the one over an element's own text, and a panel left
+   hanging from its own <details> lands a bar's width to the right of
+   where it was placed -- the JS measures from the bar (js/editor/index.js,
+   placeEmojiPanel) and the box it is laid out in has to be that same
+   bar. */
+.emoji-menu { position: static; }
 .toolbar .menu-tool .emoji-panel { top: 100%; left: 0; right: auto; }
 .toolbar .emoji-panel .emoji-key {
   width: 1.75rem;
@@ -2197,10 +2224,8 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .place-item-head {
   display: flex;
   align-items: center;
-  /* Room between the caret at the end of the line and the two buttons:
-     without it the three glyphs read as one row of three actions, and the
-     caret is not an action at all -- it says which way the next press on
-     the LINE goes. */
+  /* Room between the line's words and the buttons at its end, so that a
+     long title never runs into them. */
   gap: var(--s3);
   padding: var(--s1) var(--s1) var(--s1) var(--s2);
 }
@@ -2271,21 +2296,12 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 }
 .place-item-text.is-empty { color: var(--faint); font-style: italic; }
 .place-item-meta { font-size: 12px; color: var(--muted); }
-/* The caret, last in the line whatever the words do -- the same one the
-   header's pills wear, turning the same way when what it opens is open. */
-.place-item-mark {
-  flex: none;
-  width: 12px;
-  height: 12px;
-  margin-left: auto;
-  opacity: 0.7;
-  background: currentColor;
-  color: var(--faint);
-  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
-  mask: url(../assets/dow.svg) center / contain no-repeat;
-  transition: transform var(--base) var(--ease);
-}
-.place-item.is-open .place-item-mark { transform: rotate(180deg); }
+/* There is no mark at the end of the line saying that it opens. There was
+   one, and it was one glyph too many: the row is a button its whole width,
+   it lights up under the pointer, and the four buttons that appear beside
+   it there say plainly enough that this line is something one acts on.
+   What a mark would have added for a screen reader is on the button
+   itself and always was -- aria-expanded (js/editor/index.js). */
 /* The two things one does to an element without opening it. The same pair
    a slide card carries, in the same shape: this is the same question one
    step down -- one of the things the slide is made of. */
@@ -2293,7 +2309,25 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   flex: none;
   display: flex;
   gap: 2px;
+  /* Not standing there all the time. Four glyphs on every row is a wall of
+     furniture across the one thing this list is for -- reading what is on
+     the slide -- and they are answers to a question nobody has asked yet.
+     So they come up on the line the pointer is on, exactly as a slide
+     card's do (.card-buttons above), and on nothing else: an open row is
+     not a row being pointed at, and while one types in it the four glyphs
+     over the field are the last thing that should be lit.
+     Faded rather than taken away: the room stays reserved either way, or
+     every line would change its length as the mouse crossed it. */
+  opacity: 0;
+  transition: opacity var(--fast) var(--ease);
 }
+/* The HEAD, not the whole row: an open row is as tall as the editor
+   inside it, and the buttons belong to the one line they stand on.
+   :focus-within for the same reason, and scoped the same way -- a button
+   reached with the Tab key has to be visible once it is reached, while
+   the caret sitting in the field below must not light it up. */
+.place-item-head:hover .place-item-tools,
+.place-item-head:focus-within .place-item-tools { opacity: 1; }
 .place-item-tool {
   display: inline-flex;
   align-items: center;
@@ -2318,14 +2352,22 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   -webkit-mask: var(--button-icon) center / contain no-repeat;
   mask: var(--button-icon) center / contain no-repeat;
 }
+/* The same two arrows a slide card wears, for the same gesture one step
+   down -- and here they also say which block lies over which. */
+.place-item-up { --button-icon: url(../assets/up.svg); }
+.place-item-down { --button-icon: url(../assets/dow.svg); }
+/* At the ends of the list one of them has nothing to trade places with.
+   Shown and shut rather than taken away: a row that loses a button as it
+   travels up the list is a row whose other buttons move under the mouse. */
+.place-item-tool:disabled { opacity: 0.3; cursor: default; }
 .place-item-copy { --button-icon: url(../assets/duplicate.svg); }
 .place-item-remove { --button-icon: url(../assets/delete.svg); }
-.place-item-tool:hover {
+.place-item-tool:hover:not(:disabled) {
   border-color: var(--accent-edge);
   background: var(--paper);
   color: var(--text);
 }
-.place-item-remove:hover {
+.place-item-remove:hover:not(:disabled) {
   border-color: var(--danger);
   background: var(--danger-wash);
   color: var(--danger);
@@ -2366,7 +2408,13 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   margin-bottom: var(--s3);
 }
 .element-level-field .field-label { margin-bottom: 0; }
-.element-level { margin-left: auto; }
+/* And it stands directly behind its word, not at the far edge of the
+   column. It used to be pushed over there with margin-left:auto, which
+   put eighty pixels of nothing between "Größe" and the four buttons that
+   answer it -- across that gap the row reads as a label on the left and
+   some toolbar on the right, and the buttons look as though they belonged
+   to the field below. Everything else in this editor begins at the left
+   edge; so does this. */
 .element-level .count-option {
   min-width: 0;
   display: inline-flex;
@@ -2864,7 +2912,17 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  background: #000;
+  /* Paper, not black -- and this is about the four corners, not about the
+     moment before the slide is there. The frame is rounded and the page
+     inside it is square, so the page is CLIPPED to the curve; along that
+     curve its edge pixels are part transparent, and whatever lies under
+     them shows through. Under black that half-pixel came out a dark grey
+     and the corners read as a thick, smudged arc hung off a border one can
+     barely see -- a shadow nobody had asked for. Under paper the same half
+     pixel lands between the paper and the border, where it belongs. The
+     slide cards do it this way too (.slide-card above), and no slide ever
+     sees this colour: the page fills the frame to the edge. */
+  background: var(--paper);
 }
 .preview-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .preview-hint { text-align: center; }
@@ -2988,23 +3046,21 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    where the caret went. */
 .source-view:focus { outline: none; box-shadow: none; }
 
-/* While the file is open, the two columns it replaces are not there and
-   the preview moves up into the second track. The seam keeps its own
-   track, which is the preview's, exactly as it does the rest of the time.
+/* While the file is open, the two columns it replaces are not there and it
+   SPANS the tracks they leave standing. The grid itself does not change --
+   same three tracks, same widths, same seam -- and that is the point: the
+   preview keeps the width it had, to the pixel, across the switch into the
+   file and back out of it. A grid of two tracks instead of three, however
+   carefully its fractions were chosen, moved the preview a few dozen
+   pixels every time the mode changed, and a preview that resizes under the
+   eye is a preview one cannot judge a slide by.
 
-   The width is the source column's own (js/column-split.js): a form is as
-   wide as its fields need and a file as wide as its longest line, so the
-   two remember different numbers. */
-.editor.is-sourcing {
-  grid-template-columns:
-    minmax(360px, var(--source-width, 1.15fr))
-    minmax(320px, 1fr);
-}
+   It also leaves one width where there were two (js/column-split.js): the
+   seam divides the editor in one place, and the file is as wide there as
+   the form was. */
 .editor.is-sourcing > .slide-list,
 .editor.is-sourcing > .column.form { display: none; }
-.editor.is-sourcing > .source-view { grid-column: 1; grid-row: 1; }
-.editor.is-sourcing > .column.preview,
-.editor.is-sourcing > .column-split { grid-column: 2; grid-row: 1; }
+.editor.is-sourcing > .source-view { grid-column: 1 / 3; grid-row: 1; }
 /* The button that opened it stays lit for as long as it is open: this is a
    mode, and a mode that does not say it is on is one nobody finds the way
    out of. */
@@ -3672,10 +3728,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   .column-split { display: none; }
   .column.preview { grid-column: 1; grid-row: auto; }
   /* The file stacks with the rest. Said again here because the rule that
-     puts it beside the preview names the editor and so outweighs the one
-     above -- and two tracks of 360 and 320 do not fit in a window this
-     narrow whatever they are asked to do. */
-  .editor.is-sourcing { grid-template-columns: 1fr; }
+     spans it across the two tracks beside the preview names the editor and
+     so outweighs the one above -- and stacked there is only the one track
+     for it to stand in. */
   .editor.is-sourcing > .source-view,
   .editor.is-sourcing > .column.preview { grid-column: 1; grid-row: auto; }
   .source-view { overflow: visible; }

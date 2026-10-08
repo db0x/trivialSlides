@@ -306,6 +306,18 @@
 }
 .reveal .layout-freestyle .slide-box > :first-child { margin-top: 0; }
 .reveal .layout-freestyle .slide-box > :last-child { margin-bottom: 0; }
+/* A placed block of code keeps to the width it was given: the lines wrap
+   into the box instead of running out of the right-hand side of it. On an
+   ordinary slide a block of code has the whole text area and `pre` is the
+   right answer -- long lines there are the author's business. In a box
+   somebody sized by hand it is the wrong one: the width is the one thing
+   the author actually said, and it was the only thing the block did not
+   keep to. The height follows the text, as it does for every other placed
+   block. */
+.reveal .layout-freestyle pre.slide-box > code {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
 
 /* --- Image beside text ------------------------------------------------ */
 .reveal .slides section.layout-image-right,
@@ -658,9 +670,18 @@
    Links keep the theme's colour on purpose: they have to stay
    recognisable as links, and that is what their colour is for. */
 .reveal .slides section[data-text-color] :is(h1, h2, h3, h4, h5, h6,
-p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
+p, li, td, th, blockquote, cite, strong, em, del, .slide-text) {
   color: inherit;
 }
+/* Code, but only the kind that stands INSIDE a sentence. A highlighted
+   block brings its own colours (code.js) and the one it uses for the code
+   it has nothing to say about -- a bracket, a semicolon, a name it does
+   not know -- is one of them. This rule used to name `code` flatly and so
+   won over the scheme on every slide carrying a colour of its own: the
+   keywords kept the scheme's colours, everything between them took the
+   slide's, and a light scheme under white text showed about a third of
+   the program. */
+.reveal .slides section[data-text-color] :not(pre) > code { color: inherit; }
 
 /* --- Background effects ------------------------------------------------
    An animated background. It does not sit on the <section> -- that box is
@@ -1003,15 +1024,22 @@ p, li, td, th, blockquote, cite, strong, em, del, code, .slide-text) {
 /* --- Staged reveals in the editor preview -----------------------------
    reveal hides a fragment until it is clicked, which is right on the wall
    and useless in the editor: the author would be typing into a part of the
-   slide that shows nothing. In the preview they are visible but dimmed,
-   with a bar in the margin -- you see what is there AND that it only
-   appears later. Presentation and export are untouched. */
+   slide that shows nothing. In the preview they are visible but dimmed --
+   you see what is there AND that it only appears later. Presentation and
+   export are untouched.
+
+   The dimming does that alone. There used to be a bar in the margin as
+   well, and a short vertical line at the left edge of a block is the one
+   shape nobody reads as a mark: it reads as a text caret, and so as an
+   invitation to type where nothing can be typed. Beside a picture it is
+   worse -- a caret next to an image promises an editing mode that does not
+   exist -- and on a freestyle slide it stands wherever the block has been
+   put, which is not a margin at all. What the bar had to say is said
+   twice over anyway: by the dimming here, and in words by the element's
+   own row in the form ("appears on click"). */
 body.is-preview .reveal .fragment {
   visibility: visible !important;
   opacity: 0.5;
-  border-left: 3px solid currentColor;
-  padding-left: 0.4em;
-  margin-left: -0.4em;
 }
 
 /* --- Quotes inside body text -------------------------------------------

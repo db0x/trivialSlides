@@ -39,6 +39,41 @@
   // or fills the window.
   var SNAP = 6;      // screen pixels
 
+  // The grips are drawn INSIDE the slide, and reveal scales the slide down
+  // to fit the frame it stands in. At the size a preview usually has, that
+  // took a grip of eighteen pixels to nine and the picture inside it to a
+  // smudge -- which is why the one for turning was the one nobody found.
+  // So the scaling is given back to them: --place-scale is its undo, every
+  // measurement in css/place.css is counted in it, and a grip is the same
+  // size under the hand whatever the preview is doing.
+  //
+  // Asked again whenever the frame changes size, and once more each time
+  // the handles are put on -- that is the moment it has to be right, and
+  // it costs one number.
+  function keepSize() {
+    var scale = window.Reveal && Reveal.getScale ? Reveal.getScale() : 1;
+    if (!scale || !isFinite(scale)) scale = 1;
+    document.documentElement.style.setProperty("--place-scale", String(1 / scale));
+  }
+  // After reveal has worked out its own scaling rather than before: the
+  // window event reaches us first, and the number we want is the one it
+  // leaves behind.
+  window.addEventListener("resize", function () {
+    requestAnimationFrame(function () { keepSize(); keepInside(); });
+  });
+  try { if (window.Reveal && Reveal.on) Reveal.on("resize", keepSize); } catch (e) { /* not up yet */ }
+  keepSize();
+
+  // What each handle is, in words. The shapes say it first -- a bar on the
+   // edge, a knob on a stem, a pencil (css/place.css) -- and this is for
+   // whoever points at one anyway. The title attribute and not the
+   // editor's own tooltip: that one lives in the other document and
+   // cannot be shown over this one.
+  var WORDS = (function () {
+    var block = document.getElementById("data-grips");
+    try { return JSON.parse(block.textContent); } catch (e) { return {}; }
+  })();
+
   var picked = null;  // the block the handles are on
   var drag = null;    // the gesture in progress
   var lastPicked = -1; // which one, so it survives the slide being redrawn
@@ -192,6 +227,7 @@
   // wall.
   function handles(block) {
     clearHandles();
+    keepSize();
     // Three: what the block SAYS, how wide it is, and how far it is
     // turned. The first of them is the way back to the words -- a block
     // one can move but not rewrite would be furniture, not text.
@@ -199,9 +235,56 @@
       var grip = document.createElement("span");
       grip.className = "place-grip place-grip-" + what;
       grip.dataset.grip = what;
+      if (WORDS[what]) grip.title = WORDS[what];
       block.appendChild(grip);
     });
     block.classList.add("is-picked");
+    keepInk(block.closest("section"));
+    keepInside();
+  }
+
+  // Light handles on a dark slide, dark handles on a light one -- the
+  // pictures carry no ground of their own any more, so the only thing
+  // keeping them visible is standing opposite what they are drawn on.
+  //
+  // reveal says which of the two it is, but only where it knows the
+  // slide's background COLOUR: it says nothing about a gradient, a picture
+  // or the moving background of an effect, which is most of what a slide
+  // like this has. So the question is asked the other way round -- what
+  // colour is the slide's own text? A slide is written in something that
+  // can be read on it, so its text is the one honest answer about its
+  // background that is always there.
+  function keepInk(section) {
+    var light = true;
+    if (section && section.classList.contains("has-light-background")) {
+      light = false;
+    } else if (section && !section.classList.contains("has-dark-background")) {
+      var rgb = /(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(window.getComputedStyle(section).color);
+      // The eye's own weighting of the three, the one every contrast rule
+      // of thumb is written in.
+      if (rgb) light = (rgb[1] * 299 + rgb[2] * 587 + rgb[3] * 114) / 1000 >= 128;
+    }
+    var root = document.documentElement.style;
+    root.setProperty("--place-ink", light ? "#ffffff" : "#15181d");
+    root.setProperty("--place-halo", light ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.75)");
+  }
+
+  // A grip that lands outside the slide is a grip nobody can reach: this
+  // page shows the slide and nothing around it, so whatever crosses the
+  // edge is simply gone -- and a block pushed into a corner is exactly
+  // when one wants to take hold of it. Each handle that would fall off is
+  // turned inwards instead, onto the block's own corner. A worse place for
+  // it than just outside, and better than no place at all.
+  function keepInside() {
+    var wide = document.documentElement.clientWidth;
+    var high = document.documentElement.clientHeight;
+    [].forEach.call(document.querySelectorAll(".place-grip"), function (grip) {
+      grip.classList.remove("is-inside");
+      var r = grip.getBoundingClientRect();
+      if (r.top < 0 || r.left < 0 || r.right > wide || r.bottom > high) {
+        grip.classList.add("is-inside");
+      }
+    });
   }
 
   function clearHandles() {

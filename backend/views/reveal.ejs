@@ -18,6 +18,12 @@
        here: the presentation and the exported file must not carry so much
        as the rule for one (js/slide-place.js). -->
   <link rel="stylesheet" href="<%= BASE %>/static/css/place.css">
+  <!-- What the three handles are, in words. This page is a document of
+       its own, so the editor's own tooltips do not reach into it; these
+       ride along and become the handles' title (js/slide-place.js). -->
+  <script type="application/json" id="data-grips"><%- JSON.stringify({
+    edit: t('editor.gripEdit'), width: t('editor.gripWidth'), turn: t('editor.gripTurn'),
+  }) %></script>
 <% } %>
 </head>
 <body class="<%= preview ? "is-preview" : "" %>">
