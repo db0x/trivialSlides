@@ -15,12 +15,25 @@ import * as places from "./places.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
 import { setupAi } from "./ai.js";
+import { setupPalette } from "./palette.js";
+import { judge, themeText } from "./contrast.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
 var deck = JSON.parse($("#data-deck").textContent);
 var LAYOUTS = JSON.parse($("#data-layouts").textContent);
 var images = JSON.parse($("#data-images").textContent);
+// What each theme colours a slide that chooses nothing of its own, read
+// off reveal.js' stylesheets on the server (themes.js). Without it the
+// contrast line can only say that the theme decides.
+var THEME_COLORS = {};
+try { THEME_COLORS = JSON.parse($("#data-themes").textContent); } catch (e) { /* then it says so */ }
+// And what each effect lays under the writing instead of the colour the
+// slide chose (effects.js). Keyed by name, the way the slide carries it.
+var EFFECT_COLORS = {};
+try {
+  JSON.parse($("#data-effects").textContent).forEach(function (e) { EFFECT_COLORS[e.id] = e; });
+} catch (e) { /* then it says so */ }
 var layoutsById = {};
 LAYOUTS.forEach(function (l) { layoutsById[l.id] = l; });
 
@@ -60,6 +73,8 @@ var el = {
   videoNote: $("#video-note"),
   fragmentMenu: $("#fragment-menu"),
   fragmentButton: $("#fragment-button"),
+  levelMenu: $("#level-menu"),
+  levelButton: $("#level-button"),
   textSideMenu: $("#text-side-menu"),
   textSideButton: $("#text-side-button"),
   textPlaceMenu: $("#text-place-menu"),
@@ -85,6 +100,12 @@ var el = {
   textColorTool: $("#text-color-tool"),
   gradient: $("#slide-gradient"),
   gradientHint: $("#gradient-hint"),
+  gradientName: $("#gradient-name"),
+  effectName: $("#effect-name"),
+  textColorName: $("#text-color-name"),
+  backgroundColorName: $("#background-color-name"),
+  sample: $("#look-sample"),
+  contrast: $("#look-contrast"),
   gradientVorlagen: $("#gradient-presets"),
   effectTiles: $("#effect-tiles"),
   codeButton: $("#code-insert"),
@@ -241,16 +262,30 @@ function saveNow(toFile) {
 var saveSoon = verzoegert(900, saveNow);
 
 // --- Saved, or owed ----------------------------------------------------
-// With autosave on this says nothing at all: writing the file is the normal
-// course of things, and a word after every keystroke would be a complaint
-// about it. Switched off, the opposite holds -- nothing is written unless
-// one presses the button, so the header has to say that something is owed,
-// and the button has to be there to press.
+// The word is there in every state, which it was not. With autosave on the
+// header used to say NOTHING -- and the one question a writer asks all day
+// is whether the work is safe, so the state everybody is in most of the
+// time was the one the bar would not report on. A word that only ever
+// appears when something is wrong teaches nobody where to look for it.
+//
+// It says "saved" through the second or so between a keystroke and the
+// delayed write, and that is deliberate rather than overlooked: the gap is
+// shorter than the glance, nothing can be done about it in the meantime,
+// and a word that flickered between two states while one typed would be
+// the noisiest thing in the editor. What it is reporting is the FILE, not
+// the keystroke -- and if the file cannot be written, saveNow() says so in
+// the same place, in red.
+//
+// Switched off, the opposite holds: nothing is written unless one presses
+// the button, so the bar has to say what is owed, and the button has to be
+// there to press. It comes and goes with the setting -- but the slot it
+// stands in holds its width either way (app.css), so nothing beside it
+// moves when it does.
 function drawSaveState() {
   el.saveButton.hidden = autosaveOn;
   var owed = !autosaveOn && (schmutzig || ungesichert);
   el.saveButton.classList.toggle("is-owed", owed);
-  stateShow(owed ? t("state.unsaved") : "");
+  stateShow(owed ? t("state.unsaved") : t("state.saved"), owed ? "is-owed" : "is-saved");
 }
 
 el.saveButton.addEventListener("click", function () { saveNow(true); });
@@ -601,9 +636,8 @@ function showSlide() {
   showColorField(el.customTextColor, slide.textColor);
   el.gradient.value = slide.gradient || "";
   gradientShow();
-  $$(".effect-tile").forEach(function (k) {
-    k.classList.toggle("is-active", k.dataset.effect === (slide.effect || ""));
-  });
+  effectShow();
+  lookShow();
 }
 
 function setContentMode(slide) {
@@ -632,6 +666,14 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$("#text-toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // The heading menu is a <details> rather than a button with a command,
+  // so the sweep above does not reach it. In source mode there are no
+  // blocks to be a heading -- only text -- so it greys out the same way
+  // the width menu does when there is no width to choose, and for the
+  // same reason: a button that vanishes and comes back is harder to find
+  // again than one that goes quiet.
+  el.levelMenu.setAttribute("aria-disabled", sourceMode ? "true" : "false");
+  if (sourceMode) el.levelMenu.open = false;
   // "This paragraph" needs a paragraph, and in source mode there is none --
   // only text. The slide's own text box is a different matter: it is an
   // attribute of the slide and can be set from either mode.
@@ -839,6 +881,10 @@ function headerMenu(id, after) {
 }
 
 headerMenu("deck-theme", function () {
+  // The contrast line rests on the theme's own colours wherever a slide
+  // names none, so the verdict belongs to the theme as much as to the
+  // slide and has to be said again here (lookShow, contrast.js).
+  lookShow();
   saveNow().then(function () { preview.newLoad(active); });
 });
 headerMenu("deck-transition", function () { saveNow(); });
@@ -1069,6 +1115,46 @@ function mark(selector, on) {
   row.classList.toggle("is-active", on);
   row.setAttribute("aria-checked", on ? "true" : "false");
 }
+
+// --- A heading inside the text -----------------------------------------
+// One of four, and which one is a question about the block the caret is
+// in -- so the menu answers it on the way open, the same as the one
+// beside it (js/editor/richtext.js, levelHere). Radio rows and not
+// checkmarks: a block is one of the four at a time.
+function drawLevel() {
+  var node = markedRange && markedRange.startContainer;
+  var level = sourceMode ? null : rt.levelHere(el.content, node);
+  $$("#level-menu .menu-item").forEach(function (row) {
+    var here = level !== null && String(level) === row.dataset.level;
+    row.classList.toggle("is-active", here);
+    row.setAttribute("aria-checked", here ? "true" : "false");
+  });
+}
+
+// <details> has no disabled state of its own, so the click that would open
+// it is the one that has to be turned away -- the same as the width menu
+// further down.
+el.levelButton.addEventListener("click", function (ev) {
+  if (el.levelMenu.getAttribute("aria-disabled") === "true") ev.preventDefault();
+});
+el.levelButton.addEventListener("mousedown", rememberRange);
+el.levelMenu.addEventListener("toggle", function () {
+  if (el.levelMenu.open) drawLevel();
+});
+
+$$("#level-menu .menu-item").forEach(function (row) {
+  row.addEventListener("click", function () {
+    if (!sourceMode && markedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(markedRange);
+      rt.befehl(el.content, "level-" + row.dataset.level);
+    }
+    el.levelMenu.open = false;
+    remember();
+    drawLevel();
+  });
+});
 
 // The caret is what "this paragraph" means, and opening a menu takes the
 // focus off it. So the range is written down on the way in -- the same
@@ -2290,6 +2376,100 @@ $(".tab-row").addEventListener("keydown", function (ev) {
   tabs[there].focus();
 });
 
+// --- What the slide will look like -------------------------------------
+// The sample at the top of the colours panel, and the one line under it
+// that says whether the writing can be read on it (views/editor.ejs).
+//
+// Colour, gradient and effect STACK on a slide -- the ground first, each
+// of the others over it (render.js) -- and the panel used to show them as
+// three rows of swatches and the result nowhere. Here the three are laid
+// on in the same order, so the sample is the arrangement itself rather
+// than a picture of it.
+//
+// A colour nobody has chosen is the THEME's, and the theme's colours are
+// read off its stylesheet and handed to this page (themes.js) -- so the
+// sample wears them too rather than falling back on the editor's own. It
+// has to: the line underneath judges the slide in the colours it will
+// really have, and a sample in different ones would stand there arguing
+// with the sentence beside it -- pale type on a pale card under the words
+// "easy to read". Which colour of the theme's it is depends on the
+// ground, and that rule is asked of contrast.js rather than written here
+// a second time.
+//
+// The one thing the sample still cannot show is an effect's own ground:
+// that is built of layers in slides.css. The line says so in words, and
+// the sample keeps the colour underneath, which is what the layers drift
+// over.
+function lookShow() {
+  var slide = deck.slides[active];
+  if (!slide) return;
+
+  var theme = THEME_COLORS[deck.theme];
+  var wears = theme ? themeText(theme, slide.background) : null;
+  el.sample.style.backgroundColor = slide.background
+    || (theme && !slide.gradient ? theme.background : "");
+  el.sample.style.backgroundImage = slide.gradient || "";
+  el.sample.style.color = slide.textColor || (wears ? wears.main : "");
+  $(".look-sample-title", el.sample).style.color = slide.textColor
+    || (wears ? wears.heading : "");
+  // The quiet of the effect is the tiles' own, worn at another size
+  // (app.css) -- one definition, so the sample cannot drift away from the
+  // row of tiles that sets it.
+  if (slide.effect) el.sample.setAttribute("data-effect", slide.effect);
+  else el.sample.removeAttribute("data-effect");
+
+  var said = judge({
+    text: slide.textColor,
+    background: slide.background,
+    gradient: slide.gradient,
+    effect: slide.effect,
+  }, theme, EFFECT_COLORS[slide.effect]);
+  var word = said.state === "unknown"
+    ? t(said.see === "text" ? "contrast.noText"
+      : said.see === "ground" ? "contrast.noGround"
+      : said.see === "effect" ? "contrast.effect" : "contrast.alpha")
+    // The number in the reader's own notation: 8.2 in English, 8,2 in
+    // German. The same locale the overview dates are written in. Whose
+    // doing the number is gets its own sentence, because a number resting
+    // on the theme or on an effect changes when that does -- and because
+    // the effect's is the WORST of several, which the reader would
+    // otherwise have no way of knowing.
+    : t("contrast." + said.state + (said.via === "effect" ? "Effect"
+      : said.via === "theme" ? "Theme" : ""),
+    { n: said.value.toLocaleString(t("date.locale")) });
+  el.contrast.textContent = word;
+  el.contrast.className = "look-contrast"
+    + (said.state === "unknown" ? "" : " is-" + said.state);
+
+  // The name of what is set, at the end of each row. Without a value of
+  // its own a slide follows the deck's theme, and that is what the row
+  // says rather than standing empty -- an empty line reads as "nothing
+  // here to set" and the opposite is true.
+  el.textColorName.textContent = slide.textColor || t("editor.colorTheme");
+  el.backgroundColorName.textContent = slide.background || t("editor.colorTheme");
+}
+
+// --- The effect --------------------------------------------------------
+// Radio rows, so the chosen one is said in the markup and not only in a
+// class: before this a screen reader had no way at all of learning which
+// effect a slide carried (views/editor.ejs).
+function effectShow() {
+  var slide = deck.slides[active];
+  var now = (slide && slide.effect) || "";
+  var name = "";
+  $$(".effect-tile").forEach(function (k) {
+    var here = k.dataset.effect === now;
+    k.classList.toggle("is-active", here);
+    k.setAttribute("aria-checked", here ? "true" : "false");
+    // Only the chosen tile is a tab stop; the arrow keys move inside the
+    // row. Thirteen stops across this panel were thirteen presses of Tab
+    // to reach the field under it.
+    k.tabIndex = here ? 0 : -1;
+    if (here) name = k.getAttribute("aria-label");
+  });
+  el.effectName.textContent = name;
+}
+
 // --- Gradient ----------------------------------------------------------
 // Two ways to the same value: a swatch to click, and the field below it for
 // anyone who writes their own CSS. The field's pattern is the grammar from
@@ -2308,9 +2488,45 @@ function gradientShow() {
   el.gradientHint.classList.toggle("hint-error", falsch);
   el.gradientHint.textContent = falsch ? t("editor.gradientInvalid") : gradientNote;
   // The active swatch is whichever one holds exactly this value -- a
-  // hand-written gradient simply marks none of them.
+  // hand-written gradient simply marks none of them, and then the row
+  // says so in words rather than leaving the name blank.
+  var name = "";
+  var any = false;
   $$(".gradient-probe").forEach(function (p) {
-    p.classList.toggle("is-active", p.dataset.gradient === value);
+    var here = p.dataset.gradient === value;
+    p.classList.toggle("is-active", here);
+    p.setAttribute("aria-checked", here ? "true" : "false");
+    p.tabIndex = here ? 0 : -1;
+    if (here) { name = p.getAttribute("aria-label"); any = true; }
+  });
+  // A radiogroup with nothing checked still has to have ONE tab stop, or
+  // the keyboard cannot get into the row at all.
+  if (!any) {
+    var first = $(".gradient-probe");
+    if (first) first.tabIndex = 0;
+    name = t("editor.gradientCustom");
+  }
+  el.gradientName.textContent = name;
+}
+
+// Left and right walk a row of swatches and take the choice with them:
+// pressing one and arriving at it are the same thing here, there is
+// nothing to confirm. The same keys the tabs over this panel answer to,
+// and the same reason -- a row is one stop, not thirteen.
+function swatchKeys(row, pick) {
+  row.addEventListener("keydown", function (ev) {
+    var all = $$("[role='radio']", row);
+    var here = all.indexOf(document.activeElement);
+    if (here === -1) return;
+    var there = null;
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") there = (here - 1 + all.length) % all.length;
+    else if (ev.key === "ArrowRight" || ev.key === "ArrowDown") there = (here + 1) % all.length;
+    else if (ev.key === "Home") there = 0;
+    else if (ev.key === "End") there = all.length - 1;
+    if (there === null) return;
+    ev.preventDefault();
+    pick(all[there]);
+    all[there].focus();
   });
 }
 
@@ -2320,26 +2536,35 @@ el.gradient.addEventListener("input", function () {
   remember();
 });
 
-el.gradientVorlagen.addEventListener("click", function (ev) {
-  var probe = ev.target.closest(".gradient-probe");
-  if (!probe) return;
+function gradientPick(probe) {
   harvest();
   el.gradient.value = probe.dataset.gradient;
   deck.slides[active].gradient = probe.dataset.gradient;
   gradientShow();
+  lookShow();
   remember();
+}
+
+el.gradientVorlagen.addEventListener("click", function (ev) {
+  var probe = ev.target.closest(".gradient-probe");
+  if (probe) gradientPick(probe);
 });
+swatchKeys(el.gradientVorlagen, gradientPick);
 
 // An animated background carries a name, so there is nothing to type: the
 // tiles are the whole control.
-el.effectTiles.addEventListener("click", function (ev) {
-  var tile = ev.target.closest(".effect-tile");
-  if (!tile) return;
+function effectPick(tile) {
   harvest();
   deck.slides[active].effect = tile.dataset.effect;
   showSlide();
   remember();
+}
+
+el.effectTiles.addEventListener("click", function (ev) {
+  var tile = ev.target.closest(".effect-tile");
+  if (tile) effectPick(tile);
 });
+swatchKeys(el.effectTiles, effectPick);
 
 // --- Images ------------------------------------------------------------
 // One picker, two callers by now: the picture of the slide in front, and
@@ -2675,6 +2900,12 @@ var aiDialog = setupAi({
   flush: window.trivialSlidesSave,
   frame: $(".preview-frame"),
 });
+
+// Everything the header can do, findable by its name (js/editor/palette.js).
+// Set up LAST of the lot, because it reads the header off the page rather
+// than being told what is in it -- and by here everything that puts itself
+// there has been.
+setupPalette();
 
 // --- Startup -----------------------------------------------------------
 // Paragraphs rather than <div> on line break: only then does the field

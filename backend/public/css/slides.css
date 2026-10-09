@@ -700,7 +700,10 @@ p, li, td, th, blockquote, cite, strong, em, del, .slide-text) {
    42.5%): a circle turning on its own centre would not move at all.
 
    It brings its background with it, so unlike a gradient it covers the
-   slide's own colour. That is part of the picture, not an oversight.
+   slide's own colour. That is part of the picture, not an oversight -- and
+   it is why the editor judges the writing against THESE colours rather
+   than against the one the slide chose and never shows (effects.js, where
+   the grounds below are declared as data, and js/editor/contrast.js).
 
    Only print draws it differently, for the reason given further down. */
 .reveal .slide-background[data-background-effect] > .slide-effect {

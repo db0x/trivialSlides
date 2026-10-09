@@ -526,7 +526,25 @@ function slideHtml(slide, imageBase, deckBands) {
   // here and the file has no line that points at it. So the slide says it,
   // and this is where that is answered.
   //
-  // reveal.js asks no more of it than the class: any element carrying
+  // Is this body already a quote from end to end? Every line of it a quote
+// line, blank lines and our own .element comments aside -- which is
+// exactly the case where the layout's own blockquote would land round a
+// blockquote. A body that is quoted only in PART is not one: there the
+// layout's wrapper is what holds the whole thing together, and the inner
+// quote is a quote within a quote on purpose.
+//
+// The same question the editor's field asks on the way in
+// (js/editor/richtext.js, isQuoteLine) -- written again here rather than
+// shared, because nothing else travels between the two and one regular
+// expression is a smaller thing to keep in step than a module boundary.
+function allQuoted(content) {
+  const lines = String(content || "").split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "" && !l.startsWith("<!--"));
+  return lines.length > 0 && lines.every((l) => /^>/.test(l));
+}
+
+// reveal.js asks no more of it than the class: any element carrying
   // `fragment` is a step, and a box is as good a step as a paragraph.
   // What it buys over marking the blocks inside is the box ITSELF -- on a
   // full-bleed image that box has a dark ground of its own (slides.css),
@@ -536,8 +554,18 @@ function slideHtml(slide, imageBase, deckBands) {
 
   let inner;
   if (layout === "quote") {
+    // The layout says the quote -- unless the body has already said it.
+    //
+    // Both ways round are things people write, and both have to come out
+    // as ONE quote. Someone who picks the layout and starts typing has
+    // said it with the layout; someone who writes > has said it in
+    // Markdown, which is the way a reader that has never heard of
+    // data-layout sees it too. Saying it twice is what the editor's own
+    // example deck used to do, and it put a blockquote inside a
+    // blockquote on the wall.
+    const body = md(slide.content, imageBase);
     inner =
-      `<blockquote>${md(slide.content, imageBase) || "<p></p>"}</blockquote>` +
+      (allQuoted(slide.content) ? body : `<blockquote>${body || "<p></p>"}</blockquote>`) +
       (slide.source ? `<cite>${esc(slide.source)}</cite>` : "");
     inner = `<div class="${textBox}">${heading}${inner}</div>`;
   } else if (layouts.hasField(layout, "textSide")) {

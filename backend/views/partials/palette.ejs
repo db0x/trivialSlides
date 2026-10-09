@@ -1,0 +1,35 @@
+<!-- Every command in the header, findable by typing its name. Ctrl+K, or
+     Cmd+K (js/editor/palette.js).
+
+     This is what lets the bar above stay short. A toolbar is always a bet
+     about which handful of things are worth standing there all day, and
+     every such bet is wrong for somebody; a palette is the answer to
+     "where did they put it", and it costs the bar nothing.
+
+     There is no list of commands written out here, and none in the
+     JavaScript either: the rows are READ OFF THE HEADER each time this
+     opens. A button added to the bar is in here without anybody saying
+     so, a button taken out is gone from here, and a row can never name
+     something the editor does not have -- which is the failure every
+     hand-kept command list comes to in the end.
+
+     A dialog and not a floating box, for the reason every other overlay in
+     this editor is one: it is modal, the browser takes the focus into it
+     and gives it back on the way out, and Escape closes it without a line
+     of code. -->
+<dialog id="palette-dialog" class="dialog dialog-palette" aria-label="<%= t('palette.field') %>">
+  <!-- role=combobox over a listbox: the field keeps the focus the whole
+       time and says which row is current through aria-activedescendant, so
+       the arrow keys move the selection without the focus ever leaving the
+       place one is typing. -->
+  <div class="palette-field-row">
+    <input id="palette-field" class="palette-field" type="text" role="combobox"
+           autocomplete="off" autocorrect="off" spellcheck="false"
+           aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list"
+           aria-label="<%= t('palette.field') %>"
+           placeholder="<%= t('palette.placeholder') %>">
+  </div>
+  <ul id="palette-list" class="palette-list" role="listbox" aria-label="<%= t('palette.field') %>"></ul>
+  <p id="palette-empty" class="palette-empty" hidden><%= t('palette.empty') %></p>
+  <p class="palette-keys"><%= t('palette.hintKeys') %></p>
+</dialog>

@@ -47,9 +47,21 @@ function translate(language, schluessel, values) {
 // what the server already rendered does not need sending twice.
 const FOR_BROWSER = [
   "theme.tooLight", "theme.tooDark",
-  "state.offline", "state.unsaved",
+  "state.offline", "state.unsaved", "state.saved",
+  // The command palette names every command after the control it
+  // drives, so only its own furniture travels (js/editor/palette.js).
+  "palette.empty", "palette.groupDeck", "palette.groupOpen",
+  "palette.groupExport", "palette.groupPresent", "palette.groupSettings",
   "color.none", "color.reset", "color.done",
   "editor.gradientInvalid",
+  // The one line under the sample, which says whether the writing can
+  // be read on the ground behind it -- built in the page as the two
+  // colours are chosen (js/editor/contrast.js).
+  "editor.colorTheme", "editor.gradientCustom", "date.locale",
+  "contrast.good", "contrast.thin", "contrast.poor",
+  "contrast.goodTheme", "contrast.thinTheme", "contrast.poorTheme",
+  "contrast.goodEffect", "contrast.thinEffect", "contrast.poorEffect",
+  "contrast.noText", "contrast.noGround", "contrast.alpha", "contrast.effect",
   "dialog.codeTitle", "dialog.codeEdit", "dialog.codeInsert", "dialog.codeApply",
   "code.click", "code.noLanguage", "code.remove",
   "editor.videoUnknown", "editor.urlInvalid",

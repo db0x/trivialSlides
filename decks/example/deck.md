@@ -114,8 +114,7 @@ sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.
 ## Three columns
 
 - C
-<!-- .element: data-at="80,60,11" data-turn="20" -->
-
+<!-- .element: class="fragment" data-fragment-index="0" -->
 - C++
 <!-- .element: class="fragment" data-fragment-index="0" -->
 - C#

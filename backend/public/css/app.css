@@ -48,6 +48,15 @@
   --accent-edge: #b3d9f1;
   --danger: #c0534a;
   --danger-wash: #fbeceb;
+  /* A verdict has three answers and not two: fine, thin, and wrong. Red
+     was already here for the third; these two are the other two, and they
+     exist because the one line on the colours panel that judges a slide's
+     contrast has to say which of the three it is in a colour AND in a
+     word (js/editor/contrast.js). Both are read as text on paper, so they
+     are chosen to clear 4.5:1 against it -- a warning nobody can read is
+     a joke at the reader's expense. */
+  --ok: #2e7d32;
+  --warn: #b26a00;
 
   /* --- Radius ----------------------------------------------------------
      Four sizes and a pill. The rule is the size of the thing: the smaller
@@ -117,6 +126,8 @@
   --d-accent-wash: #1a2c39;
   --d-accent-edge: #2d5a76;
   --d-danger: #e8827a;
+  --d-ok: #7cc47f;
+  --d-warn: #e0a449;
   --d-danger-wash: #33201e;
   /* Deeper and darker than the light ones: on a dark ground a shadow at 6 %
      is invisible, and what separates two dark surfaces is mostly the fall
@@ -164,6 +175,8 @@
     --accent-edge: var(--d-accent-edge);
     --danger: var(--d-danger);
     --danger-wash: var(--d-danger-wash);
+    --ok: var(--d-ok);
+    --warn: var(--d-warn);
     --lift-1: var(--d-lift-1);
     --lift-2: var(--d-lift-2);
     --lift-3: var(--d-lift-3);
@@ -192,6 +205,8 @@
   --accent-edge: var(--d-accent-edge);
   --danger: var(--d-danger);
   --danger-wash: var(--d-danger-wash);
+  --ok: var(--d-ok);
+  --warn: var(--d-warn);
   --lift-1: var(--d-lift-1);
   --lift-2: var(--d-lift-2);
   --lift-3: var(--d-lift-3);
@@ -384,13 +399,32 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 .button-icon:active::before { transform: scale(0.9); }
 
 /* --- Header ----------------------------------------------------------- */
-/* One bar, four groups, and the order of them is the order of the
-   questions: whose deck is this (the mark and the title), what does it look
-   like (the two pills), what do I do to it (the tray), and what is it all
-   for (presenting). The space that used to sit in the middle doing nothing
-   now sits between the title and the first group, which is where a gap
-   says something: everything after it belongs to the deck rather than
-   naming it. */
+/* ONE SHAPE PER KIND OF CONSEQUENCE. Three shapes, and between them they
+   cover everything the bar can do:
+
+     .header-value   a PILL with a border, carrying a name and a value.
+                     The deck IS this; clicking offers the other values.
+     .head-tool      a square GHOST button with a word and no ground
+                     until it is pointed at. Something OPENS.
+     .header-present the one FILLED button. The way forward.
+
+   Round is state, square is action -- and a reader who has noticed that
+   once can predict every control in the bar without pressing it.
+
+   What stood here before could not be predicted at all. The pills and the
+   icon tray were the same height, the same pill radius and the same sunken
+   ground, so they read as one family; behind that family were two entirely
+   different grammars, and the tray's half hid five different kinds of
+   consequence -- writing a file, unfolding a panel, two dialogs and a menu
+   -- behind five anonymous grey squares. The ground was what made them
+   look like one thing. It is gone.
+
+   The order is the order of the questions: whose deck is this (the mark
+   and the title), what does it look like (the pills), what can I open
+   (the four words), what is the file doing (the state slot), and what is
+   it all for (presenting). Anything the bar cannot carry is reachable by
+   name with Ctrl+K (js/editor/palette.js) -- which is what allows it to
+   stay this short without hiding anything. */
 .head {
   display: flex;
   align-items: center;
@@ -482,12 +516,19 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
    A caret at the end, likewise drawn rather than written, so the pill says
    it opens. The width is held from below so the bar does not twitch as the
    value goes from "none" to "black-contrast" and back. */
+/* The one round shape in the bar, and roundness is the whole signal: this
+   shows a value, it does not do anything. */
 .header-value {
   display: flex;
   align-items: center;
   gap: var(--s2);
   height: 34px;
-  min-width: 9.5rem;
+  /* Held from below so the bar does not twitch as the value goes from
+     "none" to "black-contrast" and back -- but only as far as the longer
+     of the two names needs, not as far as the longest value might. It was
+     9.5rem, which reserved 300 pixels of bar for two settings one touches
+     once a talk. */
+  min-width: 7.5rem;
   padding: 0 var(--s2) 0 var(--s3);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -531,54 +572,137 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 /* Hangs from the left edge of its button and is at least as wide as it. */
 .header-menu .menu-content { left: 0; right: auto; min-width: 100%; }
 
+/* --- What opens (views/editor.ejs) ------------------------------------- */
+/* Four buttons, each with its word. No tray: the sunken ground that used
+   to hold them was what made five different kinds of consequence look like
+   one thing, and it was doing that job in place of the words.
+
+   Ghost, so the bar stays quiet -- there is no edge and no ground until
+   the pointer arrives, which is the same bargain .brand and the title
+   field already strike two groups to the left. What carries the meaning is
+   the word, not the box round it. Square, because every action in this bar
+   is square and only a value is round. */
+.head-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  /* font: inherit FIRST -- the shorthand resets the size and the line
+     height, so a size written before it would be thrown away. */
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.head-tool::-webkit-details-marker { display: none; }
+/* The icon, as a mask like every other icon here, so it takes the button's
+   own colour rather than the grey baked into the file. */
+.head-tool::before {
+  content: "";
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background: currentColor;
+  -webkit-mask: var(--button-icon) center / contain no-repeat;
+  mask: var(--button-icon) center / contain no-repeat;
+  transition: transform var(--fast) var(--ease);
+}
+.head-tool:active::before { transform: scale(0.9); }
+.head-tool:hover { background: var(--sunken); color: var(--text); }
+/* Open, it wears the accent wash -- the same answer the pills give, so
+   "this is the one that is unfolded" is one colour wherever it happens.
+
+   It matters most for the source button, which opens not a menu but a
+   MODE: the file takes the place of the slide list and the form for as
+   long as it is open, and a mode that does not say it is on is one nobody
+   finds the way out of. */
+.head-tool[aria-expanded="true"],
+.menu[open] > .head-tool { background: var(--accent-wash); color: var(--accent); }
+/* One of the four opens a MENU rather than a panel or a dialog, and says
+   so: the caret is the difference between a click that does something and
+   a click that asks a second question. */
+.has-caret::after {
+  content: "";
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-right: -2px;
+  background: currentColor;
+  color: var(--faint);
+  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
+  mask: url(../assets/dow.svg) center / contain no-repeat;
+  transition: transform var(--base) var(--ease);
+}
+.menu[open] > .has-caret::after { transform: rotate(180deg); color: inherit; }
+/* A <summary> is a block, and a block with inline-flex children gets a
+   line box with the font's descender under it -- half a pixel the three
+   plain buttons beside it do not carry, and half a pixel is all it takes
+   to make one button in a row stand taller than the rest. The <details>
+   holds its one button as a flex item instead. */
+.head-open > .menu { display: flex; }
+/* Its menu hangs from the left edge of the button, like the pills' do:
+   right-aligned it would drift out from under the word it belongs to. */
+.head-open-menu > .menu-content { left: 0; right: auto; }
+
+/* --- What the file is doing (views/editor.ejs) ------------------------- */
+/* One slot, and it keeps its width whatever stands in it. The Save button
+   comes and goes with the autosave setting, and while it lived in the tray
+   its coming and going shifted everything to its right -- the Present
+   button among them. A button that moves its neighbours is a button one
+   cannot learn the place of.
+
+   Wide enough for the longer of the two states (the word plus the button),
+   and right-aligned so that what IS there always ends in the same place.
+   It doubles as the gap before the filled button, which is why there is no
+   other separator drawn here. */
+.head-state {
+  min-width: 10rem;
+  justify-content: flex-end;
+}
 .save-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .save-state.is-open { color: var(--text); }
+/* Quiet on purpose: it is the one line in the bar that is read by not
+   being read -- one glances at it, finds the expected word, and goes on.
+   Owed, it steps up to the full text colour, and lost, to red. */
+.save-state.is-saved { color: var(--faint); }
+.save-state.is-owed { color: var(--text); font-weight: 500; }
 .save-state.is-error { color: var(--danger); font-weight: 600; }
 
-/* The tray the deck's tools sit in. One sunken shape instead of five
-   outlined squares: the group reads as a single piece of furniture, and the
-   buttons inside it only draw a ground when they are pointed at.
-
-   It stands 34 pixels tall like everything else in the bar, and that is
-   counted from the outside in: one pixel of border and two of padding
-   either side leave 28 for the buttons. It used to be 3 and 30, which came
-   to 38 -- four pixels taller than the pills beside it and the button after
-   it, enough for the row to read as two rows that nearly line up. The
-   buttons inside a tray are the one place where a hair under the usual 34
-   is right: the tray around them is the hit area that matters. */
-.head-tools {
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius-pill);
-  background: var(--sunken);
-  border: 1px solid var(--border);
-}
-
 /* An icon button with no edge of its own: it belongs to whatever it stands
-   in, and only answers under the pointer. Everywhere in the header, and in
-   any other tray built the same way. */
+   in, and only answers under the pointer. Square like everything else in
+   this bar that DOES something -- it was a lozenge while it sat in a
+   lozenge-shaped tray, and the tray is gone. */
 .icon-ghost {
   border: 1px solid transparent;
   background: transparent;
   box-shadow: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   cursor: pointer;
   transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
 }
-.icon-ghost:hover { background: var(--paper); color: var(--text); box-shadow: var(--lift-1); }
-.head-tools .icon-ghost { width: 28px; height: 28px; }
-/* The download button is a <summary> inside a <details>, and a block with
-   an inline-flex child gets a line box with the font's descender under it
-   -- half a pixel the three plain buttons beside it do not carry, and half
-   a pixel is all it takes to make the tray taller than the row. The
-   details holds its one button as a flex item instead. */
-.head-tools > .menu { display: flex; }
+.icon-ghost:hover { background: var(--sunken); color: var(--text); }
+/* Said again here because box-shadow:none above is as specific as the one
+   rule that gives everything in this editor its focus ring and stands
+   after it -- so these two buttons, alone in the bar, took the key and
+   showed nothing. The ring is what tabbing through a page is made of. */
+.icon-ghost:focus-visible { box-shadow: var(--ring); }
 .menu[open] > .icon-ghost { background: var(--accent-wash); color: var(--accent); }
 
 /* Language and light/dark live in one menu at the right end of the header
    (partials/settings.ejs) -- two switches that are set once do not need to
    stand there permanently. */
-.head-settings { --button-icon: url(../assets/menu.svg); }
+/* Three dots in a row, which is what a menu of leftovers looks like
+   everywhere. The file it used to wear was a 3x3 grid of them, and a grid
+   of nine dots is every other program's sign for "all the apps". */
+.head-settings { --button-icon: url(../assets/more.svg); }
 /* Two rows, each a whole sentence: they read as one line or not at all.
    The menu hangs from the right edge of a header that is wider than they
    are, so there is room for it. */
@@ -600,13 +724,17 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
   text-align: center;
 }
 
-/* Presenting: the one filled button in the editor, and the only one that
-   says a word. Its triangle is a mask like every other icon here, so it
-   takes the button's own colour rather than the grey baked into the file. */
+/* Presenting: the one FILLED button in the editor. It is no longer the
+   only one that says a word -- four of its neighbours do now -- so the
+   fill is what sets it apart, and the fill is enough. Square like the
+   rest of the actions: it used to be a lozenge, which made it the fourth
+   round thing in a bar where roundness was supposed to mean "a value".
+   Its triangle is a mask like every other icon here, so it takes the
+   button's own colour rather than the grey baked into the file. */
 .header-present {
   height: 34px;
   padding: 0 var(--s4);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   font-weight: 600;
   list-style: none;
   cursor: pointer;
@@ -621,60 +749,33 @@ input::placeholder, textarea::placeholder { color: var(--faint); }
 }
 .header-present:hover .present-mark { transform: translateX(1px) scale(1.08); }
 .present-menu[open] > .header-present { filter: brightness(1.08); }
-.header-download { --button-icon: url(../assets/download.svg); }
+/* An arrow going down into a tray. It used to be an arrow into a CLOUD,
+   which is the sign every other program on the machine uses for syncing --
+   and nothing here syncs anywhere. */
+.head-export { --button-icon: url(../assets/export.svg); }
 .header-save { --button-icon: url(../assets/save.svg); }
 /* While something is owed it is the one button in the header that asks to
    be pressed, so it says so -- the accent, as the present button does. */
 .header-save.is-owed { color: var(--accent); background: var(--accent-wash); }
-.header-source { --button-icon: url(../assets/toolbar/code.svg); }
-.header-bands { --button-icon: url(../assets/bands.svg); }
+.head-source { --button-icon: url(../assets/toolbar/code.svg); }
+/* Two bars, one along the top and one along the bottom, which is what the
+   thing IS. The file still carries view-media-playlist in its Inkscape
+   metadata from wherever it was started, but nothing of that playlist is
+   left in the geometry. */
+.head-bands { --button-icon: url(../assets/bands.svg); }
 /* The settings menu is the last thing in the bar on both pages, and on the
    overview it is the only thing -- so it, and not whatever happens to
    precede it, takes the margin that pushes the right-hand end apart. */
 .head > .head-menu { margin-left: auto; }
-/* In the editor the tray and the present button stand before it, and the
-   gap belongs in front of THEM -- otherwise the settings button drifts off
-   on its own and the group it ends falls apart. */
-.head > .head-tools { margin-left: auto; }
-.head > .head-tools ~ .head-menu { margin-left: 0; }
+/* In the editor the state slot and the present button stand before it, and
+   the gap belongs in front of THEM -- otherwise the settings button drifts
+   off on its own and the group it ends falls apart. */
+.head > .head-state { margin-left: auto; }
+.head > .head-state ~ .head-menu { margin-left: 0; }
 
 .menu { position: relative; }
 .menu summary { list-style: none; }
 .menu summary::-webkit-details-marker { display: none; }
-/* A menu floats, so it is lifted off the page rather than ruled off it: the
-   shadow is what says "this is over the form", and the border is only there
-   to give it an edge where the shadow is too faint to find one -- against a
-   white card in the light palette, mostly.
-
-   It arrives rather than appearing: a sixth of a second, a few pixels up
-   and a touch of scale. The animation is on the open state because a
-   <details> has no other moment to hang one on. */
-.menu-content {
-  position: absolute;
-  right: 0;
-  z-index: 20;
-  margin-top: var(--s2);
-  padding: var(--s1);
-  background: var(--paper);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--lift-3);
-  width: max-content;
-  max-width: 290px;
-}
-.menu[open] > .menu-content { animation: menu-in var(--base) var(--ease); }
-@keyframes menu-in {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-  to   { opacity: 1; transform: none; }
-}
-.menu-content a {
-  display: block;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  color: inherit;
-  text-decoration: none;
-  transition: background var(--fast) var(--ease);
-}
 /* A menu floats, so it is lifted off the page rather than ruled off it: the
    shadow is what says "this is over the form", and the border is only there
    to give it an edge where the shadow is too faint to find one -- against a
@@ -1681,6 +1782,19 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .tool-icon[data-command="insertOrderedList"] { --button-icon: url(../assets/toolbar/md-ol.svg); }
 .tool-icon[data-command="strikeThrough"] { --button-icon: url(../assets/toolbar/md-strike.svg); }
 .tool-icon[data-command="link"] { --button-icon: url(../assets/toolbar/md-link.svg); }
+/* The icon has been in the assets since September waiting for the button
+   it belongs to (views/editor.ejs). */
+.tool-icon[data-command="quote"] { --button-icon: url(../assets/toolbar/md-quote.svg); }
+/* The heading menu, and its four rows. The same four icons the freestyle
+   element editor wears for the same four levels (.element-level, further
+   down) -- it is one vocabulary, and the button in the bar shows the
+   middle of it because a heading inside a text is a sub-heading more
+   often than it is a title. */
+.tool-level { --button-icon: url(../assets/toolbar/md-h2.svg); }
+.tool-level-row[data-level="1"] { --button-icon: url(../assets/toolbar/md-h1.svg); }
+.tool-level-row[data-level="2"] { --button-icon: url(../assets/toolbar/md-h2.svg); }
+.tool-level-row[data-level="3"] { --button-icon: url(../assets/toolbar/md-h3.svg); }
+.tool-level-row[data-level="0"] { --button-icon: url(../assets/toolbar/md-text.svg); }
 /* The icon is on the summary that opens the menu now, not on a button of
    its own -- the thing it stands for comes in two kinds (views/editor.ejs). */
 .tool-fragment { --button-icon: url(../assets/toolbar/fragment.svg); }
@@ -1986,6 +2100,45 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .content-field:empty::before { content: attr(data-placeholder); color: var(--muted); }
 .content-field p { margin: 0 0 0.7em; }
 .content-field ul, .content-field ol { margin: 0 0 0.7em; padding-left: 1.4em; }
+/* A quote in the field. The browser's own blockquote is a margin and
+   nothing else, which in a writing field says "indented" rather than
+   "quoted" -- and the one thing this field exists to do is show what the
+   markup MEANS without showing the markup.
+
+   A bar down the left and the type a shade quieter, which is what a quote
+   looks like in every reader there is. Not italics: the quote layout sets
+   its own face on the wall (slides.css), and a field that leaned where
+   the slide does not would be lying about the result.
+
+   The last paragraph inside loses its bottom margin, or a quote ends in a
+   gap that belongs to the paragraph rather than to the box, and the bar
+   runs on past the words. */
+.content-field blockquote {
+  margin: 0 0 0.7em;
+  padding-left: 0.9em;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+}
+.content-field blockquote > :last-child { margin-bottom: 0; }
+/* A heading inside the text. Stepped in size and a little tighter than
+   the paragraph under it, which is all a heading has to do here -- the
+   theme decides what it looks like on the wall, and a field that copied
+   one theme would be wrong on the other thirteen.
+
+   The first one loses its top margin, or a text that opens with a heading
+   starts a line lower than one that opens with a paragraph. */
+.content-field :is(h1, h2, h3) {
+  margin: 1em 0 0.4em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.content-field > :is(h1, h2, h3):first-child { margin-top: 0; }
+.content-field h1 { font-size: 1.35em; }
+.content-field h2 { font-size: 1.18em; }
+.content-field h3 { font-size: 1.05em; }
+/* Nested, each level steps in again and the bar stays visible against the
+   one outside it -- mdToHtml nests as deeply as the file does. */
+.content-field blockquote blockquote { margin-top: 0.7em; }
 /* Mark paragraphs that only appear on click visibly in the editor --
    otherwise there is a surprise waiting during the talk. */
 /* A code block in the rich-text field: an object, not text. It is sealed
@@ -2568,21 +2721,210 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* Both dots on one line, each with its word beside it -- a fieldset per
    dot left two large boxes almost empty. */
 .color-row { display: flex; flex-wrap: wrap; gap: 20px; }
-/* The word above the swatch, the way the gradient and the effect wear
-   theirs -- the same .field-label, so a column of choices lines up on one
-   left edge instead of one word standing beside its tile and the next two
-   above theirs. */
+/* A word and the swatch it belongs to. Three of these stand in a row
+   under the QR code's colours (.color-row), and two more stand one per
+   line on the colours panel, where the row around them does the laying
+   out (.look-row). */
 .color-choice {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s3);
   cursor: pointer;
 }
+
+/* --- Colours and effects: the result, then the layers ------------------ */
+/* The sample, and it is the first thing on the panel because it is the
+   only thing on it that answers the question the panel is open for.
+   Colour, gradient and effect do not stand side by side on the slide --
+   they stack (render.js) -- and three rows of swatches never showed what
+   they come to together.
+
+   16 by 9, so it is a slide and not a banner, and capped so it does not
+   take the panel: a sample one has to scroll past to reach the controls
+   would be the same mistake the eleven layout tiles were. */
+/* The sample and its verdict side by side where there is room for them,
+   and one under the other where there is not. The verdict belongs NEXT to
+   the thing it judges: under a 16-by-9 sample it left a block of empty
+   paper beside the picture and a line of type below it, which read as two
+   things rather than one statement about one picture. */
+.look-sample-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3) var(--s4);
+  margin-bottom: var(--s5);
+}
+.look-sample {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3em;
+  position: relative;
+  /* It grows with the column rather than standing at one size in a panel
+     that runs from 460 to 980 pixels wide: at the wide end a fixed 242
+     was a third of the room with the verdict floating beside it in air.
+     Capped, because a sample one has to scroll past to reach the controls
+     would be the mistake the eleven layout tiles were. */
+  flex: 1 1 15rem;
+  max-width: 22rem;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  padding: var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  /* The slide's own fallback, so an untouched sample looks like an
+     untouched slide rather than like a hole in the panel. The real
+     colours are written onto the element by index.js; what cannot be
+     written is the THEME, which is why the line underneath says so
+     rather than this pretending to know. */
+  background: var(--sunken);
+  color: var(--text);
+}
+.look-sample-title { font-size: 20px; font-weight: 600; line-height: 1.15; }
+.look-sample-text { font-size: 13px; opacity: 0.85; }
+/* Over whatever the effect draws behind them. */
+.look-sample-title, .look-sample-text { position: relative; z-index: 1; }
+
+/* --- An effect, in a picture that does not move ------------------------
+   AN EFFECT IN A STILL PICTURE IS ITS GROUND, not a drawing of its
+   layers. This project decided that once already, for the cards in the
+   slide list (css/thumb.css): "The effects bring their ground with them
+   and that is what a card shows of them; the layers that would turn and
+   drift are not built at all."
+
+   The sample used to wear the TILES' pictures instead, at five times the
+   size they were drawn for. A tile is 46 by 28 and a single bold shape in
+   one is a hint; the same shape at 242 by 136 is a black dome, a bunch of
+   stars in one corner, four circles swallowing the slide. And all of it
+   stood behind the sample's own words, which the sample exists to let
+   somebody judge -- so the one thing it had to keep legible was the one
+   thing it covered.
+
+   The grounds are the four from css/slides.css, written again here rather
+   than reached for: that stylesheet is the presentation's and is not
+   loaded in the editor, and four colours are a smaller thing to keep in
+   step than a stylesheet boundary. If one of them changes over there, it
+   changes here -- which is what the comment in both places is for. The
+   same four are declared as data in effects.js, where the contrast line
+   reads them; a fifth effect, or a new colour for one of these, is four
+   places (slides.css, effects.js, here, css/thumb.css). */
+.look-sample[data-effect="waves"] {
+  background-color: #4973ff;
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+.look-sample[data-effect="starfield"] {
+  background-image: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+}
+.look-sample[data-effect="blobs"] { background-color: #fee440; }
+/* Three of the four say what they are with their ground alone -- blue
+   water, a night sky, yellow under the blobs. The stripes' ground is
+   WHITE, and white says nothing: the whole effect is in the layers. So
+   here, as on the card (css/thumb.css) and on the tile above, the ground
+   wears the two edges themselves, at the offset the layers have halfway
+   through. */
+.look-sample[data-effect="stripes"] {
+  background-color: #fff;
+  background-image:
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 42%, rgba(0, 153, 255, 0.5) 42%),
+    linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 62%, rgba(0, 153, 255, 0.5) 62%);
+}
+
+/* The verdict. One line, and its colour is the verdict -- but never ONLY
+   its colour: the word in front says the same thing, because a line that
+   is red to some readers and grey to others has told only some of them. */
+.look-contrast {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  /* Beside the sample it takes whatever is left, and it may be two or
+     three lines there -- the sentences that explain why nothing was
+     judged are whole sentences. 14rem keeps it from being squeezed into a
+     column of single words before it gives up and wraps underneath. */
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.look-contrast::before {
+  content: "\2013";          /* nothing judged yet */
+  font-weight: 700;
+}
+.look-contrast.is-good { color: var(--muted); }
+.look-contrast.is-good::before { content: "\2713"; color: var(--ok); }
+.look-contrast.is-thin { color: var(--text); }
+.look-contrast.is-thin::before { content: "\26a0"; color: var(--warn); }
+.look-contrast.is-poor { color: var(--danger); font-weight: 500; }
+.look-contrast.is-poor::before { content: "\26a0"; color: var(--danger); }
+
+/* A row of this panel: what it is called, the control, and -- at the end,
+   where the eye leaves the row -- the NAME of what is set. The name is
+   the part that was missing: a swatch says what a colour looks like and a
+   tile says what a gradient looks like, neither says which one it is, and
+   the only place the name lived was a tooltip. A finger never sees one. */
+.look-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  margin-bottom: 10px;
+}
+/* The two rows whose control is a whole row of tiles underneath rather
+   than one swatch beside the words. */
+.look-row-wide { margin-bottom: 6px; }
+.look-row-label {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.look-row .look-row-label { order: -1; }
+.look-row-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* Written CSS, behind a fold: the one place in this form where somebody
+   is asked to type a language, and the editor's premise is that nobody
+   has to. */
+.look-own { margin-top: 8px; }
+.look-own > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+.look-own > summary::-webkit-details-marker { display: none; }
+.look-own > summary::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  -webkit-mask: url(../assets/dow.svg) center / contain no-repeat;
+  mask: url(../assets/dow.svg) center / contain no-repeat;
+  transform: rotate(-90deg);
+  transition: transform var(--base) var(--ease);
+}
+.look-own[open] > summary::before { transform: none; }
+.look-own > summary:hover { background: var(--sunken); color: var(--text); }
+.look-own > :not(summary) { margin-top: 8px; }
 
 /* --- Colours and effects, in two groups -------------------------------- */
 /* What the writing takes, and what the ground takes (views/editor.ejs).
    The heading is the ordinary field label with a line under it: enough to
    gather three fields into one answer, not so much that the panel grows a
    second kind of box inside the box it already is. */
-.color-group + .color-group { margin-top: var(--s6); }
+.color-group { margin-top: var(--s6); }
 /* The heading over a group of fields. It is not a field label -- it names
    the QUESTION the three fields under it are three answers to -- so it is
    the size of the box headings outside, in small capitals, and the line
@@ -2598,8 +2940,6 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   letter-spacing: 0.08em;
   color: var(--muted);
 }
-/* On its own line, like the gradient and the effect under it. */
-.color-group > .color-choice { display: block; margin-bottom: 10px; }
 /* And wearing the same tile those two wear -- 46 by 28 with the box's own
    corner. Standing under one another, a circle among rectangles read as a
    different KIND of choice than it is.
@@ -2669,13 +3009,33 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   transform: none;
   border-radius: 50%;
 }
-/* No colour of its own: a struck-through circle, the way the option used
-   to look before the picker arrived. */
+/* NOTHING CHOSEN IS NOT AN ERROR, and for a long time this panel said it
+   was: a slide with no colours of its own showed three red diagonals, so
+   the tab opened looking like three complaints. Red is this editor's
+   colour for a thing that is wrong (.save-state.is-error, .hint-error,
+   [aria-invalid]) and a slide following its theme is the ordinary case.
+
+   The checkerboard instead -- the sign every graphics program uses for
+   "there is nothing here, you are seeing through" -- drawn in the quiet
+   greys the rest of the furniture is made of. One definition, worn by the
+   empty colour swatch, the empty gradient and the empty effect alike:
+   they are the same statement, so they are the same picture. */
+.swatch-empty {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%),
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
+}
 .clr-field.is-empty button { display: none; }
 .clr-field.is-empty input.color-field {
-  background:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px)),
-    var(--paper);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%),
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
 }
 
 /* The gradient: a row of samples, each wearing what it does, and a field
@@ -2701,17 +3061,16 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .gradient-probe:hover { border-color: var(--accent-edge); box-shadow: var(--lift-2); transform: translateY(-1px); }
 /* The chosen one is named by a ring outside the swatch: a border of its own
    would sit on top of the gradient and change what the sample shows. A gap
-   between the two, so the ring is read as a ring and not as a thick edge. */
+   between the two, so the ring is read as a ring and not as a thick edge.
+
+   AND by a tick, because a ring is a colour and a colour on its own has
+   told only the readers who can see it. The tick is below -- one rule for
+   both rows, since they are the same statement. */
 .gradient-probe.is-active {
   border-color: var(--paper);
   box-shadow: 0 0 0 2px var(--accent);
 }
-/* "No gradient" carries the same struck-through circle as a colour dot
-   without a colour -- the same statement, so the same picture. */
-.gradient-none {
-  background-image:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px));
-}
+
 .gradient-field {
   width: 100%;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -2743,6 +3102,37 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+/* The second signal on a chosen tile, in both rows. A ring is a colour,
+   and a colour on its own has told only the readers who can see it.
+
+   A tick on a disc of the accent, so it is legible whatever the tile
+   happens to be: a bare tick on the pale "morning" gradient would be a
+   tick nobody can find, which is the problem it is here to solve. One
+   pseudo-element, because the effect tiles have already spent ::before on
+   the quiet of the effect. */
+.gradient-probe.is-active::after,
+.effect-tile.is-active::after {
+  content: "\2713";
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 1.5px var(--paper);
+}
+/* A gradient swatch has no position of its own yet -- the effect tiles do
+   (their quiet is absolutely placed inside them). */
+.gradient-probe { position: relative; }
 .effect-tile[data-effect="waves"] { background-color: #4973ff; }
 .effect-tile[data-effect="waves"]::before {
   content: "";
@@ -2801,9 +3191,17 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
     linear-gradient(-60deg, rgba(102, 204, 51, 0.5) 62%, rgba(0, 153, 255, 0.5) 62%);
 }
 
-.effect-none {
+/* The empty tile in either row, wearing the checkerboard the empty colour
+   swatch wears. Stated here, after both rows, so it outweighs whatever
+   ground .gradient-probe and .effect-tile give themselves. */
+.gradient-probe.swatch-none,
+.effect-tile.swatch-none {
+  background-color: var(--paper);
   background-image:
-    linear-gradient(to bottom right, transparent calc(50% - 1px), var(--danger) 50%, transparent calc(50% + 1px));
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%),
+    linear-gradient(45deg, var(--sunken) 25%, transparent 25%, transparent 75%, var(--sunken) 75%);
+  background-size: 10px 10px;
+  background-position: 0 0, 5px 5px;
 }
 .hint-error { color: var(--danger); }
 
@@ -2996,6 +3394,109 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
    image picker. Has to state AFTER .dialog: same specificity, so source
    order decides. */
 .dialog-schmal { width: min(420px, 92vw); }
+
+/* --- The command palette (partials/palette.ejs) ------------------------ */
+/* It is what allows the header above to stay short, so it is built to be
+   opened and closed in a second: no title bar, no close button, nothing
+   between the key and the typing. The field IS the head of the dialog.
+
+   Pulled up the screen rather than centred on it. A box that appears
+   under the eye is read faster than one that appears over it, and the
+   thing it is about -- the header -- is up there too. */
+.dialog-palette {
+  width: min(560px, 94vw);
+  margin-top: 12vh;
+  padding: 0;
+  overflow: hidden;
+}
+.palette-field-row { border-bottom: 1px solid var(--border-soft); }
+/* No border of its own and no ring: the dialog around it is the box, and
+   the caret is in here from the moment it opens, so there is nothing for a
+   focus ring to tell anybody. */
+.palette-field {
+  width: 100%;
+  height: 56px;
+  padding: 0 var(--s5);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.palette-field:focus { outline: none; box-shadow: none; }
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--s1);
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+}
+/* Which part of the editor a row comes from. Small and grey, read once on
+   the way past -- the row underneath is what one is looking for. */
+.palette-group {
+  padding: var(--s3) 10px var(--s1);
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.palette-list > .palette-group:first-child { padding-top: var(--s2); }
+.palette-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+/* ONE row is current, and it is the one Enter runs. There is no separate
+   hover state: moving the pointer over a row MAKES it the current one
+   (js/editor/palette.js), so the keyboard and the mouse are never pointing
+   at two different lines at once -- which is the thing that makes most
+   palettes feel haunted. */
+.palette-row.is-at { background: var(--accent-wash); color: var(--accent); }
+.palette-name { flex: 0 1 auto; }
+/* The long form of what the button says, where the two differ: the bar
+   says "Kopf & Fuss", this says what that means. */
+.palette-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-size: 12px;
+}
+.palette-row.is-at .palette-hint { color: inherit; opacity: 0.75; }
+/* The value in force, on the rows that offer a choice between values. A
+   tick and not a highlight, or it would say the same thing as being the
+   current row and the two would be told apart by nobody. */
+.palette-row.is-ticked .palette-name::after {
+  content: "\2713";
+  margin-left: 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.palette-row.is-at.is-ticked .palette-name::after { color: inherit; }
+.palette-empty {
+  margin: 0;
+  padding: var(--s5);
+  color: var(--muted);
+}
+/* The three keys, once, along the foot. Somebody who opens this box twice
+   never reads them again, which is why they are at the bottom and in the
+   faint colour rather than anywhere a glance would land. */
+.palette-keys {
+  margin: 0;
+  padding: 10px var(--s5);
+  border-top: 1px solid var(--border-soft);
+  background: var(--sunken);
+  color: var(--faint);
+  font-size: 12px;
+}
 /* The two buttons a dialog's head may carry beside its title
    (partials/ai.ejs). The source column builds its own the same way at its
    foot -- see .source-actions-buttons, which is this rule in the one place
@@ -3061,14 +3562,6 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .editor.is-sourcing > .slide-list,
 .editor.is-sourcing > .column.form { display: none; }
 .editor.is-sourcing > .source-view { grid-column: 1 / 3; grid-row: 1; }
-/* The button that opened it stays lit for as long as it is open: this is a
-   mode, and a mode that does not say it is on is one nobody finds the way
-   out of. */
-.header-source[aria-expanded="true"] {
-  background: var(--accent-wash);
-  color: var(--accent);
-}
-
 /* --- A dialog that stands beside the preview --------------------------- */
 /* Three of them: the deck's two bands, one element of a freestyle slide,
    and the instruction a deck is changed by. Each is dragged aside and
@@ -3423,6 +3916,11 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 /* While it waits for a key, the button says so by being lit. */
 #prefs-record.is-active { border-color: var(--accent); color: var(--accent); }
 #prefs-open { --button-icon: url(../assets/prefs.svg); }
+/* The row that opens the command palette (partials/settings.ejs). It is
+   the one place in the editor that says there is one -- somebody who knows
+   Ctrl+K never looks for a button, and somebody who does not has to be
+   told once. */
+#palette-open { --button-icon: url(../assets/search.svg); }
 /* The last word of the dialog, and the smallest: it applies to everything
    above it. */
 .prefs-scope { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
@@ -3481,11 +3979,9 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 .slide-bands .switch-line + .switch-line { margin-top: 6px; }
 
 /* --- A deck from a prompt (partials/ai.ejs) ---------------------------- */
-/* Same place in the header as the file and the strips: the third thing
-   there that works on the whole deck. Same no-second-margin rule as its
-   two neighbours, or the group on the right tears apart. */
-.header-ai { --button-icon: url(../assets/ai.svg); }
-.head > .header-ai { margin-left: 0; }
+/* Same place in the header as the file and the strips: the third of the
+   four things up there that OPEN something. */
+.head-ai { --button-icon: url(../assets/ai.svg); }
 
 /* The other way to start a talk, beside the plus on the overview
    (views/index.ejs). The same circle as its neighbour, with the same mask
@@ -3712,6 +4208,35 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
 [data-enter] .preview-frame,
 [data-enter] .preview-hint,
 [data-enter] .column-split { animation: enter-from-right 280ms ease-out 120ms backwards; }
+
+/* A bar too short for its words. The four buttons give up their names
+   before anything else gives up anything -- they are the youngest thing in
+   the bar, their tooltips still say everything the words did, and by the
+   time a window is this narrow the alternative is the title field reduced
+   to a slot.
+
+   Written as a clip rather than display:none so the word stays in the
+   accessible name -- which, on three of these four, IS the name: no
+   aria-label is laid over them, because one would replace the word rather
+   than add to it (views/editor.ejs). A screen reader goes on hearing
+   "Quelltext" at every width, and so does anyone searching the palette,
+   which reads these buttons off the page (js/editor/palette.js).
+
+   The pills keep their values and lose nothing: a pill with no value is
+   not a shorter pill, it is a different control. */
+@media (max-width: 1340px) {
+  .head-tool-word {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .head-tool { gap: 0; padding: 0 9px; }
+  .has-caret::after { display: none; }
+}
 
 /* Narrow windows: the three columns become stacked areas. */
 @media (max-width: 1100px) {

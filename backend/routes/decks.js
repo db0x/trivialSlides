@@ -6,6 +6,7 @@ const express = require("express");
 const multer = require("multer");
 
 const deck = require("../deck");
+const themes = require("../themes");
 const document = require("../document");
 const pdf = require("../pdf");
 const layouts = require("../layouts");
@@ -153,6 +154,11 @@ const PREVIEW_DEFAULT = "16:9";
 router.get("/d/:slug", loadDeck, (req, res) => {
   res.render("editor", {
     slug: req.slug,
+    // Whether the page carries the command palette, which the settings
+    // menu asks before offering the way into it (partials/settings.ejs).
+    // That menu is shared with the overview, and over there Ctrl+K leads
+    // nowhere -- a menu row that opens nothing is worse than no row.
+    palette: true,
     deck: req.deck,
     layouts: i18n.layoutsTranslated(layouts.LAYOUTS, req.language),
     gradients: i18n.gradientsTranslated(gradients.list(), req.language),
@@ -190,6 +196,11 @@ router.get("/d/:slug", loadDeck, (req, res) => {
     gradientPattern: deck.GRADIENT_PATTERN,
     gradientMax: deck.GRADIENT_MAX,
     themes: deck.THEMES,
+    // What each theme colours a slide that chooses nothing itself. The
+    // editor needs them to say whether the writing can be read -- without
+    // them it can only say that the theme decides (themes.js,
+    // js/editor/contrast.js).
+    themeColors: themes.COLORS,
     transitions: deck.TRANSITIONS,
     previewFormats: PREVIEW_FORMATS,
     previewDefault: PREVIEW_DEFAULT,
