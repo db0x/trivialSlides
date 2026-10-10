@@ -5,7 +5,8 @@
   "license": "MIT",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "screenshot": "node tools/screenshot.js"
   },
   "dependencies": {
     "@melloware/coloris": "^0.25.0",
