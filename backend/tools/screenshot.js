@@ -6,25 +6,22 @@
 // taking the screenshot happened to be sitting in front of. Nobody
 // remembers to take the other one -- hence this file.
 //
-// Nothing here touches a real deck. The app is started a second time, on a
-// port of its own, pointed at a COPY of the deck in a temporary folder: the
-// editor autosaves, and a browser driven across a deck will save it, so the
-// deck that gets driven must be one nobody minds losing.
+// Nothing here touches a real deck: the app is started a second time
+// against a copy in a temporary folder (tools/harness.js, which the tests
+// use for the same reason).
 //
 //   node tools/screenshot.js                  -> ../current.png
 //   node tools/screenshot.js --language en    -> the English editor
 //   node tools/screenshot.js --split vertical -> a straight cut, no slant
 //
 const fs = require("fs");
-const os = require("os");
-const net = require("net");
 const path = require("path");
-const { spawn } = require("child_process");
 const puppeteer = require("puppeteer-core");
 const { browserPath } = require("../pdf");
 const { DECKS_DIR } = require("../config");
+const harness = require("./harness");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = harness.ROOT;
 
 // The window the editor is photographed in. Not a phone and not a
 // billboard: a laptop, which is what the readme's reader has in front of
@@ -68,73 +65,6 @@ function parseArgs(argv) {
   }
   options.out = path.resolve(options.out);
   return options;
-}
-
-// A port the kernel just told us is free. There is a gap between closing
-// this listener and the app opening the same port, but on a developer's
-// machine nothing is racing us for it.
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const probe = net.createServer();
-    probe.once("error", reject);
-    probe.listen(0, "127.0.0.1", () => {
-      const { port } = probe.address();
-      probe.close(() => resolve(port));
-    });
-  });
-}
-
-// The deck the browser will be driven across -- a copy, in a folder that is
-// thrown away afterwards. The assets come along: the slides reference them,
-// and a deck whose pictures are missing photographs badly.
-function copyDeck(slug) {
-  const source = path.join(DECKS_DIR, slug);
-  if (!fs.existsSync(source)) {
-    throw new Error(`No deck "${slug}" in ${DECKS_DIR}`);
-  }
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), "trivialslides-shot-"));
-  fs.cpSync(source, path.join(folder, slug), { recursive: true });
-  return folder;
-}
-
-async function startServer(decksDir, port) {
-  const child = spawn(process.execPath, [path.join(ROOT, "app.js")], {
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      DECKS_DIR: decksDir,
-      PORT: String(port),
-      BASE_PATH: "",
-      // The picture should show the editor, not an AI button that only
-      // appears on machines that happen to have a key lying around. One
-      // readme image for everyone means the same editor for everyone.
-      AI_KEY: "",
-      ANTHROPIC_API_KEY: "",
-      AI_URL: "",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
-  let noise = "";
-  child.stdout.on("data", (d) => { noise += d; });
-  child.stderr.on("data", (d) => { noise += d; });
-
-  const base = `http://127.0.0.1:${port}`;
-  const deadline = Date.now() + 20000;
-  for (;;) {
-    if (child.exitCode !== null) {
-      throw new Error(`The app stopped before it answered:\n${noise}`);
-    }
-    try {
-      const answer = await fetch(base, { signal: AbortSignal.timeout(1000) });
-      if (answer.ok) break;
-    } catch (e) { /* not up yet -- that is what the loop is for */ }
-    if (Date.now() > deadline) {
-      throw new Error(`The app did not answer on ${base} within 20s:\n${noise}`);
-    }
-    await new Promise((r) => setTimeout(r, 200));
-  }
-  return { child, base };
 }
 
 // One screenshot: the editor, in the theme asked for, standing on the slide
@@ -278,12 +208,14 @@ async function main() {
     throw new Error("No browser found to take the screenshot with. Set BROWSER_PATH.");
   }
 
-  const decksDir = copyDeck(options.deck);
+  // A copy, in a folder that is thrown away afterwards: the editor saves by
+  // itself, and the deck in the repository has to survive being photographed
+  // (tools/harness.js).
+  const decksDir = harness.copyDeck(options.deck, DECKS_DIR);
   let server = null;
   let browser = null;
   try {
-    const port = await freePort();
-    server = await startServer(decksDir, port);
+    server = await harness.startServer({ decksDir });
     console.log(`Editor running on ${server.base} against a copy of "${options.deck}".`);
 
     browser = await puppeteer.launch({
@@ -305,8 +237,8 @@ async function main() {
     console.log(`Wrote ${options.out} (${picture.length} bytes, ${options.split}).`);
   } finally {
     if (browser) await browser.close().catch(() => {});
-    if (server) server.child.kill("SIGTERM");
-    fs.rmSync(decksDir, { recursive: true, force: true });
+    if (server) await server.stop();
+    harness.removeDecks(decksDir);
   }
 }
 

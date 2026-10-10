@@ -1,11 +1,12 @@
 {
   "name": "trivialSlides",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "description": "trivialSlides - based on reveal.js",
   "license": "MIT",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "test": "node --test --test-timeout=120000 --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='tools/**' --test-coverage-lines=80 --test-coverage-branches=78",
     "screenshot": "node tools/screenshot.js"
   },
   "dependencies": {

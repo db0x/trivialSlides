@@ -1,0 +1,61 @@
+# The test suite, on every push and every pull request.
+#
+# Node 22 and not 20, for the same reason the Dockerfile says so: the app
+# uses what a current node brings, and the test runner, the assertions and
+# the coverage report are all part of it -- there is no test framework to
+# install here, only the project's own dependencies.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+# A second push to the same branch makes the first run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      # The one feature deliberately outside the suite. Named here as well
+      # as in tools/harness.js, so that nothing a runner happens to export
+      # can make a test call a service that costs money.
+      AI_KEY: ""
+      ANTHROPIC_API_KEY: ""
+      AI_URL: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        working-directory: backend
+        run: npm ci
+
+      # Chrome is already on the runner image, and pdf.js finds it by
+      # itself (/usr/bin/google-chrome is in its list). So the browser
+      # tests and the PDF export run here, where on a laptop without one
+      # they would skip themselves.
+      - name: Say which browser the suite will use
+        run: |
+          node -e "const p=require('./backend/pdf').browserPath(); console.log(p ? 'browser: '+p : 'no browser -- the browser tests will skip')"
+
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+      # The editor saves by itself, so a test that drives it is a test that
+      # writes. Everything is supposed to run against a copy in a temporary
+      # folder (tools/harness.js) -- this is what proves it did. A deck in
+      # the repository that came out of a test run changed is a bug in the
+      # tests, and a silent one.
+      - name: The decks in the repository are untouched
+        run: git diff --exit-code -- decks/
