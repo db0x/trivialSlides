@@ -4261,3 +4261,51 @@ input[type="color"] { width: 54px; height: 32px; padding: 2px; cursor: pointer; 
   .source-view { overflow: visible; }
   .head { flex-wrap: wrap; }
 }
+
+/* A question with three named answers, where a switch would only do two:
+   how the speaker view opens (partials/prefs.ejs). The rows read like the
+   switch-lines above them -- same gap, same size, same cursor -- because
+   they are asked in the same breath and should not look like a different
+   kind of control. */
+.choice-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* A fieldset is the honest element for a question with named answers,
+     and it is the only one on this page -- so it has to be told to stand
+     where every .field above it stands rather than where a fieldset
+     normally would. */
+  min-width: 0;
+}
+
+/* A legend carries its own indent in every browser, which would put this
+   one heading half a character to the right of all the others. */
+.choice-field > legend {
+  padding: 0;
+  margin-bottom: var(--s1);
+}
+
+.choice-line {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* The one place a native control is left as it is: a radio is a circle
+   with a dot in it in every operating system, and drawing our own would
+   gain nothing but a chance to get it wrong. Only its colour is ours. */
+.choice {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.choice:focus-visible { outline: none; box-shadow: var(--ring); }

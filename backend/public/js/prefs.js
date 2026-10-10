@@ -175,6 +175,25 @@
     });
   }
 
+  // How the speaker view opens. Three named ways rather than a switch,
+  // and here for the same reason as the rest: it is about the screens on
+  // this desk, not about a deck.
+  var speakerWays = Array.prototype.slice.call(
+    document.querySelectorAll('input[name="speaker-window"]'));
+
+  function drawSpeaker() {
+    if (!window.speakerWindow) return;
+    var way = window.speakerWindow.read();
+    speakerWays.forEach(function (box) { box.checked = box.value === way; });
+  }
+
+  speakerWays.forEach(function (box) {
+    box.addEventListener("change", function () {
+      if (box.checked && window.speakerWindow) window.speakerWindow.write(box.value);
+    });
+  });
+  drawSpeaker();
+
   // The row in the settings menu opens it. Delegated, because the menu is
   // the same partial on both pages and closes itself on the click.
   document.addEventListener("click", function (ev) {
@@ -183,6 +202,7 @@
     // It can have been switched from the editor's own button since the
     // dialog was last open.
     if (autosaveBox && window.autosave) autosaveBox.checked = window.autosave.read();
+    drawSpeaker();
     dialog.showModal();
   });
 

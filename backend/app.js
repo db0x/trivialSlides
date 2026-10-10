@@ -7,6 +7,7 @@
 //     app.use(BASE + "/slides", loginRequired, require("./routes/slides"));
 //
 // with authentication, layout and sharing all coming from Relay.
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { BASE, PORT, PUBLIC_URL, VERSION } = require("./config");
@@ -38,6 +39,51 @@ app.use(express.urlencoded({ extended: false }));
 // dependencies below keep the long cache: they only change on npm install.
 app.use(BASE + "/static", express.static(path.join(__dirname, "public"), { maxAge: 0 }));
 app.use(BASE + "/reveal", express.static(path.join(__dirname, "node_modules", "reveal.js", "dist"), { maxAge: "1h" }));
+// The speaker view -- S during a presentation -- is not a file of reveal's
+// that we could override: the whole page sits inlined in its notes plugin,
+// and nothing about it is configurable. So the two things that are wrong
+// for a presenter here are rewritten on the way out, which leaves the
+// plugin an untouched dependency that npm install cannot undo. A line not
+// found means reveal changed it: then the bundle goes out as it is and
+// says so in the log, rather than the speaker view failing to load.
+const NOTES_PLUGIN = path.join(__dirname, "node_modules", "reveal.js", "plugin", "notes", "notes.js");
+const NOTES_REWRITES = [
+  // 1. The clock, hard-wired to en-US 12h time: AM/PM in front of a German
+  // audience. Two places say it -- the line that ticks every second, and
+  // the markup the window starts with, which stands until the first tick.
+  // hourCycle rather than hour12: false, because en-US reads midnight as
+  // 24:05 that way, and h23 reads it as 00:05.
+  ["'en-US', { hour12: true, hour: '2-digit', minute:'2-digit' }", "'en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }"],
+  [">0:00 AM<", ">00:00<"],
+  // 2. The window. A width and a height in that third argument are what
+  // make a browser open a popup rather than an ordinary tab, and a popup
+  // under Wayland comes up with a frame the window manager did not draw.
+  // Which way is wanted depends on the screens plugged in, so the choice
+  // belongs to the presenter: the settings hold it and the page acts on
+  // it (public/js/speaker-window.js) -- including the third way, where no
+  // browser window opens at all and the application in desktop/ shows the
+  // view instead. Without that script -- nobody else loads this plugin
+  // today, but reveal's own default is the honest fallback -- it stays
+  // the popup it has always been.
+  ['window.open("about:blank","reveal.js - Notes","width=1100,height=700")',
+    '(window.speakerWindow?window.speakerWindow.open():window.open("about:blank","reveal.js - Notes","width=1100,height=700"))'],
+];
+let notesPlugin = null;
+app.get(BASE + "/reveal-plugin/notes/notes.js", (req, res) => {
+  if (notesPlugin === null) {
+    notesPlugin = fs.readFileSync(NOTES_PLUGIN, "utf8");
+    for (const [theirs, ours] of NOTES_REWRITES) {
+      if (!notesPlugin.includes(theirs)) console.warn("reveal notes plugin: line not found, serving unchanged:", theirs);
+      notesPlugin = notesPlugin.replace(theirs, ours);
+    }
+  }
+  // max-age=0 rather than the hour the other dependencies get: this bundle
+  // is no longer one of theirs, it is a file of ours that happens to be
+  // mostly reveal's -- and a cached copy of the 12h clock would sit in the
+  // browser for an hour after the fix. res.send adds an ETag, so the ask
+  // costs one conditional request and answers 304 while nothing changes.
+  res.type("application/javascript").set("Cache-Control", "public, max-age=0").send(notesPlugin);
+});
 app.use(BASE + "/reveal-plugin", express.static(path.join(__dirname, "node_modules", "reveal.js", "plugin"), { maxAge: "1h" }));
 // OverlayScrollbars, served the same way: the ES module and its stylesheet
 // straight from node_modules, no build step in between.

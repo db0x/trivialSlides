@@ -293,3 +293,102 @@ test("a path that climbs out of the decks folder is refused", async () => {
     assert.ok(status >= 400, `${line} answered ${status}`);
   }
 });
+
+test("the notes plugin goes out rewritten", async () => {
+  // The speaker view comes inlined in reveal's own bundle, and app.js
+  // rewrites two things in it on the way out. What this guards is the
+  // rewrite still finding its lines: a reveal update that renames one
+  // would leave the bundle untouched, and nothing but AM/PM and a
+  // title-barless window in front of a presenter would say so.
+  const res = await get("/reveal-plugin/notes/notes.js");
+  assert.equal(res.status, 200);
+  const source = await res.text();
+  assert.ok(source.includes("hourCycle: 'h23'"), "the clock was not rewritten");
+  assert.ok(!source.includes("hour12: true"), "a 12h clock is left in the bundle");
+  assert.ok(!source.includes(">0:00 AM<"), "the placeholder still reads AM");
+  var guarded = '(window.speakerWindow?window.speakerWindow.open():' +
+    'window.open("about:blank","reveal.js - Notes","width=1100,height=700"))';
+  assert.ok(source.includes(guarded), "the speaker view does not ask how to open");
+  // The popup call survives INSIDE that expression, as the fallback for a
+  // page without our script. What must not survive is one outside it: that
+  // would be a second way out, deciding for the presenter after all.
+  assert.ok(!source.split(guarded).join("").includes('window.open("about:blank","reveal.js - Notes"'),
+    "a window.open the settings cannot reach is left in the bundle");
+});
+
+test("the speaker view is a page with an address of its own", async () => {
+  // The whole point of it: reveal's speaker window has no URL, this one
+  // has. Anything that can open a URL can show it -- another window, a
+  // bookmark, the application in desktop/.
+  const res = await get("/d/example/speaker");
+  assert.equal(res.status, 200);
+  const page = await res.text();
+  assert.match(page, /id="speaker-now"/);
+  assert.match(page, /speaker-view\.js/);
+  assert.equal((await get("/d/does-not-exist/speaker")).status, 404);
+});
+
+test("the talk says where it is and the channel passes it on", async () => {
+  // One listener on the stream, one state posted by the talk, and what
+  // comes out the other end is what went in -- rebuilt, not passed
+  // through (backend/speaker.js).
+  const stream = await get("/d/example/speaker/stream");
+  assert.equal(stream.status, 200);
+  assert.match(stream.headers.get("content-type"), /text\/event-stream/);
+
+  const reader = stream.body.getReader();
+  const decoder = new TextDecoder();
+  let seen = "";
+  const until = async (what) => {
+    const deadline = Date.now() + 5000;
+    while (!seen.includes(what) && Date.now() < deadline) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      seen += decoder.decode(value, { stream: true });
+    }
+    assert.ok(seen.includes(what), `never heard ${what} in: ${seen}`);
+  };
+
+  await until("retry:");
+  const said = await send("/d/example/speaker/state",
+    { index: 3, total: 15, notes: "a word", fragment: 1, fragments: 2 });
+  assert.equal(said.status, 204);
+  await until('"index":3');
+
+  const line = seen.split("\n").find((l) => l.startsWith("data:") && l.includes('"index":3'));
+  const state = JSON.parse(line.slice(5));
+  assert.equal(state.total, 15);
+  assert.equal(state.notes, "a word");
+  assert.ok(Number.isFinite(state.at), "the channel stamps the time itself");
+  await reader.cancel();
+});
+
+test("only the talk itself may say where it is", async () => {
+  // The same guard the editor's writing routes carry: without it any page
+  // in any tab could move a presenter's speaker view mid-sentence.
+  const res = await fetch(`${base}/d/example/speaker/state`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: 9 }),
+  });
+  assert.equal(res.status, 403);
+});
+
+test("a state that makes no sense is made sense of", async () => {
+  // What arrives here went through a browser; what leaves goes to a page
+  // and to an application. So nothing is passed through as it came.
+  const res = await send("/d/example/speaker/state",
+    { index: "-4", total: null, notes: { nope: 1 }, fragment: "x" });
+  assert.equal(res.status, 204);
+  const stream = await get("/d/example/speaker/stream");
+  const reader = stream.body.getReader();
+  const { value } = await reader.read();
+  const text = new TextDecoder().decode(value);
+  const line = (text + "").split("\n").find((l) => l.startsWith("data:"));
+  const state = JSON.parse(line.slice(5));
+  assert.equal(state.index, 0, "a negative slide number is no slide number");
+  assert.equal(state.total, 0);
+  assert.equal(state.notes, "", "notes are a string or they are nothing");
+  assert.equal(state.fragment, 0);
+  await reader.cancel();
+});

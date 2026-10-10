@@ -1,0 +1,25 @@
+[Desktop Entry]
+# The speaker view as an application of the desktop, and the handler for
+# the address S hands over (trivialslides://speaker/<slug>).
+#
+# A template: @EXEC@ is the path to trivialslides-speaker.py on this
+# machine, which install.sh fills in. Installed by hand it goes to
+# ~/.local/share/applications/ and the scheme is registered with
+#
+#     xdg-mime default trivialslides-speaker.desktop x-scheme-handler/trivialslides
+#
+Type=Application
+Version=1.0
+Name=trivialSlides Speaker View
+Name[de]=trivialSlides Sprecheransicht
+Comment=The current slide, the next one and the time, in a window of its own
+Comment[de]=Aktuelle Folie, nächste Folie und die Zeit, in einem eigenen Fenster
+Exec=@EXEC@ %u
+Icon=x-office-presentation
+Terminal=false
+Categories=Office;Presentation;
+MimeType=x-scheme-handler/trivialslides;
+# It is started by a URL, not from the menu: without one it has no deck to
+# show and would only print its own usage.
+NoDisplay=true
+StartupNotify=true

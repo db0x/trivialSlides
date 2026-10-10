@@ -118,6 +118,34 @@ A model on your own machine wants no key at all, only its address —
 `.env.example` has that case and the rest, though the dialog itself is the
 quicker way to find out what it does.
 
+## The speaker view
+
+`S` during a talk opens the speaker view: the slide on the wall, the one
+after it, a stopwatch and a clock — the clock in 24h, which reveal.js alone
+does not do.
+
+How it opens is set in the settings dialog, per browser, because none of
+the three ways is simply right. **A window of its own** is what a second
+screen wants, but a browser only grants that as a popup: no address bar,
+and under Wayland a frame the window manager never drew. **A new tab** has
+the whole browser around it and is dragged out of the strip once. **The
+desktop application** in `desktop/` is a real window with a real title bar.
+
+That third one is **Linux only**. It is a GTK window around WebKit
+(`python3-gi` and WebKit2, which a GNOME desktop already has), and the
+address it is handed over is registered the freedesktop way —
+`desktop/install.sh` writes one `.desktop` file and sets the handler for
+`trivialslides://`, `--remove` takes both back out. Neither piece exists on
+Windows or macOS. Nothing is lost there: popups get ordinary window
+decoration from those systems, so the first way already does what this one
+is for.
+
+The view itself is not tied to any of that. It is an ordinary page at
+`/d/<slug>/speaker` and shows the running talk in any browser on any
+machine that can reach the server — a bookmark, a second window, a laptop
+beside the beamer. The talk posts where it is, listeners hear it as
+server-sent events.
+
 ## The layouts
 
 | Layout | What for |

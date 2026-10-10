@@ -1,0 +1,198 @@
+/* The speaker view with an address of its own (views/speaker.ejs).
+
+   Read from a metre away, in a dark room, between two sentences. That is
+   the whole brief, and it sets everything here: two pictures as large as
+   the window allows, the time in a size that needs no squinting, and
+   nothing else competing for the glance.
+
+   app.css is loaded first and brings the tokens and the dark mode with it;
+   this file only lays out the four things on this page. */
+
+.is-speaker {
+  /* The shape a slide is shown in: a screen's, not a slide's -- the same
+     19:9 the editor's cards are cut to (app.css, .slide-card, and
+     css/thumb.css states it from the inside). Said here because this page
+     has no card to borrow it from. */
+  --thumb-shape: 19 / 9;
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  /* The pictures take the room, the column beside them takes what it
+     needs. Below a laptop's width they stack instead -- a phone propped
+     on the lectern is a speaker view too. */
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 26vw, 360px);
+  gap: var(--s4);
+  padding: var(--s4);
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.speaker-slides {
+  display: grid;
+  grid-template-rows: auto auto;
+  /* Both pictures keep the shape of a screen, so on a tall window there is
+     room left over. It goes above and below rather than between them: a
+     gap in the middle reads as something missing, the same gap around the
+     pair reads as air. */
+  align-content: center;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.speaker-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+/* The one after this is a glance, not a study: half the height of the one
+   on the wall is plenty, and the room goes to the picture that matters. */
+.speaker-next .speaker-frame { max-width: 52%; }
+
+.speaker-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s2);
+}
+
+.speaker-count {
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* The box a slide stands in. The page inside is 960 wide whatever this
+   comes to (css/thumb.css says why it may not be anything else), so the
+   frame is scaled from out here by the only one who knows the width --
+   js/speaker-view.js sets --thumb-scale, the same arrangement the
+   editor's slide list uses. */
+.speaker-frame {
+  position: relative;
+  aspect-ratio: var(--thumb-shape, 19 / 9);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--sunken);
+  box-shadow: var(--lift-1);
+}
+
+.speaker-frame iframe {
+  display: block;
+  width: 960px;
+  aspect-ratio: var(--thumb-shape, 19 / 9);
+  border: 0;
+  transform-origin: 0 0;
+  transform: scale(var(--thumb-scale, 0.5));
+}
+
+.speaker-frame iframe.is-empty { visibility: hidden; }
+
+/* The last slide has nothing after it, and an empty box reads as a fault.
+   It says so instead. */
+.speaker-next.is-end .speaker-frame::after {
+  content: attr(data-end);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.speaker-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  min-width: 0;
+}
+
+.speaker-time {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--raised);
+  box-shadow: var(--lift-1);
+}
+
+/* A button, because it does something: one click and the stopwatch starts
+   again. It is not dressed as one -- the number IS the control, which is
+   what reveal's own view taught every presenter who ever reset it. */
+.speaker-timer {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.speaker-timer:hover { color: var(--accent); }
+.speaker-timer:focus-visible { outline: none; box-shadow: var(--ring); }
+
+.speaker-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.speaker-notes {
+  flex: 1 1 auto;
+  /* Nothing to say, no room taken: a tall empty box reads as a fault,
+     and today it is empty on every slide of every deck (the format has
+     no notes yet). It grows the moment there is something in it. */
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  min-height: 0;
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--raised);
+  box-shadow: var(--lift-1);
+}
+
+.speaker-notes-body {
+  flex: 1 1 auto;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: clamp(14px, 1.3vw, 18px);
+  line-height: 1.5;
+}
+
+/* Whether the talk is being heard. Three states and three colours, and
+   the quietest of them is the one that says all is well: a line in the
+   corner that only speaks up when it has bad news. */
+.speaker-notes.is-empty { flex: 0 0 auto; }
+
+.speaker-state {
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.speaker-state[data-kind="live"] { color: var(--ok); }
+.speaker-state[data-kind="lost"] { color: var(--warn); }
+
+@media (max-width: 900px) {
+  .is-speaker { grid-template-columns: minmax(0, 1fr); }
+  .speaker-next .speaker-frame { max-width: 70%; }
+}

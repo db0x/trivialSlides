@@ -26,13 +26,17 @@
   }) %></script>
 <% } %>
 </head>
-<body class="<%= preview ? "is-preview" : "" %>">
+<body class="<%= preview ? "is-preview" : "" %>" data-slug="<%= slug %>" data-base="<%= BASE %>">
 <div class="reveal"><div class="slides">
 <%- slides %>
 </div></div>
 
 <script src="<%= BASE %>/reveal/reveal.js"></script>
-<script src="<%= BASE %>/reveal-plugin/notes/notes.js"></script>
+<!-- The notes plugin, with its clock rewritten to 24h on the way out
+     (app.js). The query is part of that: a browser that already holds the
+     12h bundle under the bare address keeps it until its hour is up, and a
+     new address is what gets the fix in front of a presenter today. -->
+<script src="<%= BASE %>/reveal-plugin/notes/notes.js?clock=24h"></script>
 <script src="<%= BASE %>/reveal-plugin/highlight/highlight.js"></script>
 <script src="<%= BASE %>/static/js/slide-effects.js"></script>
 <script src="<%= BASE %>/static/js/slide-video.js"></script>
@@ -48,6 +52,18 @@
      settings dialog, stored per browser, read here. This page has a head of
      its own, so it is listed here and not in partials/head.ejs. -->
 <script src="<%= BASE %>/static/js/presenter-keys.js"></script>
+<!-- Whether S opens the speaker view as a window of its own or as a tab.
+     Read by the notes plugin, which app.js rewrites to ask (this page is
+     the only one presenting, so the script is listed here as well). -->
+<script src="<%= BASE %>/static/js/speaker-window.js"></script>
+<% if (!preview) { %>
+  <!-- What the talk tells a speaker view that is NOT this browser's own
+       window: one POST per slide, which the channel in backend/speaker.js
+       passes on. Not in the preview -- that is a picture of a slide, not
+       a talk somebody is following. Last of the scripts, because it needs
+       Reveal to exist. -->
+  <script src="<%= BASE %>/static/js/speaker-relay.js" defer></script>
+<% } %>
 <script>
   // The preview inside the editor must not behave like a presentation: no
   // keyboard control (the keys belong to the form next to it), no address

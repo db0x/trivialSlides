@@ -56,6 +56,22 @@
       <p class="hint"><%= t('prefs.autosaveNote') %></p>
     </div>
 
+    <!-- How S opens the speaker view while presenting. Three ways and no
+         right one, so they stand here as three named choices rather than
+         as a switch: a window of the browser's (a popup, which is the
+         only kind a page may ask for), a tab, or the application of the
+         desktop (desktop/, js/speaker-window.js). -->
+    <fieldset class="field choice-field">
+      <legend class="field-label"><%= t('prefs.speakerView') %></legend>
+      <% ['window', 'tab', 'app'].forEach(function (way) { %>
+        <label class="choice-line">
+          <input type="radio" name="speaker-window" class="choice" value="<%= way %>">
+          <span><%= t('prefs.speakerView.' + way) %></span>
+        </label>
+      <% }); %>
+      <p class="hint"><%= t('prefs.speakerViewNote') %></p>
+    </fieldset>
+
     <p class="hint prefs-scope"><%= t('prefs.note') %></p>
   </div>
 </dialog>

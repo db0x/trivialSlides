@@ -18,6 +18,7 @@ const code = require("../code");
 const source = require("../source");
 const check = require("../check");
 const emoji = require("../emoji");
+const speaker = require("../speaker");
 const video = require("../video");
 const storage = require("../storage");
 const i18n = require("../i18n");
@@ -298,6 +299,42 @@ router.get("/d/:slug/present", loadDeck, (req, res) => {
     indices: render.indices(req.deck.slides),
     preview: false,
   });
+});
+
+// --- The speaker view --------------------------------------------------
+//
+// reveal.js brings one of its own, and it is a window the talk opens and
+// speaks to directly: it has no address, so nothing outside that browser
+// can show it. These three give it one.
+//
+//   /speaker         the view itself, an ordinary page with an ordinary URL
+//   /speaker/stream  where it hears about the talk (backend/speaker.js)
+//   /speaker/state   where the talk says what it is doing
+//
+// With an address it can be a bookmark, a second window, a tab on the
+// laptop beside the one on the beamer -- or the application in desktop/,
+// which is a window of the desktop with a title bar of its own, the thing
+// a browser popup under Wayland is not.
+router.get("/d/:slug/speaker", loadDeck, (req, res) => {
+  res.render("speaker", {
+    slug: req.slug,
+    deck: req.deck,
+    total: req.deck.slides.length,
+  });
+});
+
+router.get("/d/:slug/speaker/stream", loadDeck, (req, res) => {
+  if (!speaker.subscribe(req.slug, req, res)) {
+    res.status(503).json({ error: req.t("server.invalid") });
+  }
+});
+
+// Said by the talk itself and by nothing else, hence the same guard the
+// editor's writing routes carry. It answers nothing worth reading: the
+// talk is not waiting for it, it has a slide to show.
+router.post("/d/:slug/speaker/state", sameOriginOnly, loadDeck, (req, res) => {
+  speaker.publish(req.slug, req.body);
+  res.status(204).end();
 });
 
 // A standalone SVG needs its namespace, or no browser will draw it -- it

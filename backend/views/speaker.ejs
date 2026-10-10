@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="<%= LANGUAGE %>">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= t('speaker.title') %> — <%= deck.title %></title>
+<!-- Deliberately not partials/head.ejs. That one dresses a page of the
+     editor: its header, its menus, its dialogs, its scripts. This is a
+     page for one pair of eyes during twenty minutes, and everything it
+     does not carry is one thing fewer to go wrong on a lectern. -->
+<link rel="icon" href="<%= BASE %>/static/trivialSlides.svg" type="image/svg+xml">
+<link rel="stylesheet" href="<%= BASE %>/static/css/app.css">
+<link rel="stylesheet" href="<%= BASE %>/static/css/speaker.css">
+</head>
+<body class="is-speaker" data-slug="<%= slug %>" data-base="<%= BASE %>" data-total="<%= total %>">
+
+<!-- The two pictures. Each is a slide standing still in a frame of its own
+     (views/thumb.ejs), the same way the editor's list shows them -- a
+     speaker view does not need a second reveal.js running, it needs to
+     know what is on the wall and what comes next. -->
+<main class="speaker-slides">
+  <section class="speaker-pane speaker-now">
+    <h2 class="speaker-label"><%= t('speaker.current') %> <span id="speaker-count" class="speaker-count"></span></h2>
+    <div class="speaker-frame"><iframe id="speaker-now" title="<%= t('speaker.current') %>" scrolling="no"></iframe></div>
+  </section>
+  <section class="speaker-pane speaker-next">
+    <h2 class="speaker-label"><%= t('speaker.upcoming') %></h2>
+    <div class="speaker-frame"><iframe id="speaker-next" title="<%= t('speaker.upcoming') %>" scrolling="no"></iframe></div>
+  </section>
+</main>
+
+<aside class="speaker-side">
+  <!-- Clock and stopwatch. 24h, because this is a German lectern and
+       because a presenter reads a time, not a puzzle. The stopwatch
+       starts when the talk does and is reset by a click, which is the one
+       gesture reveal's own view taught every presenter. -->
+  <div class="speaker-time">
+    <button type="button" id="speaker-timer-reset" class="speaker-timer" title="<%= t('speaker.timerReset') %>">
+      <span id="speaker-timer">00:00:00</span>
+    </button>
+    <span id="speaker-clock" class="speaker-clock">--:--</span>
+  </div>
+
+  <!-- Empty until the deck format grows notes of its own. The field is
+       here and the channel carries it (backend/speaker.js), so that day
+       is a renderer away rather than a rebuild. -->
+  <div class="speaker-notes">
+    <h2 class="speaker-label"><%= t('speaker.notes') %></h2>
+    <div id="speaker-notes" class="speaker-notes-body"></div>
+    <p id="speaker-notes-none" class="hint"><%= t('speaker.noNotes') %></p>
+  </div>
+
+  <p id="speaker-state" class="speaker-state" role="status"><%= t('speaker.waiting') %></p>
+</aside>
+
+<script type="application/json" id="data-texte"><%- JSON.stringify({
+  "speaker.waiting": t('speaker.waiting'),
+  "speaker.connected": t('speaker.connected'),
+  "speaker.lost": t('speaker.lost'),
+  "speaker.end": t('speaker.end'),
+  "speaker.slideOf": t('speaker.slideOf'),
+}) %></script>
+<script src="<%= BASE %>/static/js/speaker-view.js"></script>
+</body>
+</html>
