@@ -40,6 +40,11 @@ pids/
 *.pid
 *.seed
 
+# --- Python ------------------------------------------------------------
+# Byte-code caches of the desktop helper scripts are build output.
+__pycache__/
+*.py[cod]
+
 # --- Transient ---------------------------------------------------------
 tmp/
 temp/
