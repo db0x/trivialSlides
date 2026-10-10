@@ -11,17 +11,29 @@ import { createPreview } from "./preview.js";
 import { drawList, drawPictures, dragEnable } from "./slide-list.js";
 import { SPLIT, splitColumns, joinColumns, mergeColumns } from "./columns.js";
 import { setupDeckSource } from "./deck-source.js";
-import { setupAside } from "./dialog-aside.js";
 import * as places from "./places.js";
 import { drawLibrary } from "./library.js";
 import { setupBands, isEmpty as bandEmpty, HIDDEN_FIELD } from "./bands.js";
 import { setupAi } from "./ai.js";
+import { setupPalette } from "./palette.js";
+import { judge, themeText } from "./contrast.js";
 import Coloris from "../../../coloris/dist/esm/coloris.js";
 
 var BASE = window.SLIDES_BASE;
 var deck = JSON.parse($("#data-deck").textContent);
 var LAYOUTS = JSON.parse($("#data-layouts").textContent);
 var images = JSON.parse($("#data-images").textContent);
+// What each theme colours a slide that chooses nothing of its own, read
+// off reveal.js' stylesheets on the server (themes.js). Without it the
+// contrast line can only say that the theme decides.
+var THEME_COLORS = {};
+try { THEME_COLORS = JSON.parse($("#data-themes").textContent); } catch (e) { /* then it says so */ }
+// And what each effect lays under the writing instead of the colour the
+// slide chose (effects.js). Keyed by name, the way the slide carries it.
+var EFFECT_COLORS = {};
+try {
+  JSON.parse($("#data-effects").textContent).forEach(function (e) { EFFECT_COLORS[e.id] = e; });
+} catch (e) { /* then it says so */ }
 var layoutsById = {};
 LAYOUTS.forEach(function (l) { layoutsById[l.id] = l; });
 
@@ -61,6 +73,8 @@ var el = {
   videoNote: $("#video-note"),
   fragmentMenu: $("#fragment-menu"),
   fragmentButton: $("#fragment-button"),
+  levelMenu: $("#level-menu"),
+  levelButton: $("#level-button"),
   textSideMenu: $("#text-side-menu"),
   textSideButton: $("#text-side-button"),
   textPlaceMenu: $("#text-place-menu"),
@@ -76,6 +90,9 @@ var el = {
   imageRemove: $("#image-remove"),
   layoutHint: $("#layout-hint"),
   layoutLocked: $("#layout-locked"),
+  layoutMenu: $("#layout-menu"),
+  layoutMini: $("#layout-current-mini"),
+  layoutName: $("#layout-current-name"),
   state: $("#save-state"),
   saveButton: $("#deck-save"),
   customColor: $("#background-custom"),
@@ -83,6 +100,12 @@ var el = {
   textColorTool: $("#text-color-tool"),
   gradient: $("#slide-gradient"),
   gradientHint: $("#gradient-hint"),
+  gradientName: $("#gradient-name"),
+  effectName: $("#effect-name"),
+  textColorName: $("#text-color-name"),
+  backgroundColorName: $("#background-color-name"),
+  sample: $("#look-sample"),
+  contrast: $("#look-contrast"),
   gradientVorlagen: $("#gradient-presets"),
   effectTiles: $("#effect-tiles"),
   codeButton: $("#code-insert"),
@@ -104,18 +127,10 @@ var el = {
   fieldColumnCount: $("#field-column-count"),
   fieldText: $("#field-text"),
   freestyleTools: $("#freestyle-tools"),
-  elementDialog: $("#element-dialog"),
-  elementForm: $("#element-form"),
-  elementLevel: $("#element-level"),
-  elementLevelField: $("#element-level-field"),
-  elementText: $("#element-text"),
-  elementContent: $("#element-content"),
-  elementFrame: $("#element-frame"),
-  elementSource: $("#element-source"),
-  elementSourceNote: $("#element-source-note"),
-  elementFragment: $("#element-fragment"),
-  elementToolbar: $("#element-toolbar"),
-  elementRemove: $("#element-remove"),
+  placeList: $("#place-list"),
+  placeCount: $("#place-count"),
+  placeEmpty: $("#place-empty"),
+  placeOrder: $("#place-order"),
   slideBands: $("#slide-bands"),
   headerOn: $("#slide-header-on"),
   footerOn: $("#slide-footer-on"),
@@ -130,7 +145,7 @@ var activeColumn = 0;
 
 var preview = createPreview($("#preview"), BASE, placed, function (n) {
   // The pencil on a selected block, or two clicks on it. The preview
-  // knows which block it was; the words are over here.
+  // knows which block it was; the words are over here, in its row.
   var slide = deck.slides[active];
   if (!slide || !n || n.block < 0) return;
   harvest();
@@ -162,10 +177,10 @@ function placed(n) {
   var text = places.place(slide.content, n.block, n.at, n.turn);
   if (text == null) return;
   slide.content = text;
-  // With the dialog open the form is not what one is looking at, and
-  // filling it afresh would take the element's own field apart under the
-  // words being written in it. Where a block stands is not on that form
-  // anyway -- it belongs to the mouse, which has just said it.
+  // With a row open the form is being written in, and filling it afresh
+  // would take that very field apart under the words going into it. Where
+  // a block stands is not on the form anyway -- it belongs to the mouse,
+  // which has just said it.
   if (elementAt < 0) {
     // The body has changed under the field, and a body carrying placements
     // is beyond what the rich-text field can show -- so which field is in
@@ -247,16 +262,30 @@ function saveNow(toFile) {
 var saveSoon = verzoegert(900, saveNow);
 
 // --- Saved, or owed ----------------------------------------------------
-// With autosave on this says nothing at all: writing the file is the normal
-// course of things, and a word after every keystroke would be a complaint
-// about it. Switched off, the opposite holds -- nothing is written unless
-// one presses the button, so the header has to say that something is owed,
-// and the button has to be there to press.
+// The word is there in every state, which it was not. With autosave on the
+// header used to say NOTHING -- and the one question a writer asks all day
+// is whether the work is safe, so the state everybody is in most of the
+// time was the one the bar would not report on. A word that only ever
+// appears when something is wrong teaches nobody where to look for it.
+//
+// It says "saved" through the second or so between a keystroke and the
+// delayed write, and that is deliberate rather than overlooked: the gap is
+// shorter than the glance, nothing can be done about it in the meantime,
+// and a word that flickered between two states while one typed would be
+// the noisiest thing in the editor. What it is reporting is the FILE, not
+// the keystroke -- and if the file cannot be written, saveNow() says so in
+// the same place, in red.
+//
+// Switched off, the opposite holds: nothing is written unless one presses
+// the button, so the bar has to say what is owed, and the button has to be
+// there to press. It comes and goes with the setting -- but the slot it
+// stands in holds its width either way (app.css), so nothing beside it
+// moves when it does.
 function drawSaveState() {
   el.saveButton.hidden = autosaveOn;
   var owed = !autosaveOn && (schmutzig || ungesichert);
   el.saveButton.classList.toggle("is-owed", owed);
-  stateShow(owed ? t("state.unsaved") : "");
+  stateShow(owed ? t("state.unsaved") : t("state.saved"), owed ? "is-owed" : "is-saved");
 }
 
 el.saveButton.addEventListener("click", function () { saveNow(true); });
@@ -308,20 +337,12 @@ function remember() {
   previewSoon();
 }
 
-// The slide as the preview is to show it: what the model holds, or --
-// while an element is open in the dialog -- a copy of it carrying what the
-// dialog says about that element. One road for both, so that a redraw
-// asked for from anywhere while the dialog stands open cannot quietly put
-// the unapplied words back to what they were.
-function previewSlide() {
-  var slide = deck.slides[active];
-  if (!slide) return null;
-  var text = elementText();
-  return text == null ? slide : Object.assign({}, slide, { content: text });
-}
-
+// The slide as the preview is to show it: what the model holds, and
+// nothing else. An open element is no exception any more -- its row writes
+// into the slide as it is typed (harvest), so there is no half-finished
+// version anywhere for the preview to be told about separately.
 function previewNow() {
-  var slide = previewSlide();
+  var slide = deck.slides[active];
   // The bands travel with the slide: they belong to the deck, and the
   // server would otherwise draw the strips as they stood at the last save
   // (routes/decks.js, js/editor/bands.js).
@@ -423,11 +444,22 @@ function harvest() {
   // the file for nothing.
   if (!hasTitle(slide)) slide.title = null;
   else slide.title = el.title.value === "" && slide.title == null ? null : el.title.value;
-  // On a freestyle slide the text is not in a field at all: it is in the
-  // elements, and those are written by the dialog and by the mouse
+  // On a freestyle slide the text is not in one field at all: it is in the
+  // elements, and those are written by the open row and by the mouse
   // (places.js). Reading a field that is not on the form would put back
   // whatever it happened to be holding.
+  //
+  // The open row IS read here, which is what makes it an ordinary field of
+  // this form: typed into, harvested before every save and every slide
+  // change, and never a keystroke behind. Only while it belongs to the
+  // slide in front -- during a slide change this runs before `active`
+  // moves (select), so the row is read into its own slide and not into the
+  // next one.
   if (!placing(slide)) slide.content = sourceMode ? el.sourceText.value : harvestText(slide);
+  else if (elementAt >= 0 && elementOn === active) {
+    var written = elementWritten(slide);
+    if (written != null) slide.content = written;
+  }
   slide.source = el.source.value;
   // Passed on as typed: the server picks the id out of it (video.js), and
   // it does so for the live preview too. So a pasted link is a video
@@ -554,9 +586,18 @@ function showSlide() {
   showVideo();
 
   $$(".layout-tile").forEach(function (k) {
-    k.classList.toggle("is-active", k.dataset.layout === slide.layout);
+    var here = k.dataset.layout === slide.layout;
+    k.classList.toggle("is-active", here);
+    k.setAttribute("aria-checked", here ? "true" : "false");
   });
-  el.layoutHint.textContent = (layoutsById[slide.layout] || {}).hint || "";
+  // The tiles live in a sheet behind the row now, so the row has to say
+  // which of them is in force -- the same picture and the same word the
+  // tile carries, because they are the one thing the sheet was opened to
+  // choose. Without this the form would show a layout nobody can see.
+  var chosen = layoutsById[slide.layout] || {};
+  el.layoutMini.className = "mini mini-" + slide.layout;
+  el.layoutName.textContent = chosen.label || slide.layout || "";
+  el.layoutHint.textContent = chosen.hint || "";
 
   var def = layoutsById[slide.layout] || { fields: [] };
   // The layout that has no heading puts the whole field away -- an input
@@ -595,24 +636,27 @@ function showSlide() {
   showColorField(el.customTextColor, slide.textColor);
   el.gradient.value = slide.gradient || "";
   gradientShow();
-  $$(".effect-tile").forEach(function (k) {
-    k.classList.toggle("is-active", k.dataset.effect === (slide.effect || ""));
-  });
+  effectShow();
+  lookShow();
 }
 
 function setContentMode(slide) {
   var count = splitCount(slide);
-  // A slide that is arranged rather than written through shows the row of
-  // sizes where the text field stands, and no field at all: its text is
-  // in its elements, and each of those is opened on the slide itself.
+  // A slide that is arranged rather than written through shows the list of
+  // its elements where the text field stands, and no field at all: its
+  // text is in those elements, and each of them is opened in its own row.
   var arranged = placing(slide);
   el.freestyleTools.hidden = !arranged;
   el.fieldText.hidden = arranged;
   if (arranged) {
     el.contentFrame.hidden = true;
     el.sourceFrame.hidden = true;
+    drawPlaceList();
     return;
   }
+  // A row left standing open on a slide that is no longer arranged would
+  // be writing into a text that is now one field's worth.
+  closeElement();
   // The frames carry the visible border, so those are what get hidden --
   // hiding the field alone would leave an empty box behind.
   el.contentFrame.hidden = sourceMode;
@@ -622,6 +666,14 @@ function setContentMode(slide) {
   el.sourceNote.hidden = !sourceMode || contentSimple(slide);
   el.sourceButton.classList.toggle("is-active", sourceMode);
   $$("#text-toolbar button[data-command]").forEach(function (b) { b.disabled = sourceMode; });
+  // The heading menu is a <details> rather than a button with a command,
+  // so the sweep above does not reach it. In source mode there are no
+  // blocks to be a heading -- only text -- so it greys out the same way
+  // the width menu does when there is no width to choose, and for the
+  // same reason: a button that vanishes and comes back is harder to find
+  // again than one that goes quiet.
+  el.levelMenu.setAttribute("aria-disabled", sourceMode ? "true" : "false");
+  if (sourceMode) el.levelMenu.open = false;
   // "This paragraph" needs a paragraph, and in source mode there is none --
   // only text. The slide's own text box is a different matter: it is an
   // attribute of the slide and can be set from either mode.
@@ -829,6 +881,10 @@ function headerMenu(id, after) {
 }
 
 headerMenu("deck-theme", function () {
+  // The contrast line rests on the theme's own colours wherever a slide
+  // names none, so the verdict belongs to the theme as much as to the
+  // slide and has to be said again here (lookShow, contrast.js).
+  lookShow();
   saveNow().then(function () { preview.newLoad(active); });
 });
 headerMenu("deck-transition", function () { saveNow(); });
@@ -1060,6 +1116,46 @@ function mark(selector, on) {
   row.setAttribute("aria-checked", on ? "true" : "false");
 }
 
+// --- A heading inside the text -----------------------------------------
+// One of four, and which one is a question about the block the caret is
+// in -- so the menu answers it on the way open, the same as the one
+// beside it (js/editor/richtext.js, levelHere). Radio rows and not
+// checkmarks: a block is one of the four at a time.
+function drawLevel() {
+  var node = markedRange && markedRange.startContainer;
+  var level = sourceMode ? null : rt.levelHere(el.content, node);
+  $$("#level-menu .menu-item").forEach(function (row) {
+    var here = level !== null && String(level) === row.dataset.level;
+    row.classList.toggle("is-active", here);
+    row.setAttribute("aria-checked", here ? "true" : "false");
+  });
+}
+
+// <details> has no disabled state of its own, so the click that would open
+// it is the one that has to be turned away -- the same as the width menu
+// further down.
+el.levelButton.addEventListener("click", function (ev) {
+  if (el.levelMenu.getAttribute("aria-disabled") === "true") ev.preventDefault();
+});
+el.levelButton.addEventListener("mousedown", rememberRange);
+el.levelMenu.addEventListener("toggle", function () {
+  if (el.levelMenu.open) drawLevel();
+});
+
+$$("#level-menu .menu-item").forEach(function (row) {
+  row.addEventListener("click", function () {
+    if (!sourceMode && markedRange) {
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(markedRange);
+      rt.befehl(el.content, "level-" + row.dataset.level);
+    }
+    el.levelMenu.open = false;
+    remember();
+    drawLevel();
+  });
+});
+
 // The caret is what "this paragraph" means, and opening a menu takes the
 // focus off it. So the range is written down on the way in -- the same
 // trick the colour tool plays further down -- and put back before the
@@ -1120,6 +1216,9 @@ document.addEventListener("click", function (ev) {
 $$(".layout-tile").forEach(function (tile) {
   tile.addEventListener("click", function () {
     harvest();
+    // The sheet has done its job the moment one of the eleven is pressed:
+    // leaving it open would hide the form it has just changed.
+    el.layoutMenu.open = false;
     var slide = deck.slides[active];
     slide.layout = tile.dataset.layout;
     // A layout without columns -- or with one single column -- cannot keep
@@ -1142,25 +1241,588 @@ function freeSpot(slide) {
   return [20 + step * 4, 18 + step * 9, 40].join(",");
 }
 
-// A new text. It is made as a plain block and the dialog that opens with
-// it asks how large it should be -- which is where that question has to
-// be asked anyway, since a size can be changed afterwards. One button
-// here, one question there, instead of the same question twice.
+// --- The list of them, in the form -------------------------------------
+// Every element the slide carries has a row: what kind of thing it is,
+// what it says, and the two buttons that make a second one of it and take
+// it away. A row opens into the element's own editor -- the template in
+// views/editor.ejs, stamped out into the row that is open.
+//
+// Here and not in a window of its own, which is what this was: a dialog
+// floating over the preview has to be pushed somewhere before one can
+// work, it covers the very slide it is writing, and nothing in it says
+// what ELSE is standing on that slide. The form has the room, the preview
+// keeps the whole of its own, and "what is on this slide" is answered by
+// reading rather than by hunting over the picture for handles.
+//
+// One row at a time. Two rich-text fields writing into one slide are two
+// answers to the question of what its text is, and the numbers the blocks
+// are addressed by (places.js) would be read off a text the other field
+// had already changed.
+
+// Which element is open, which slide it belongs to, and the editor
+// standing in its row. The slide is kept as a NUMBER: the model is
+// replaced wholesale by every save (saveNow), so the object would be a
+// different one a second later while the index is the same one.
+var elementAt = -1;
+var elementOn = -1;
+var elementBox = null;
+// Whether that editor is showing Markdown rather than rich text -- the
+// same question the slide's own text field asks (contentSimple), asked of
+// a single block.
+var elementSourceMode = false;
+// And the third answer: the element is a picture. Then neither field is
+// shown -- the picture is -- and this is what the row holds in their
+// stead, { alt, src }, until it is written back as a line
+// (js/editor/places.js, image).
+var elementPicture = null;
+
+// The word under a row's text. The three headings and the text block have
+// one already -- it is what the size buttons are named after -- and the
+// four shapes that have no size to be asked about are named here.
+function kindWord(kind) {
+  if (kind === "h1" || kind === "h2" || kind === "h3") return t("editor.placeAdd" + kind.slice(1));
+  if (kind === "text") return t("editor.placeAdd0");
+  return t("editor.placeKind." + kind);
+}
+
+// What a row says about its element, filled in place. In place because
+// this is also what runs while one types in the open row: rebuilding the
+// list under a field somebody is writing in would take the field away.
+function drawPlaceRow(row, slide, n) {
+  var kind = places.kind(slide.content, n);
+  var said = places.summary(slide.content, n);
+  var marks = places.classes(slide.content, n);
+  var meta = [kindWord(kind)];
+  if (marks.indexOf("fragment") !== -1) meta.push(t("dialog.elementFragment"));
+  $(".place-item-kind", row).dataset.kind = kind;
+  var text = $(".place-item-text", row);
+  text.textContent = said || t("editor.placeUntitled");
+  text.classList.toggle("is-empty", !said);
+  // The one thing here that can outrun its column: cut off at the end by
+  // the CSS, with the whole of it in the tooltip.
+  $(".place-item-open", row).dataset.tip = said || t("editor.placeUntitled");
+  $(".place-item-meta", row).textContent = meta.join(" · ");
+  // The first row has nothing above it and the last nothing below: a
+  // button that cannot do anything says so rather than doing nothing.
+  var count = places.count(slide.content);
+  $(".place-item-up", row).disabled = n === 0;
+  $(".place-item-down", row).disabled = n === count - 1;
+}
+
+function placeRow(slide, n) {
+  var row = document.createElement("li");
+  row.className = "place-item";
+  row.dataset.block = String(n);
+
+  var head = document.createElement("div");
+  head.className = "place-item-head";
+
+  // The whole line is the button, not a pencil at the end of it: the row
+  // is there to be opened, and a target the width of the column is one
+  // nobody has to aim at.
+  var open = document.createElement("button");
+  open.type = "button";
+  open.className = "place-item-open";
+  open.id = "place-head-" + n;
+  open.setAttribute("aria-expanded", "false");
+  open.setAttribute("aria-controls", "place-body-" + n);
+  var icon = document.createElement("span");
+  icon.className = "place-item-kind";
+  icon.setAttribute("aria-hidden", "true");
+  open.appendChild(icon);
+  var words = document.createElement("span");
+  words.className = "place-item-words";
+  var text = document.createElement("span");
+  text.className = "place-item-text";
+  words.appendChild(text);
+  var meta = document.createElement("span");
+  meta.className = "place-item-meta";
+  words.appendChild(meta);
+  open.appendChild(words);
+  head.appendChild(open);
+
+  var tools = document.createElement("span");
+  tools.className = "place-item-tools";
+  // Up and down before the other two, the way a slide card carries them
+  // (js/editor/slide-list.js): the same pair of questions one step down.
+  // Here they do a second thing besides ordering a list -- they are what
+  // decides which block lies over which (places.js, move).
+  [["up", t("editor.placeUp")], ["down", t("editor.placeDown")],
+   ["copy", t("editor.placeDuplicate")], ["remove", t("dialog.elementRemove")]].forEach(function (b) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "place-item-tool place-item-" + b[0];
+    button.dataset.tip = b[1];
+    button.setAttribute("aria-label", b[1]);
+    tools.appendChild(button);
+  });
+  head.appendChild(tools);
+  row.appendChild(head);
+
+  var body = document.createElement("div");
+  body.className = "place-item-body";
+  body.id = "place-body-" + n;
+  body.setAttribute("role", "region");
+  body.setAttribute("aria-labelledby", "place-head-" + n);
+  body.hidden = true;
+  row.appendChild(body);
+
+  drawPlaceRow(row, slide, n);
+  return row;
+}
+
+// The list, built afresh from the slide's own text -- which is the only
+// place the elements live. Whatever row was open is shut first: it is
+// about to be thrown away with the list it stands in.
+function drawPlaceList() {
+  var slide = deck.slides[active];
+  if (!slide) return;
+  closeElement();
+  var count = places.count(slide.content);
+  el.placeList.textContent = "";
+  for (var n = 0; n < count; n++) el.placeList.appendChild(placeRow(slide, n));
+  el.placeList.hidden = !count;
+  el.placeEmpty.hidden = !!count;
+  // What the order of the rows means. Only where there are two of them to
+  // order: on a slide with one block nothing lies over anything.
+  el.placeOrder.hidden = count < 2;
+  el.placeCount.textContent = count
+    ? t(count === 1 ? "editor.placeCountOne" : "editor.placeCount", { n: count })
+    : "";
+}
+
+// --- One element, open -------------------------------------------------
+// The fields of the open row, reached through the box they were stamped
+// into: nothing in there is an id, because there is a copy of it per
+// element (views/editor.ejs).
+function elementBody(box) {
+  if (elementPicture) return places.imageLine(elementPicture);
+  return elementSourceMode
+    ? $(".element-text", box).value
+    : rt.htmlToMd($(".element-content", box));
+}
+
+// The picture on the row, from whatever the file says it is.
+function showElementPicture() {
+  $(".element-image-preview", elementBox).src = imageUrl(elementPicture.src);
+}
+
+function showElementText(body) {
+  // A block that is nothing but a picture is SHOWN, not spelled out:
+  // ![](logo.svg) is a file name dressed as Markdown, and a row that
+  // offers it as text asks to have the one thing typed in it that cannot
+  // be seen going wrong. The picture and the button to swap it take the
+  // field's place, and the sentence under them changes with it -- blank
+  // lines and what is "written along" say nothing about a photograph.
+  elementPicture = places.image(body);
+  $(".element-field", elementBox).hidden = !!elementPicture;
+  $(".element-image-field", elementBox).hidden = !elementPicture;
+  $(".element-note", elementBox).hidden = !!elementPicture;
+  $(".element-image-note", elementBox).hidden = !elementPicture;
+  if (elementPicture) {
+    elementSourceMode = false;
+    showElementPicture();
+    return;
+  }
+  elementSourceMode = !rt.isSimple(body);
+  $(".element-frame", elementBox).hidden = elementSourceMode;
+  $(".element-source", elementBox).hidden = !elementSourceMode;
+  $(".element-source-note", elementBox).hidden = !elementSourceMode;
+  // Only the commands that need a rich field. The four alignments are
+  // marks on the element and not commands on its text, so they work in
+  // either mode; the code button writes a fence and works in either mode
+  // too, which is the whole reason it is not an execCommand. The colour
+  // paints marked words and has none to paint in a textarea.
+  $$(".element-toolbar button[data-command]", elementBox).forEach(function (b) {
+    b.disabled = elementSourceMode;
+  });
+  $(".element-color", elementBox).disabled = elementSourceMode;
+  if (elementSourceMode) $(".element-text", elementBox).value = body;
+  else $(".element-content", elementBox).innerHTML = rt.mdToHtml(body);
+}
+
+// What the element says about itself besides its words: how it is
+// aligned, and whether it waits for a click. Both are classes on its own
+// comment line (places.js), so both are read and written here rather than
+// typed into the text.
+function showElementMarks(list) {
+  var align = (list || []).filter(function (c) { return c.indexOf("align-") === 0; })[0] || "";
+  $$(".element-toolbar button[data-align]", elementBox).forEach(function (b) {
+    b.classList.toggle("is-active", "align-" + b.dataset.align === align);
+  });
+  $(".element-fragment", elementBox).checked = (list || []).indexOf("fragment") !== -1;
+}
+
+function elementMarks() {
+  var out = [];
+  var chosen = $(".element-toolbar button[data-align].is-active", elementBox);
+  if (chosen) out.push("align-" + chosen.dataset.align);
+  if ($(".element-fragment", elementBox).checked) out.push("fragment");
+  return out;
+}
+
+function showElementLevel(level) {
+  $(".element-level-field", elementBox).hidden = level == null;
+  $$(".element-level .count-option", elementBox).forEach(function (b) {
+    var is = Number(b.dataset.level) === level;
+    b.classList.toggle("is-active", is);
+    b.setAttribute("aria-pressed", is ? "true" : "false");
+  });
+}
+
+// The open row as the slide's whole text. Read by harvest() and by
+// nobody else: the row writes into the model as it is typed, exactly as
+// the text field of every other layout does, and from there the preview,
+// the save and the file all read the same one thing. That is what the
+// Apply button of the old dialog was for, and why there is none here.
+//
+// An empty field writes NOTHING. A block with nothing in it is no block
+// at all (places.js, blocks), so writing one back would take the element
+// off the slide in the middle of somebody retyping it and shift the
+// number of every element behind it. Emptying a row and leaving it is
+// what deletes the element (closeElement) -- once, at the end, instead of
+// on the keystroke that cleared the last letter.
+function elementWritten(slide) {
+  if (!elementBox) return null;
+  var chosen = $(".element-level .count-option.is-active", elementBox);
+  var level = $(".element-level-field", elementBox).hidden
+    ? null
+    : Number(chosen && chosen.dataset.level);
+  var body = elementBody(elementBox);
+  if (!body.trim()) return null;
+  var text = places.write(slide.content, elementAt, level, body);
+  if (text != null) text = places.setClasses(text, elementAt, elementMarks());
+  return text;
+}
+
+function elementChanged() {
+  if (elementAt < 0) return;
+  // The row of sizes belongs to what stands in the field NOW. Press the
+  // list button over a text element and it is a list from that moment: it
+  // has no heading size any more, and a row left standing over it offers
+  // four buttons that do nothing (places.js, write, refuses the one that
+  // would do harm). Empty the bullets back into a sentence and the sizes
+  // come back. A picture answers no to the same question, which is how it
+  // keeps the row it never had.
+  //
+  // Asked here and not only when the row opens, because that is the whole
+  // of the difference somebody notices: a list made in this row used to
+  // keep the sizes of the text it was a minute ago, while the same list
+  // opened again the next day had none.
+  $(".element-level-field", elementBox).hidden = !places.sized(elementBody(elementBox));
+  remember();
+  var slide = deck.slides[active];
+  var row = elementBox && elementBox.closest(".place-item");
+  if (row && slide) drawPlaceRow(row, slide, elementAt);
+}
+
+function wireElement(box) {
+  $$(".element-toolbar button[data-command]", box).forEach(function (b) {
+    // mousedown rather than click, as in the slide's own bar: otherwise
+    // the field loses the selection the command is meant to act on.
+    b.addEventListener("mousedown", function (ev) {
+      ev.preventDefault();
+      rt.befehl($(".element-content", box), b.dataset.command);
+      elementChanged();
+    });
+  });
+  // The alignment is a mark on the element, not a command on its text:
+  // one of the four or none of them, and pressing the one in force takes
+  // it off again.
+  $$(".element-toolbar button[data-align]", box).forEach(function (b) {
+    b.addEventListener("click", function () {
+      var on = b.classList.contains("is-active");
+      $$(".element-toolbar button[data-align]", box).forEach(function (o) { o.classList.remove("is-active"); });
+      b.classList.toggle("is-active", !on);
+      elementChanged();
+    });
+  });
+  $$(".element-level .count-option", box).forEach(function (b) {
+    b.addEventListener("click", function () {
+      showElementLevel(Number(b.dataset.level));
+      elementChanged();
+    });
+  });
+  // The three that write into the field rather than formatting it. Each
+  // one is the slide bar's tool pointed at this row (see writtenIn): the
+  // panel of characters, the dialog that builds a code block, and the
+  // picker that paints a few words.
+  //
+  // The emoji panel is filled the first time it is opened and not before:
+  // 450 keys per row, for rows that mostly never ask for one, is a cost
+  // paid every time a line is clicked.
+  var emoji = $(".element-emoji", box);
+  var filled = false;
+  emoji.addEventListener("toggle", function () {
+    if (!emoji.open || filled) return;
+    filled = true;
+    fillEmojiGrid($(".emoji-grid", emoji));
+    // The panel is measured to be placed, and it has just been given
+    // something to measure.
+    placeEmojiPanel(emoji);
+  });
+  wireEmojiPanel(emoji);
+  $(".element-code", box).addEventListener("click", function () { codeDialogOeffnen(null); });
+  // A code block in this field is opened by a click on it, exactly as one
+  // in the slide's field is: the block is sealed, so the click lands on it
+  // rather than inside it.
+  $(".element-content", box).addEventListener("click", function (ev) {
+    if (!ev.target.closest) return;
+    var block = ev.target.closest(".code-block");
+    if (!block || !$(".element-content", box).contains(block)) return;
+    if (ev.target.closest(".code-remove")) {
+      block.remove();
+      elementChanged();
+      return;
+    }
+    codeDialogOeffnen(block);
+  });
+  // The colour picker hangs itself on the field, and this one was stamped
+  // out after the picker was set up -- so it is handed over by name. Its
+  // listeners are on the document and find it by themselves (Coloris,
+  // bindFields).
+  var colour = $(".element-color", box);
+  Coloris.wrap(colour);
+  colour.addEventListener("mousedown", rememberRange);
+  $(".element-content", box).addEventListener("keyup", rememberRange);
+  $(".element-content", box).addEventListener("mouseup", rememberRange);
+  // The picture, swapped for another out of the same picker the rest of
+  // the editor uses. What it says about itself -- its alt text -- is
+  // carried over: the picker asks for a file and nothing else, and this
+  // is not the place to quietly drop a line the file already had.
+  $(".element-image-choose", box).addEventListener("click", function () {
+    askForImage(function (name) {
+      if (!elementPicture || elementBox !== box) return;
+      elementPicture = { alt: elementPicture.alt, src: name };
+      showElementPicture();
+      elementChanged();
+    });
+  });
+  // Per keystroke, exactly as the slide's own text field is read
+  // (el.content above): what holds the keystrokes back from the preview is
+  // remember()'s own delay, which is one delay for the whole editor.
+  $(".element-content", box).addEventListener("input", elementChanged);
+  $(".element-text", box).addEventListener("input", elementChanged);
+  $(".element-fragment", box).addEventListener("change", elementChanged);
+  // The way out for whoever reached the row with the keyboard: the row
+  // shuts and the line that opened it has the focus again, which is where
+  // one was before.
+  box.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Escape") return;
+    ev.stopPropagation();
+    var row = box.closest(".place-item");
+    var gone = closeElement();
+    if (gone >= 0) { drawPlaceList(); remember(); return; }
+    if (row) $(".place-item-open", row).focus();
+  });
+}
+
+// Shut, and nothing else: the list is rebuilt by whoever asked for this.
+// Returns the element that went with the row -- an emptied one -- or -1,
+// so that a caller holding a number knows whether it still means the same
+// element.
+function closeElement() {
+  var box = elementBox;
+  var n = elementAt;
+  var on = elementOn;
+  // Read before the row is let go of: a picture's body is held here and
+  // nowhere else, so emptying this first would make every picture look
+  // like an emptied row and take it off the slide.
+  var empty = box ? !elementBody(box).trim() : true;
+  elementBox = null;
+  elementAt = -1;
+  elementOn = -1;
+  elementPicture = null;
+  if (!box) return -1;
+  var row = box.closest(".place-item");
+  box.remove();
+  if (row) {
+    row.classList.remove("is-open");
+    $(".place-item-open", row).setAttribute("aria-expanded", "false");
+    $(".place-item-body", row).hidden = true;
+  }
+  // Only for the slide it was opened on. A row still standing open when
+  // the editor is put on another slide is simply taken down -- what it
+  // held was written into its own slide at the last keystroke.
+  if (!empty || on !== active) return -1;
+  var slide = deck.slides[active];
+  var text = slide && places.remove(slide.content, n);
+  if (text == null) return -1;
+  slide.content = text;
+  return n;
+}
+
+// Shuts whatever is open and says where the element asked for stands
+// afterwards: an emptied row takes its element with it and everything
+// behind it moves up one. -1 where the element asked for was that one.
+function settle(n) {
+  var gone = closeElement();
+  if (gone < 0) return n;
+  drawPlaceList();
+  remember();
+  if (gone === n) return -1;
+  return gone < n ? n - 1 : n;
+}
+
+// `fresh` for an element that has just been made: it carries a
+// placeholder word and the first thing anybody does is type over it, so
+// the words are taken. An old one is opened to be changed, and there the
+// cursor goes to the end, where nothing is lost by a keystroke.
+function openElement(n, fresh) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  var same = elementAt === n;
+  harvest();
+  n = settle(n);
+  // A second press on the row that is open is what shuts it again.
+  if (same || n < 0) return;
+  var said = places.read(slide.content, n);
+  var row = $('.place-item[data-block="' + n + '"]', el.placeList);
+  if (!said || !row) return;
+  elementAt = n;
+  elementOn = active;
+  elementBox = document.importNode($("#element-editor").content, true).firstElementChild;
+  var body = $(".place-item-body", row);
+  body.appendChild(elementBox);
+  body.hidden = false;
+  row.classList.add("is-open");
+  $(".place-item-open", row).setAttribute("aria-expanded", "true");
+  wireElement(elementBox);
+  showElementLevel(said.level);
+  showElementText(said.body);
+  showElementMarks(places.classes(slide.content, n));
+  // Hold of it over there as well: the handles go on, so the element can
+  // be moved and turned while its words are being written. That the two
+  // halves stand side by side is the whole point of writing here rather
+  // than in a window over the picture.
+  //
+  // Not where a group has made the blocks of the text and the elements on
+  // the slide two different lists (places.js, placeable): the number means
+  // something here and nothing over there, and handles put on the wrong
+  // element would be an invitation to drag it.
+  if (places.placeable(slide.content)) preview.pick(n);
+  row.scrollIntoView({ block: "nearest" });
+  // A picture has no field to type in, so the focus goes to the one thing
+  // there is to do with it. (A fresh element is never a picture: one
+  // chosen in the picker lands on the slide without a row opening at all.)
+  if (elementPicture) { $(".element-image-choose", elementBox).focus(); return; }
+  var field = elementSourceMode ? $(".element-text", elementBox) : $(".element-content", elementBox);
+  field.focus();
+  if (fresh) {
+    if (elementSourceMode) field.select();
+    else document.execCommand("selectAll", false, null);
+  } else if (!elementSourceMode) {
+    var range = document.createRange();
+    range.selectNodeContents(field);
+    range.collapse(false);
+    var selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
+// --- What the rows are for ---------------------------------------------
+el.placeList.addEventListener("click", function (ev) {
+  var row = ev.target.closest(".place-item");
+  if (!row) return;
+  var n = Number(row.dataset.block);
+  if (ev.target.closest(".place-item-up")) return placeMove(n, -1);
+  if (ev.target.closest(".place-item-down")) return placeMove(n, 1);
+  if (ev.target.closest(".place-item-copy")) return placeCopy(n);
+  if (ev.target.closest(".place-item-remove")) return placeRemove(n);
+  // Anything else inside the row is the open editor minding its own
+  // business.
+  if (ev.target.closest(".place-item-open")) openElement(n);
+});
+
+// One place up or down the list, which on the slide is one step back or
+// forward: the blocks are drawn in the order they stand, so the row at the
+// bottom is the block on top (places.js, move). Nothing else about either
+// element changes -- not its words, not where it stands, not how far it is
+// turned. This is the only way to say what covers what, and without it two
+// blocks that overlap are stacked in the order they happened to be typed.
+function placeMove(n, dir) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  harvest();
+  n = settle(n);
+  if (n < 0) return;
+  var text = places.move(slide.content, n, dir);
+  // No neighbour that way. The button is shut in that case (drawPlaceRow),
+  // so this is the keyboard and the list redrawing under it.
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+  var now = n + (dir < 0 ? -1 : 1);
+  // The hands stay on the element: one step is rarely the whole ordering,
+  // and the handles over there have to follow the block they are on.
+  if (places.placeable(slide.content)) preview.pick(now);
+  // And the focus stays on the button that was pressed -- it has just
+  // moved to another row with the element it belongs to. At the end of
+  // the list that button is shut, and then the row itself takes the
+  // focus rather than leaving it on the body.
+  var row = $('.place-item[data-block="' + now + '"]', el.placeList);
+  if (!row) return;
+  var again = $(dir < 0 ? ".place-item-up" : ".place-item-down", row);
+  if (again && !again.disabled) again.focus();
+  else $(".place-item-open", row).focus();
+}
+
+// A second one of the same, standing a step away from it: everything the
+// element is travels with it -- its words, its size, where it is aligned,
+// whether it waits for a click -- and only its place is moved, so that one
+// can see there are now two (places.js, duplicate).
+function placeCopy(n) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  harvest();
+  n = settle(n);
+  if (n < 0) return;
+  var text = places.duplicate(slide.content, n, freeSpot(slide));
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+  // The copy is the last element on the slide and the one the hands are
+  // reaching for: it is taken hold of over there rather than opened here,
+  // because what one does with a copy first is put it where it belongs.
+  preview.pick(places.count(slide.content) - 1);
+}
+
+function placeRemove(n) {
+  var slide = deck.slides[active];
+  if (!slide || !placing(slide)) return;
+  harvest();
+  n = settle(n);
+  if (n < 0) return;
+  var text = places.remove(slide.content, n);
+  if (text == null) return;
+  slide.content = text;
+  showSlide();
+  remember();
+}
+
+// A new text. It is made as a plain block and the row that opens with it
+// asks how large it should be -- which is where that question has to be
+// asked anyway, since a size can be changed afterwards. One button here,
+// one question there, instead of the same question twice.
 $(".place-add-button").addEventListener("click", function () {
   var slide = deck.slides[active];
   if (!slide || !placing(slide)) return;
   harvest();
+  closeElement();
   slide.content = places.add(slide.content, 0, t("editor.placeNewText"), freeSpot(slide));
   showSlide();
   remember();
   // Straight into the words: the element exists, and the only thing
   // anybody wants from it now is to say what it reads and how large.
-  openElement(places.count(slide.content) - 1);
+  openElement(places.count(slide.content) - 1, true);
 });
 
 // And a picture, which is the same move with the other half left out: it
 // is chosen in the picker, lands in the middle like a new text does, and
-// then there is nothing to type about it. So no dialog opens -- what one
+// then there is nothing to type about it. So no row opens -- what one
 // wants of a picture one has just put down is to drag it, pull it to size
 // and turn it, and all three are over there. The handles are asked for in
 // its stead, so it is already taken hold of when it appears.
@@ -1175,215 +1837,12 @@ $(".place-add-image").addEventListener("click", function () {
     var now = deck.slides[active];
     if (!now || !placing(now)) return;
     harvest();
+    closeElement();
     now.content = places.add(now.content, 0, "![](" + name + ")", freeSpot(now));
     showSlide();
     remember();
     preview.pick(places.count(now.content) - 1);
   });
-});
-
-// --- One element, in a dialog ------------------------------------------
-// Which element is open. -1 for none, which is also what keeps the
-// dialog's buttons from acting after it has been closed.
-var elementAt = -1;
-
-// Pushed aside, pulled at the corner, and remembered where it was left --
-// the same treatment the source and the bands dialogs get, and for the
-// same reason: this one is worked in while the preview is watched, and
-// the element being written is ON that preview (js/editor/dialog-aside.js).
-// live: this one is not modal. A modal dialog makes the page behind it
-// inert, and the preview with it -- and turning the element while choosing
-// its words is the one thing this dialog is for.
-var elementAside = setupAside(el.elementDialog, {
-  key: "trivialslides:element-box",
-  frame: $(".preview-frame"),
-  resizable: true,
-  live: true,
-});
-
-// Abbrechen, and the same for every other way out that is not Apply: the
-// dialog closes and the slide keeps what it had. Nothing is written
-// until the one button that says so is pressed.
-el.elementDialog.addEventListener("click", function (ev) {
-  if (ev.target.closest("[data-close]")) el.elementDialog.close();
-});
-
-// Whether the field can show this element's text, or whether it has to be
-// shown as Markdown -- the same question the slide's own text field asks
-// (contentSimple), asked of one block.
-var elementSourceMode = false;
-
-function showElementText(body) {
-  elementSourceMode = !rt.isSimple(body);
-  el.elementFrame.hidden = elementSourceMode;
-  el.elementSource.hidden = !elementSourceMode;
-  el.elementSourceNote.hidden = !elementSourceMode;
-  $$("#element-toolbar button").forEach(function (b) { b.disabled = elementSourceMode; });
-  if (elementSourceMode) el.elementText.value = body;
-  else el.elementContent.innerHTML = rt.mdToHtml(body);
-}
-
-// What the element says about itself besides its words: how it is
-// aligned, and whether it waits for a click. Both are classes on its own
-// comment line (places.js), so both are read and written here rather than
-// typed into the text.
-function showElementMarks(list) {
-  var align = (list || []).filter(function (c) { return c.indexOf("align-") === 0; })[0] || "";
-  $$("#element-toolbar button[data-align]").forEach(function (b) {
-    b.classList.toggle("is-active", "align-" + b.dataset.align === align);
-  });
-  el.elementFragment.checked = (list || []).indexOf("fragment") !== -1;
-}
-
-function elementMarks() {
-  var out = [];
-  var chosen = $("#element-toolbar button[data-align].is-active");
-  if (chosen) out.push("align-" + chosen.dataset.align);
-  if (el.elementFragment.checked) out.push("fragment");
-  return out;
-}
-
-$$("#element-toolbar button[data-command]").forEach(function (b) {
-  // mousedown rather than click, as in the slide's own bar: otherwise the
-  // field loses the selection the command is meant to act on.
-  b.addEventListener("mousedown", function (ev) {
-    ev.preventDefault();
-    rt.befehl(el.elementContent, b.dataset.command);
-    elementDraw();
-  });
-});
-
-// The alignment is a mark on the element, not a command on its text: one
-// of the four or none of them, and pressing the one in force takes it off
-// again.
-$$("#element-toolbar button[data-align]").forEach(function (b) {
-  b.addEventListener("click", function () {
-    var on = b.classList.contains("is-active");
-    $$("#element-toolbar button[data-align]").forEach(function (o) { o.classList.remove("is-active"); });
-    b.classList.toggle("is-active", !on);
-    elementDraw();
-  });
-});
-
-function showElementLevel(level) {
-  el.elementLevelField.hidden = level == null;
-  $$(".count-option", el.elementLevel).forEach(function (b) {
-    var is = Number(b.dataset.level) === level;
-    b.classList.toggle("is-active", is);
-    b.setAttribute("aria-pressed", is ? "true" : "false");
-  });
-}
-
-function openElement(n) {
-  var slide = deck.slides[active];
-  if (!slide || !placing(slide)) return;
-  var said = places.read(slide.content, n);
-  if (!said) return;
-  elementAt = n;
-  showElementLevel(said.level);
-  showElementText(said.body);
-  showElementMarks(places.classes(slide.content, n));
-  // show() and not showModal(): see the aside's `live` above.
-  el.elementDialog.show();
-  elementAside.opened();
-  // From here on this element is the only one the mouse may take hold of
-  // over there (js/slide-place.js).
-  preview.only(n);
-  var feld = elementSourceMode ? el.elementText : el.elementContent;
-  feld.focus();
-  if (elementSourceMode) feld.select();
-  else document.execCommand("selectAll", false, null);
-}
-
-$$(".count-option", el.elementLevel).forEach(function (b) {
-  b.addEventListener("click", function () {
-    showElementLevel(Number(b.dataset.level));
-    elementDraw();
-  });
-});
-
-// --- The dialog in the preview -----------------------------------------
-// What the dialog says RIGHT NOW, as the whole slide's text: its size, its
-// words, and the marks that ride on its comment line. Asked by the two
-// that need it -- the one that draws the preview while it is being typed
-// in, and Apply, which is the same answer written down.
-//
-// Always counted off the model's own text, which is the text the dialog
-// was opened on: the block number means something in that text and in no
-// other. Were a half-finished version written back between keystrokes, a
-// moment with an empty field would leave one block fewer and every number
-// after it pointing at its neighbour.
-function elementText() {
-  var slide = deck.slides[active];
-  // == null as well as < 0: this is reached from the preview's own road,
-  // which exists before the line further down has run.
-  if (elementAt == null || elementAt < 0 || !slide) return null;
-  var chosen = $(".count-option.is-active", el.elementLevel);
-  var level = el.elementLevelField.hidden ? null : Number(chosen && chosen.dataset.level);
-  var body = elementSourceMode ? el.elementText.value : rt.htmlToMd(el.elementContent);
-  var text = places.write(slide.content, elementAt, level, body);
-  if (text != null) text = places.setClasses(text, elementAt, elementMarks());
-  return text;
-}
-
-// Drawn, not written. The preview is handed a COPY of the slide carrying
-// the provisional text; the model keeps what it had until Apply says
-// otherwise. That is what lets every other way out of the dialog --
-// Abbrechen, the cross, Escape -- stay what it always was: nothing to
-// undo, because nothing was done. Nothing is saved either, since saving
-// is what remember() does and nothing here calls it.
-var elementShown = false;
-
-function elementDraw() {
-  if (elementAt < 0) return;
-  elementShown = true;
-  previewNow();
-}
-
-// While typing, at the pace the slide's own text field is drawn at: one
-// picture per pause, not one per letter. A button is pressed and not
-// typed, so it draws at once.
-function elementSoon() {
-  elementShown = true;
-  previewSoon();
-}
-
-el.elementContent.addEventListener("input", elementSoon);
-el.elementText.addEventListener("input", elementSoon);
-el.elementFragment.addEventListener("change", elementDraw);
-
-el.elementForm.addEventListener("submit", function () {
-  if (elementAt < 0) return;
-  var slide = deck.slides[active];
-  var text = elementText();
-  elementAt = -1;
-  if (text == null) return;
-  slide.content = text;
-  showSlide();
-  remember();
-});
-
-el.elementRemove.addEventListener("click", function () {
-  if (elementAt < 0) return;
-  var slide = deck.slides[active];
-  var text = places.remove(slide.content, elementAt);
-  elementAt = -1;
-  el.elementDialog.close();
-  if (text == null) return;
-  slide.content = text;
-  showSlide();
-  remember();
-});
-
-// The model was never touched, so there is nothing to put back but the
-// picture -- and only where a provisional one was ever drawn. After Apply
-// this draws the same slide a second time, which costs one fetch and
-// saves a special case.
-el.elementDialog.addEventListener("close", function () {
-  elementAt = -1;
-  preview.only(-1);
-  if (elementShown) previewSoon();
-  elementShown = false;
 });
 
 // How many columns. Like the switch below it this is read BEFORE the
@@ -1449,7 +1908,8 @@ function rememberRange() {
   var sel = window.getSelection();
   if (!sel || !sel.rangeCount) return;
   var range = sel.getRangeAt(0);
-  if (el.content.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
+  var field = writtenIn().rich;
+  if (field && field.contains(range.commonAncestorContainer)) markedRange = range.cloneRange();
 }
 
 // While the picker is open the field is not focused, so nothing else moves
@@ -1461,16 +1921,21 @@ el.content.addEventListener("mouseup", rememberRange);
 // coloris:pick comes with every change while the picker is open, so the
 // colour is seen on the words as it is chosen rather than after the fact.
 document.addEventListener("coloris:pick", function (ev) {
-  if (!ev.detail || ev.detail.currentEl !== el.textColorTool) return;
-  if (sourceMode || !markedRange) return;
+  // Any of the bar's colour tools -- the slide's or an element row's --
+  // and none of the pickers that set a colour of the SLIDE: those write a
+  // value into a field, this one paints the words that are marked.
+  var tool = ev.detail && ev.detail.currentEl;
+  if (!tool || !tool.closest || !tool.closest(".tool-color")) return;
+  var where = writtenIn();
+  if (where.plain || !markedRange) return;
   var sel = window.getSelection();
   sel.removeAllRanges();
   sel.addRange(markedRange);
-  rt.farbe(el.content, ev.detail.color);
+  rt.farbe(where.rich, ev.detail.color);
   // The command leaves a selection of its own over the same words; it is
   // the one the next change has to act on.
   if (sel.rangeCount) markedRange = sel.getRangeAt(0).cloneRange();
-  remember();
+  where.changed();
 });
 
 // The button wears the colour of the text the caret is in, the way the
@@ -1478,17 +1943,19 @@ document.addEventListener("coloris:pick", function (ev) {
 // own reads as the field's own colour -- which is what an empty field
 // means here, so the drop goes back to grey rather than to near-black.
 function drawTextColor() {
-  if (document.activeElement !== el.content) return;
+  var where = writtenIn();
+  var tool = where.tool;
+  if (!tool || document.activeElement !== where.rich) return;
   var here = "";
   try { here = String(document.queryCommandValue("foreColor") || ""); } catch (e) { /* not asked */ }
-  var own = window.getComputedStyle(el.content).color;
+  var own = window.getComputedStyle(where.rich).color;
   var value = !here || here === own ? "" : rt.farbeVon({ style: { color: here }, tagName: "span" });
-  if (value === el.textColorTool.value) return;
-  el.textColorTool.value = value;
+  if (value === tool.value) return;
+  tool.value = value;
   // quiet: this follows the caret, it is not somebody choosing a colour.
-  el.textColorTool.dataset.quiet = "1";
-  el.textColorTool.dispatchEvent(new Event("input", { bubbles: true }));
-  delete el.textColorTool.dataset.quiet;
+  tool.dataset.quiet = "1";
+  tool.dispatchEvent(new Event("input", { bubbles: true }));
+  delete tool.dataset.quiet;
 }
 
 document.addEventListener("selectionchange", drawTextColor);
@@ -1580,6 +2047,36 @@ function codeDialogOeffnen(block) {
 
 el.codeButton.addEventListener("click", function () { codeDialogOeffnen(null); });
 
+// --- The field that is being written in --------------------------------
+// Three of the bar's tools do not format a selection, they put something
+// where the cursor is: a character, a block of code, a colour on a few
+// words. Which field that is depends on which bar they were pressed in --
+// the slide's own, or the bar of the one element row that is open. On a
+// freestyle slide there is no third answer: the slide's text field is not
+// on the screen at all while the elements are (setContentMode).
+//
+// `changed` is the pair's other half: the slide's field tells the editor
+// it has been written in by remember(), an element's row by its own
+// elementChanged(), which also redraws the line in the list.
+function writtenIn() {
+  if (elementBox) {
+    return {
+      rich: $(".element-content", elementBox),
+      plainField: $(".element-text", elementBox),
+      plain: elementSourceMode,
+      tool: $(".element-color", elementBox),
+      changed: elementChanged,
+    };
+  }
+  return {
+    rich: el.content,
+    plainField: el.sourceText,
+    plain: sourceMode,
+    tool: el.textColorTool,
+    changed: remember,
+  };
+}
+
 // --- Emoji -------------------------------------------------------------
 // An emoji is a character, not a formatting: it goes in where the cursor
 // is and into the .md as itself -- no attribute, no class, nothing for the
@@ -1589,8 +2086,7 @@ var emojiMenu = $("#emoji-menu");
 // The panel is built once, from the table the page carries (emoji.js).
 // Groups with their word above them, so 450 characters can be scanned
 // instead of searched.
-(function buildEmojiPanel() {
-  var grid = $("#emoji-grid");
+function fillEmojiGrid(grid) {
   var groups = [];
   try { groups = JSON.parse($("#data-emoji").textContent); } catch (e) { /* no panel then */ }
   groups.forEach(function (group) {
@@ -1609,24 +2105,35 @@ var emojiMenu = $("#emoji-menu");
       grid.appendChild(key);
     });
   });
-})();
+}
+fillEmojiGrid($("#emoji-grid"));
 
 // mousedown with preventDefault throughout, on the summary as well as on
 // the keys: that keeps the focus -- and with it the place the character is
 // meant to go -- in the text field. A <summary> still opens its menu on
 // the click that follows, so the menu loses nothing by it.
-$("#emoji-menu > summary").addEventListener("mousedown", function (ev) {
-  ev.preventDefault();
-});
-
-// One listener for all of them, on the panel: 450 buttons with a listener
-// each would be 450 listeners for the same three lines.
-$(".emoji-panel").addEventListener("mousedown", function (ev) {
-  var key = ev.target.closest(".emoji-key");
-  if (!key) return;
-  ev.preventDefault();
-  insertEmoji(key.textContent);
-});
+//
+// Said once for both panels: the slide's, and the one in the bar of an
+// element row (views/editor.ejs). Everything about them is the same bar
+// twice over, and a second copy of these three handlers is a second place
+// for them to drift.
+function wireEmojiPanel(menu) {
+  menu.querySelector("summary").addEventListener("mousedown", function (ev) {
+    ev.preventDefault();
+  });
+  // One listener for all of them, on the panel: 450 buttons with a
+  // listener each would be 450 listeners for the same three lines.
+  menu.querySelector(".emoji-panel").addEventListener("mousedown", function (ev) {
+    var key = ev.target.closest(".emoji-key");
+    if (!key) return;
+    ev.preventDefault();
+    insertEmoji(key.textContent);
+  });
+  menu.addEventListener("toggle", function () {
+    if (!menu.open) return;
+    placeEmojiPanel(menu);
+  });
+}
 
 // Under the button, and inside the column. Those two pull against each
 // other: the panel is ten keys wide, and the bar wraps at narrow widths so
@@ -1638,11 +2145,11 @@ $(".emoji-panel").addEventListener("mousedown", function (ev) {
 // where there is room to the right, from its RIGHT edge where there is
 // not (which is what every menu does), and flush left if even that does
 // not fit.
-emojiMenu.addEventListener("toggle", function () {
-  if (!emojiMenu.open) return;
-  var panel = $(".emoji-panel");
-  var bar = emojiMenu.closest(".toolbar");
-  var button = $("#emoji-menu > summary");
+function placeEmojiPanel(menu) {
+  var panel = menu.querySelector(".emoji-panel");
+  var bar = menu.closest(".toolbar");
+  var button = menu.querySelector("summary");
+  if (!panel || !bar || !button) return;
   var barBox = bar.getBoundingClientRect();
   var buttonBox = button.getBoundingClientRect();
   var width = panel.offsetWidth;
@@ -1650,24 +2157,27 @@ emojiMenu.addEventListener("toggle", function () {
   var left = buttonBox.left - barBox.left;
   if (left > room) left = buttonBox.right - barBox.left - width;
   panel.style.left = Math.max(0, Math.min(left, room)) + "px";
-});
+}
+
+wireEmojiPanel(emojiMenu);
 
 function insertEmoji(character) {
-  if (sourceMode) {
-    // The same place the code button writes to when a slide is source.
-    var field = el.sourceText;
+  var where = writtenIn();
+  if (where.plain) {
+    // The same place the code button writes to when the text is source.
+    var field = where.plainField;
     var start = field.selectionStart;
     var end = field.selectionEnd;
     field.value = field.value.slice(0, start) + character + field.value.slice(end);
     field.selectionStart = field.selectionEnd = start + character.length;
     field.focus();
   } else {
-    el.content.focus();
+    where.rich.focus();
     // insertText and not innerHTML: it lands at the cursor, and the
     // browser's own undo knows about it.
     document.execCommand("insertText", false, character);
   }
-  remember();
+  where.changed();
 }
 
 // In a code field Tab is indentation, not "on to the next control". Shift
@@ -1710,13 +2220,24 @@ el.codeDialog.addEventListener("close", function () {
 
 function codeUebernehmen(language, style, sourceText, fragment) {
   harvest();
-  var slide = deck.slides[active];
+  var where = writtenIn();
 
-  // A slide that is in source mode for some OTHER reason -- a table, say --
-  // has no field to put a block into. There the fence goes in as text.
-  if (sourceMode) {
+  // A text that is in source mode for some OTHER reason -- a table, say --
+  // has no rich field to put a block into. There the fence goes in as text.
+  if (where.plain) {
     var zaun = "```" + language + (style ? " hl=" + style : "");
     var block = zaun + "\n" + sourceText + "\n```" + (fragment ? "\n" + rt.FRAGMENT : "");
+    // An element's source is a field and is written straight; the slide's
+    // is a copy of the model, so there the model is written and the field
+    // is filled from it again.
+    if (elementBox) {
+      var field = where.plainField;
+      var text = field.value.replace(/\s+$/, "");
+      field.value = text ? text + "\n\n" + block : block;
+      elementChanged();
+      return;
+    }
+    var slide = deck.slides[active];
     var before = (slide.content || "").replace(/\s+$/, "");
     slide.content = before ? before + "\n\n" + block : block;
     setContentMode(slide);
@@ -1727,17 +2248,17 @@ function codeUebernehmen(language, style, sourceText, fragment) {
   var huelle = document.createElement("div");
   huelle.innerHTML = rt.codeBlockHtml(language, style, sourceText, fragment);
   var fresh = huelle.firstElementChild;
-  if (codeBearbeitet && el.content.contains(codeBearbeitet)) {
+  if (codeBearbeitet && where.rich.contains(codeBearbeitet)) {
     codeBearbeitet.replaceWith(fresh);
   } else {
-    el.content.appendChild(fresh);
+    where.rich.appendChild(fresh);
     // Something to carry on typing in: after a sealed block at the very end
     // of the field there is otherwise nowhere for the caret to go.
     var danach = document.createElement("p");
     danach.appendChild(document.createElement("br"));
-    el.content.appendChild(danach);
+    where.rich.appendChild(danach);
   }
-  remember();
+  where.changed();
 }
 
 // --- Colours -----------------------------------------------------------
@@ -1855,6 +2376,100 @@ $(".tab-row").addEventListener("keydown", function (ev) {
   tabs[there].focus();
 });
 
+// --- What the slide will look like -------------------------------------
+// The sample at the top of the colours panel, and the one line under it
+// that says whether the writing can be read on it (views/editor.ejs).
+//
+// Colour, gradient and effect STACK on a slide -- the ground first, each
+// of the others over it (render.js) -- and the panel used to show them as
+// three rows of swatches and the result nowhere. Here the three are laid
+// on in the same order, so the sample is the arrangement itself rather
+// than a picture of it.
+//
+// A colour nobody has chosen is the THEME's, and the theme's colours are
+// read off its stylesheet and handed to this page (themes.js) -- so the
+// sample wears them too rather than falling back on the editor's own. It
+// has to: the line underneath judges the slide in the colours it will
+// really have, and a sample in different ones would stand there arguing
+// with the sentence beside it -- pale type on a pale card under the words
+// "easy to read". Which colour of the theme's it is depends on the
+// ground, and that rule is asked of contrast.js rather than written here
+// a second time.
+//
+// The one thing the sample still cannot show is an effect's own ground:
+// that is built of layers in slides.css. The line says so in words, and
+// the sample keeps the colour underneath, which is what the layers drift
+// over.
+function lookShow() {
+  var slide = deck.slides[active];
+  if (!slide) return;
+
+  var theme = THEME_COLORS[deck.theme];
+  var wears = theme ? themeText(theme, slide.background) : null;
+  el.sample.style.backgroundColor = slide.background
+    || (theme && !slide.gradient ? theme.background : "");
+  el.sample.style.backgroundImage = slide.gradient || "";
+  el.sample.style.color = slide.textColor || (wears ? wears.main : "");
+  $(".look-sample-title", el.sample).style.color = slide.textColor
+    || (wears ? wears.heading : "");
+  // The quiet of the effect is the tiles' own, worn at another size
+  // (app.css) -- one definition, so the sample cannot drift away from the
+  // row of tiles that sets it.
+  if (slide.effect) el.sample.setAttribute("data-effect", slide.effect);
+  else el.sample.removeAttribute("data-effect");
+
+  var said = judge({
+    text: slide.textColor,
+    background: slide.background,
+    gradient: slide.gradient,
+    effect: slide.effect,
+  }, theme, EFFECT_COLORS[slide.effect]);
+  var word = said.state === "unknown"
+    ? t(said.see === "text" ? "contrast.noText"
+      : said.see === "ground" ? "contrast.noGround"
+      : said.see === "effect" ? "contrast.effect" : "contrast.alpha")
+    // The number in the reader's own notation: 8.2 in English, 8,2 in
+    // German. The same locale the overview dates are written in. Whose
+    // doing the number is gets its own sentence, because a number resting
+    // on the theme or on an effect changes when that does -- and because
+    // the effect's is the WORST of several, which the reader would
+    // otherwise have no way of knowing.
+    : t("contrast." + said.state + (said.via === "effect" ? "Effect"
+      : said.via === "theme" ? "Theme" : ""),
+    { n: said.value.toLocaleString(t("date.locale")) });
+  el.contrast.textContent = word;
+  el.contrast.className = "look-contrast"
+    + (said.state === "unknown" ? "" : " is-" + said.state);
+
+  // The name of what is set, at the end of each row. Without a value of
+  // its own a slide follows the deck's theme, and that is what the row
+  // says rather than standing empty -- an empty line reads as "nothing
+  // here to set" and the opposite is true.
+  el.textColorName.textContent = slide.textColor || t("editor.colorTheme");
+  el.backgroundColorName.textContent = slide.background || t("editor.colorTheme");
+}
+
+// --- The effect --------------------------------------------------------
+// Radio rows, so the chosen one is said in the markup and not only in a
+// class: before this a screen reader had no way at all of learning which
+// effect a slide carried (views/editor.ejs).
+function effectShow() {
+  var slide = deck.slides[active];
+  var now = (slide && slide.effect) || "";
+  var name = "";
+  $$(".effect-tile").forEach(function (k) {
+    var here = k.dataset.effect === now;
+    k.classList.toggle("is-active", here);
+    k.setAttribute("aria-checked", here ? "true" : "false");
+    // Only the chosen tile is a tab stop; the arrow keys move inside the
+    // row. Thirteen stops across this panel were thirteen presses of Tab
+    // to reach the field under it.
+    k.tabIndex = here ? 0 : -1;
+    if (here) name = k.getAttribute("aria-label");
+  });
+  el.effectName.textContent = name;
+}
+
 // --- Gradient ----------------------------------------------------------
 // Two ways to the same value: a swatch to click, and the field below it for
 // anyone who writes their own CSS. The field's pattern is the grammar from
@@ -1873,9 +2488,45 @@ function gradientShow() {
   el.gradientHint.classList.toggle("hint-error", falsch);
   el.gradientHint.textContent = falsch ? t("editor.gradientInvalid") : gradientNote;
   // The active swatch is whichever one holds exactly this value -- a
-  // hand-written gradient simply marks none of them.
+  // hand-written gradient simply marks none of them, and then the row
+  // says so in words rather than leaving the name blank.
+  var name = "";
+  var any = false;
   $$(".gradient-probe").forEach(function (p) {
-    p.classList.toggle("is-active", p.dataset.gradient === value);
+    var here = p.dataset.gradient === value;
+    p.classList.toggle("is-active", here);
+    p.setAttribute("aria-checked", here ? "true" : "false");
+    p.tabIndex = here ? 0 : -1;
+    if (here) { name = p.getAttribute("aria-label"); any = true; }
+  });
+  // A radiogroup with nothing checked still has to have ONE tab stop, or
+  // the keyboard cannot get into the row at all.
+  if (!any) {
+    var first = $(".gradient-probe");
+    if (first) first.tabIndex = 0;
+    name = t("editor.gradientCustom");
+  }
+  el.gradientName.textContent = name;
+}
+
+// Left and right walk a row of swatches and take the choice with them:
+// pressing one and arriving at it are the same thing here, there is
+// nothing to confirm. The same keys the tabs over this panel answer to,
+// and the same reason -- a row is one stop, not thirteen.
+function swatchKeys(row, pick) {
+  row.addEventListener("keydown", function (ev) {
+    var all = $$("[role='radio']", row);
+    var here = all.indexOf(document.activeElement);
+    if (here === -1) return;
+    var there = null;
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") there = (here - 1 + all.length) % all.length;
+    else if (ev.key === "ArrowRight" || ev.key === "ArrowDown") there = (here + 1) % all.length;
+    else if (ev.key === "Home") there = 0;
+    else if (ev.key === "End") there = all.length - 1;
+    if (there === null) return;
+    ev.preventDefault();
+    pick(all[there]);
+    all[there].focus();
   });
 }
 
@@ -1885,26 +2536,35 @@ el.gradient.addEventListener("input", function () {
   remember();
 });
 
-el.gradientVorlagen.addEventListener("click", function (ev) {
-  var probe = ev.target.closest(".gradient-probe");
-  if (!probe) return;
+function gradientPick(probe) {
   harvest();
   el.gradient.value = probe.dataset.gradient;
   deck.slides[active].gradient = probe.dataset.gradient;
   gradientShow();
+  lookShow();
   remember();
+}
+
+el.gradientVorlagen.addEventListener("click", function (ev) {
+  var probe = ev.target.closest(".gradient-probe");
+  if (probe) gradientPick(probe);
 });
+swatchKeys(el.gradientVorlagen, gradientPick);
 
 // An animated background carries a name, so there is nothing to type: the
 // tiles are the whole control.
-el.effectTiles.addEventListener("click", function (ev) {
-  var tile = ev.target.closest(".effect-tile");
-  if (!tile) return;
+function effectPick(tile) {
   harvest();
   deck.slides[active].effect = tile.dataset.effect;
   showSlide();
   remember();
+}
+
+el.effectTiles.addEventListener("click", function (ev) {
+  var tile = ev.target.closest(".effect-tile");
+  if (tile) effectPick(tile);
 });
+swatchKeys(el.effectTiles, effectPick);
 
 // --- Images ------------------------------------------------------------
 // One picker, two callers by now: the picture of the slide in front, and
@@ -1932,7 +2592,12 @@ function pickForSlide(name) {
 // The address a picture in this deck's folder has. One place for it: the
 // form shows it, the library shows it and so does the band dialog.
 function imageUrl(name) {
-  return BASE + "/assets/" + encodeURIComponent(name);
+  var s = String(name == null ? "" : name);
+  // What the renderer does with the same name (render.js, imageUrl): a
+  // picture written into the file by hand may point anywhere, and the
+  // folder of this deck is only where the picker's answers live.
+  if (/^(https?:)?\/\//i.test(s) || s.indexOf("data:") === 0) return s;
+  return BASE + "/assets/" + encodeURIComponent(s.replace(/^.*\//, ""));
 }
 
 function showImage(name) {
@@ -2213,12 +2878,10 @@ var deckSource = setupDeckSource({
   base: BASE,
   flush: window.trivialSlidesSave,
   adopt: adoptDeck,
-  // The frame behind the dialog: while a slide is written in over there,
-  // it is the one the preview shows.
+  // The frame beside the panel: while a slide is written in over there, it
+  // is the one the preview shows. No frame has to be handed over any more
+  // -- the preview keeps its own column and nothing is laid over it.
   preview: preview,
-  // And the box it stands in, which the dialog's veil is kept off -- a
-  // slide seen through a veil is a slide judged wrongly.
-  frame: $(".preview-frame"),
 });
 
 // This deck, changed by instruction, where the server has a key for it
@@ -2237,6 +2900,12 @@ var aiDialog = setupAi({
   flush: window.trivialSlidesSave,
   frame: $(".preview-frame"),
 });
+
+// Everything the header can do, findable by its name (js/editor/palette.js).
+// Set up LAST of the lot, because it reads the header off the page rather
+// than being told what is in it -- and by here everything that puts itself
+// there has been.
+setupPalette();
 
 // --- Startup -----------------------------------------------------------
 // Paragraphs rather than <div> on line break: only then does the field

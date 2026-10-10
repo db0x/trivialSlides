@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+ <defs>
+  <style id="current-color-scheme" type="text/css">
+   .ColorScheme-Text { color:#444444; }
+  </style>
+ </defs>
+ <!-- The row in the settings menu that opens the command palette, and the
+      only place in the editor that says there is one. -->
+ <path style="fill:currentColor" class="ColorScheme-Text" fill-rule="evenodd" d="M6.75 1.5a5.25 5.25 0 1 0 3.19 9.42l3.32 3.32 1.06-1.06-3.32-3.32A5.25 5.25 0 0 0 6.75 1.5zm0 1.5a3.75 3.75 0 1 1 0 7.5 3.75 3.75 0 0 1 0-7.5z"/>
+</svg>

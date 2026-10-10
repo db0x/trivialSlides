@@ -31,6 +31,9 @@ var HEADING = /^[ \t]*(#{1,6})\s*(.*)$/;
 // offer -- "heading" means nothing to a photograph -- so the row of sizes
 // stays out of its way, the way it does for a list or a code block.
 var IMAGE = /^[ \t]*!\[[^\]]*\]\([^)]*\)[ \t]*$/;
+// The same line with its two halves caught: what it says and what it
+// points at (see image() at the foot of this file).
+var IMAGE_PARTS = /^[ \t]*!\[([^\]]*)\]\(([^)]*)\)[ \t]*$/;
 // A list does not take its comment the way a paragraph does: a comment
 // line directly under the last item belongs to that ITEM, which is how a
 // single bullet is given a fragment. A placement is meant for the whole
@@ -51,13 +54,24 @@ export function blocks(text) {
   var fenced = false;
   var current = null;
   lines.forEach(function (line, i) {
-    if (FENCE.test(line)) fenced = !fenced;
-    var empty = !fenced && line.trim() === "";
+    var fence = FENCE.test(line);
+    // A fence begins a block of its own and ends one, blank line or not.
+    // That is Markdown's own rule -- marked closes the paragraph above at
+    // the fence -- and this list has to keep to it, because the preview
+    // counts the blocks it was GIVEN (js/slide-place.js) and the two are
+    // compared before anything is placed. Counted as one block here and
+    // drawn as two over there, every drag on the slide was refused with
+    // "its text and what the preview shows are not the same sequence of
+    // blocks", which is true, and was this line's fault rather than the
+    // text's.
+    if (fence && !fenced) current = null;
+    if (fence) fenced = !fenced;
+    var empty = !fenced && !fence && line.trim() === "";
     if (empty) { current = null; return; }
     // A comment line joins the block in front of it; one that stands
     // alone (nothing before it) is a block of its own and renders as
     // nothing -- which is exactly how it is counted below.
-    if (!fenced && ELEMENT.test(line) && out.length && !current) {
+    if (!fenced && !fence && ELEMENT.test(line) && out.length && !current) {
       out[out.length - 1].marks.push(i);
       return;
     }
@@ -68,6 +82,9 @@ export function blocks(text) {
       current.to = i;
       if (!fenced && ELEMENT.test(line)) current.marks.push(i);
     }
+    // The fence that closes the block closes it here too: what comes
+    // after it is the next block, with or without a blank line between.
+    if (fence && !fenced) current = null;
   });
   // The lines of the block itself, without the comments that trail it.
   out.forEach(function (b) {
@@ -219,11 +236,29 @@ export function read(text, n) {
   if (head && head[1].length <= 3) {
     return { level: head[1].length, body: head[2].trim() };
   }
-  var plain = own.every(function (l) {
-    return !HEADING.test(l) && !LIST.test(l) && !FENCE.test(l)
-      && !IMAGE.test(l) && !/^[ \t]*>/.test(l);
-  });
-  return { level: plain ? 0 : null, body: own.join("\n") };
+  return { level: sized(own.join("\n")) ? 0 : null, body: own.join("\n") };
+}
+
+// Is a size a thing this body HAS? A heading or a plain paragraph has one;
+// a list, a code block, a quote and a picture have none -- "Überschrift 2"
+// means nothing to a row of bullets, and write() below refuses to put a #
+// in front of one anyway.
+//
+// Asked of a body rather than of the file, because the editor has to ask
+// it twice: once of the element it opens (read, above) and again at every
+// keystroke, since the body changes under the hands. A text element turned
+// into a list by the button over the field is a list from that moment, and
+// the row of sizes has to go the same moment -- otherwise it stands there
+// offering four buttons that quietly do nothing, and a list made here ends
+// up looking different from the same list opened again tomorrow
+// (js/editor/index.js, elementChanged).
+export function sized(body) {
+  return String(body == null ? "" : body).split("\n")
+    .filter(function (l) { return l.trim() !== ""; })
+    .every(function (l) {
+      return !HEADING.test(l) && !LIST.test(l) && !FENCE.test(l)
+        && !IMAGE.test(l) && !/^[ \t]*>/.test(l);
+    });
 }
 
 // The text of a block, put back. Its comment lines say the same thing
@@ -300,4 +335,151 @@ export function remove(text, n) {
   block.marks.forEach(function (i) { if (i > last) last = i; });
   lines.splice(block.from, last - block.from + 1);
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+// --- What the list in the form shows about an element -------------------
+// The rows over there say three things about a block before it is opened:
+// what KIND of thing it is, what it SAYS, and -- from classes() above --
+// what rides on its comment line. The first two are read here, because
+// what counts as a heading and what counts as a picture is decided by the
+// expressions at the top of this file and nowhere else.
+
+// "h1" | "h2" | "h3" | "text" | "image" | "list" | "code" | "quote".
+// The same question read() asks for its `level`, answered in full: read()
+// has no size to offer for a list or a picture and says null, which is the
+// right answer for a row of size buttons and no answer at all for an icon.
+export function kind(text, n) {
+  var block = nth(blocks(text), n);
+  if (!block) return "text";
+  var own = block.lines.filter(function (l) { return !ELEMENT.test(l); });
+  var first = own[0] || "";
+  if (own.length === 1 && IMAGE.test(first)) return "image";
+  if (FENCE.test(first)) return "code";
+  if (LIST.test(first)) return "list";
+  if (/^[ \t]*>/.test(first)) return "quote";
+  var head = own.length === 1 && HEADING.exec(first);
+  if (head && head[1].length <= 3) return "h" + head[1].length;
+  return "text";
+}
+
+// A body that is nothing but a picture, taken apart: what it says and the
+// file it points at, or null for anything else -- a picture with a word
+// beside it is text and is written as text.
+//
+// The editor shows such an element as the PICTURE (js/editor/index.js):
+// the line that describes it is the one piece of Markdown in this editor
+// nobody needs to read, because it names a file one can simply look at,
+// and offering it as text invites the one edit that cannot be seen going
+// wrong -- a letter lost from the file name leaves an element that is
+// there, is placed, and shows nothing.
+export function image(body) {
+  var m = IMAGE_PARTS.exec(String(body == null ? "" : body));
+  return m ? { alt: m[1], src: m[2] } : null;
+}
+
+// And back, which is the only place this line is written. The alt text is
+// carried through untouched: the editor does not ask for it, and what a
+// file says is not the editor's to drop.
+export function imageLine(picture) {
+  return "![" + (picture.alt || "") + "](" + (picture.src || "") + ")";
+}
+
+// The one line the row carries: the block's words, with the Markdown that
+// shapes them taken off. Not the body as read() hands it over -- a row is
+// read at a glance and "## Was wir vorhaben" reads worse than what it
+// means. A picture answers with its file name: its alt text is usually
+// empty, and the file is what one recognises it by.
+export function summary(text, n) {
+  var block = nth(blocks(text), n);
+  if (!block) return "";
+  var own = block.lines.filter(function (l) { return !ELEMENT.test(l); }).join(" ");
+  var picture = /!\[([^\]]*)\]\(([^)]*)\)/.exec(own);
+  if (picture) {
+    return picture[1].trim() || String(picture[2]).replace(/^.*\//, "").trim();
+  }
+  return own
+    .replace(/^[ \t]*#{1,6}\s*/, "")
+    .replace(/^[ \t]*>\s*/, "")
+    .replace(/^[ \t]*([-*+]|\d+[.)])\s+/, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/[*_`~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// --- A second one of the same -------------------------------------------
+// The copy is the block AND the line that belongs to it: everything the
+// element is -- its words, its size, where it is aligned, whether it waits
+// for a click -- travels with it. Only its place is moved, by a step down
+// and to the right, so that the copy lands BESIDE the original instead of
+// exactly on top of it, where nobody could tell there were two.
+//
+// It goes to the end of the text, which is where add() puts a new one and
+// which makes it the last element on the slide: last in the order the
+// fragments appear in, and topmost where two of them overlap.
+function shifted(at) {
+  var parts = String(at).split(",").map(Number);
+  if (parts.length < 3 || parts.some(function (v) { return !isFinite(v); })) return null;
+  return [Math.min(parts[0] + 4, 95), Math.min(parts[1] + 6, 95), parts[2]].join(",");
+}
+
+// One element, a place further up or down the list -- which is a question
+// about the PICTURE as much as about the text. The blocks are drawn in the
+// order they are written and each one lies over the one before it, so the
+// last block of a freestyle slide is the topmost thing on it: moving a row
+// down the list is what puts its element in front of its neighbour.
+//
+// `dir` is -1 for a step up and +1 for a step down. The answer is the
+// whole text with the two swapped, or null where there is no neighbour to
+// swap with -- the first row cannot go up and the last cannot go down.
+//
+// Each block travels with its own comment line, wherever that line stands:
+// inside the block or behind a blank one (see blocks). What lies BETWEEN
+// the two stays where it is -- it is the blank line that separates them,
+// and it separates them just as well the other way round.
+export function move(text, n, dir) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var all = blocks(text);
+  var shown = all.filter(function (b) { return !onlyMarks(b); });
+  var here = shown.indexOf(nth(all, n));
+  var there = here + (dir < 0 ? -1 : 1);
+  if (here < 0 || there < 0 || there >= shown.length) return null;
+  var ends = function (b) {
+    var last = b.to;
+    b.marks.forEach(function (i) { if (i > last) last = i; });
+    return last;
+  };
+  var first = shown[Math.min(here, there)];
+  var second = shown[Math.max(here, there)];
+  return lines.slice(0, first.from)
+    .concat(lines.slice(second.from, ends(second) + 1))
+    .concat(lines.slice(ends(first) + 1, second.from))
+    .concat(lines.slice(first.from, ends(first) + 1))
+    .concat(lines.slice(ends(second) + 1))
+    .join("\n");
+}
+
+export function duplicate(text, n, fallback) {
+  var lines = String(text == null ? "" : text).split("\n");
+  var block = nth(blocks(text), n);
+  if (!block) return null;
+  var last = block.to;
+  block.marks.forEach(function (i) { if (i > last) last = i; });
+  var copy = lines.slice(block.from, last + 1);
+  // Where the original stands, one step on -- or, for an element nobody
+  // has placed yet, wherever the caller would have put a new one.
+  var here = /\bdata-at="([^"]*)"/.exec(copy.join("\n"));
+  var at = (here && shifted(here[1])) || fallback;
+  var written = false;
+  copy = copy.map(function (line) {
+    if (!ELEMENT.test(line) || written) return line;
+    written = true;
+    var bare = line.replace(AT, "");
+    return at ? bare.replace(/\s*-->\s*$/, ' data-at="' + at + '" -->') : bare;
+  });
+  // A block that never had a line of its own gets one, so that the copy
+  // has somewhere of its own to stand.
+  if (!written && at) copy.push('<!-- .element: data-at="' + at + '" -->');
+  var before = lines.join("\n").replace(/\s+$/, "");
+  return (before ? before + "\n\n" : "") + copy.join("\n").replace(/^\n+|\n+$/g, "") + "\n";
 }

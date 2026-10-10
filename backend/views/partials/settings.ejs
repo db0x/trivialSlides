@@ -8,7 +8,7 @@
      same table the tooltips used to come from, and theme.js writes its row
      afresh whenever the choice changes. -->
 <details class="menu head-menu">
-  <summary class="button button-icon head-settings" data-tip="<%= t('header.settings') %>"
+  <summary class="button-icon icon-ghost head-settings" data-tip="<%= t('header.settings') %>"
            aria-label="<%= t('header.settings') %>"></summary>
   <div class="menu-content" role="menu">
     <button type="button" id="language-toggle" class="menu-item" role="menuitem"
@@ -16,6 +16,18 @@
             class="menu-item-code" aria-hidden="true"><%= LANGUAGE === 'de' ? 'en' : 'de' %></span><span><%= t('header.switchLanguage') %></span></button>
     <button type="button" id="theme-toggle" class="menu-item" role="menuitem"><span
             class="menu-item-icon" aria-hidden="true"></span><span class="menu-item-word"></span></button>
+    <!-- Where everything the bar cannot carry can be found by its name
+         (partials/palette.ejs). It is in the menu and not on the bar
+         because somebody who knows the shortcut never looks for a button,
+         and somebody who does not has to be told it exists ONCE -- which
+         is what a row with its key written on it does.
+
+         Only on a page that has one: this menu is shared with the
+         overview, and there Ctrl+K leads nowhere. -->
+    <% if (typeof palette !== "undefined" && palette) { %>
+      <button type="button" id="palette-open" class="menu-item menu-item-skip" role="menuitem"><span
+              class="menu-item-icon" aria-hidden="true"></span><%= t('palette.open') %></button>
+    <% } %>
     <!-- Everything that is set once and then forgotten -- it opens the
          dialog rather than living in this menu (partials/prefs.ejs). -->
     <button type="button" id="prefs-open" class="menu-item" role="menuitem"><span

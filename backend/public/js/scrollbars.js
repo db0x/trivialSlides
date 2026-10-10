@@ -40,9 +40,9 @@ function anhaengen(el) {
   instanzen.push(OverlayScrollbars(el, options));
 }
 
-// The page itself, the three editor columns, the two input frames, the
-// image gallery and the deck's source in their dialogs, and the emoji
-// panel in the text bar.
+// The page itself, the editor columns that scroll as a whole, the two
+// input frames, the image gallery, the deck's source and the emoji panel
+// in the text bar.
 // Selectors rather than ids, because the same file serves the overview and
 // the editor.
 // The editor fills the window and has no page scroll of its own -- only
@@ -52,12 +52,16 @@ var sideScrolls = !document.body.classList.contains("side-editor");
 
 [
   sideScrolls ? document.body : null,
-  // Not the slide list: that column does not scroll itself any more, and
-  // the list inside it is scrolled by its own two buttons
-  // (js/slide-list-scroll.js). Attaching one here would also move the
-  // column's three children into a viewport of its own and take the flex
-  // layout they stand in with them.
-  ...document.querySelectorAll(".column:not(.slide-list), .field-frame, .image-gallery, .deck-source, .emoji-panel, .menu-scroll"),
+  // Two columns are left out, for the same reason in both cases: neither
+  // scrolls as a whole, and attaching one would move its children into a
+  // viewport of its own and take the flex layout they stand in with it.
+  //
+  // The slide list does not scroll itself any more -- the list inside it is
+  // scrolled by its own two buttons (js/slide-list-scroll.js). The source
+  // column is a head, a scrolling middle and a foot, and it is the middle
+  // that scrolls: .deck-source, which is in the list below on its own
+  // account (js/editor/deck-source.js).
+  ...document.querySelectorAll(".column:not(.slide-list):not(.source-view), .field-frame, .image-gallery, .deck-source, .emoji-panel, .menu-scroll"),
 ].forEach(anhaengen);
 
 // The theme switch has to reach the scrollbars too, otherwise a dark

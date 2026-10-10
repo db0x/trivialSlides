@@ -117,6 +117,48 @@ function farbeVon(el) {
   return a >= 1 ? out : out + zwei(a * 255);
 }
 
+// --- Quotes ------------------------------------------------------------
+// A block that holds BLOCKS rather than words -- the only other one in
+// this field is the group, and that one comes out of the file and cannot
+// be made by a button. This one can.
+//
+// It belongs in the field at all because the quote LAYOUT is built out of
+// it: that layout wraps the body in a blockquote of its own (render.js),
+// so a body already written with > used to be said twice -- once by the
+// markup and once by the layout -- and the field refused to show it
+// either way. Now it shows it, the layout notices it has already been
+// said, and the markers stay in the file where any other Markdown reader
+// can see them.
+//
+// ONE line of markers, for taking a level off; ALL of them, for reading
+// past them. The space after > is optional in Markdown and so it is here.
+// --- Headings in the body ----------------------------------------------
+// A slide has a heading FIELD, and this is not it: this is a heading
+// inside the text, the thing one writes over the second half of a slide.
+// The renderer has always carried them -- slides.css even spans them
+// across the columns of a split slide -- and the freestyle elements have
+// offered the same four levels from the start (partials, .element-level).
+// Only this field could not show one, which sent every slide with a ##
+// in its body to source mode.
+//
+// Three levels and not six. The field can make these three, the menu
+// offers exactly them, and a #### from somewhere else keeps its slide in
+// source mode rather than being shown as something the buttons could not
+// make again (isSimple).
+//
+// \s after the hashes covers the NO-BREAK SPACE as well, which is what
+// the editor's own example deck happens to carry -- a heading to the
+// renderer and, before this, a line of hashes to the field.
+var HEADING = /^\s{0,3}(#{1,6})\s+(.*)$/;
+var HEADING_MAX = 3;
+
+var QUOTE_MARKER = /^(\s{0,3}>\s?)/;
+var QUOTE_MARKERS = /^(\s{0,3}>\s?)+/;
+
+function isQuoteLine(line) {
+  return QUOTE_MARKER.test(String(line));
+}
+
 function isSimple(md) {
   var text = String(md || "");
   if (!text.trim()) return true;
@@ -133,7 +175,20 @@ function isSimple(md) {
     // it would simply vanish on the way back, so the slide keeps its
     // source. The same for a group nobody closed, checked at the end.
     if (GROUP_CLOSE_RE.test(z.trim())) { if (!group) return false; group--; continue; }
-    if (/^\s{0,3}(#{1,6}\s|>|~~~|\||!\[)/.test(z)) return false; // heading, quote, code, table, image
+    // A quote, and the field CAN show one now -- so the markers come off
+    // and the line is judged by what it says rather than by what it
+    // stands in. Every level of them: the conversion below nests, so a
+    // quote inside a quote is as showable as one on its own. What is
+    // underneath still has to be simple, which is why a table or a fence
+    // inside a quote sends the slide to source mode exactly as it would
+    // outside one.
+    z = z.replace(QUOTE_MARKERS, "");
+    // A heading the menu can make is one the field can show. Deeper than
+    // that and the slide keeps its source: showing an <h4> the buttons
+    // cannot put back would be the one thing source mode exists to stop.
+    var head = HEADING.exec(z);
+    if (head && head[1].length > HEADING_MAX) return false;
+    if (!head && /^\s{0,3}(~~~|\||!\[)/.test(z)) return false; // code, table, image
     // Raw HTML, other than the fragment line above and the colour spans
     // this field writes itself. Those are taken out of the line first --
     // what is left has to be free of tags, so a <div> or a <span> of any
@@ -283,7 +338,15 @@ function mdToHtml(md) {
         }
         return;
       }
-      var t = /^<(p|li)>/.exec(out[i]);
+      // A quote, which was pushed as one finished string: the comment
+      // belongs to the BLOCKQUOTE, the same way it belongs to the div of
+      // a group. Before the paragraph branch below, or the <p> of the
+      // first line inside it would take the classes instead.
+      if (/^<blockquote/.test(out[i])) {
+        out[i] = out[i].replace("<blockquote", '<blockquote class="' + list + '"' + nummer);
+        return;
+      }
+      var t = /^<(p|li|h[1-3])>/.exec(out[i]);
       if (t) { out[i] = "<" + t[1] + ' class="' + list + '"' + nummer + ">" + out[i].slice(t[0].length); return; }
     }
   }
@@ -298,6 +361,23 @@ function mdToHtml(md) {
     codeLines = [];
   }
 
+  // A run of quote lines, with one level of markers taken off. What is
+  // left is Markdown again -- paragraphs, lists, a quote of its own -- so
+  // it goes back through this same function. That recursion is the whole
+  // implementation of nesting, and it is also what makes a list inside a
+  // quote come out as a list rather than as three lines of text.
+  var quoteLines = null;
+
+  function quoteClose() {
+    if (!quoteLines) return;
+    var inner = mdToHtml(quoteLines.join("\n"));
+    quoteLines = null;
+    // One string and not three pushes: attachMarkers above walks this
+    // array looking for the element a comment belongs to, and a quote has
+    // to be one entry there to be found as one thing.
+    out.push("<blockquote>" + (inner || "<p></p>") + "</blockquote>");
+  }
+
   lines.forEach(function (line) {
     if (imCode) {
       if (ZAUN.test(line)) codeClose();
@@ -307,6 +387,7 @@ function mdToHtml(md) {
     if (ZAUN.test(line)) {
       paragraphClose();
       listClose();
+      quoteClose();
       imCode = true;
       codeInfo = codeInfoLesen(line.replace(/^\s*```/, ""));
       codeLines = [];
@@ -316,15 +397,29 @@ function mdToHtml(md) {
     if (auf) {
       paragraphClose();
       listClose();
+      quoteClose();
       out.push('<div class="' + GROUP_CLASS + " " + escHtml(auf[1]) + '" data-classes="' + escHtml(auf[1]) + '">');
       return;
     }
     if (GROUP_CLOSE_RE.test(line.trim())) {
       paragraphClose();
       listClose();
+      quoteClose();
       out.push("</div>");
       return;
     }
+    // A quote line: collected rather than converted. The run ends at the
+    // first line that is not one -- a blank line included, because in
+    // Markdown a quote is broken by one and this field has to agree with
+    // the renderer about where it stops.
+    if (isQuoteLine(line)) {
+      paragraphClose();
+      listClose();
+      if (!quoteLines) quoteLines = [];
+      quoteLines.push(line.replace(QUOTE_MARKER, ""));
+      return;
+    }
+    quoteClose();
     var marks = markerClasses(line);
     if (marks) {
       // Close the running paragraph first -- otherwise the classes land on
@@ -332,6 +427,17 @@ function mdToHtml(md) {
       // marker may well belong to a single item mid-list.
       paragraphClose();
       attachMarkers(marks, marks.index);
+      return;
+    }
+    // A heading. After the quote branch above, so "> # x" is a quote line
+    // and the hash is read one level down -- and before the lists, which
+    // a hash is not.
+    var head = HEADING.exec(line);
+    if (head && head[1].length <= HEADING_MAX) {
+      paragraphClose();
+      listClose();
+      var tief = head[1].length;
+      out.push("<h" + tief + ">" + inlineZuHtml(head[2]) + "</h" + tief + ">");
       return;
     }
     var ul = /^\s*[-*+]\s+(.*)$/.exec(line);
@@ -348,6 +454,7 @@ function mdToHtml(md) {
     else paragraph.push(inlineZuHtml(line));
   });
   if (imCode) codeClose();   // a fence nobody closed
+  quoteClose();
   paragraphClose();
   listClose();
   return out.join("");
@@ -367,13 +474,23 @@ function inlineZuMd(knoten) {
     if (k.nodeType === 3) { out += mdEscape(k.nodeValue); return; }
     if (k.nodeType !== 1) return;
     var tag = k.tagName.toLowerCase();
-    if (tag === "br") out += "\n";
-    else if (tag === "strong" || tag === "b") out += "**" + inlineZuMd(k) + "**";
-    else if (tag === "em" || tag === "i") out += "*" + inlineZuMd(k) + "*";
+    // A colour can sit on ANY of these, not only on a span: ask the browser
+    // to colour words that are already bold and it puts the style on the
+    // <strong> rather than wrapping one more element around it. Read off
+    // every element and written out around whatever the element itself
+    // becomes, the two can no longer miss each other -- before this, a
+    // colour on a run that was entirely bold, italic, struck through or a
+    // link was shown in the field and then dropped on the way to the file,
+    // which looked like the colour button simply not working.
+    var farbe = farbeVon(k);
+    var md;
+    if (tag === "br") md = "\n";
+    else if (tag === "strong" || tag === "b") md = "**" + inlineZuMd(k) + "**";
+    else if (tag === "em" || tag === "i") md = "*" + inlineZuMd(k) + "*";
     // The browser writes <strike>, marked reads ~~ and renders <del> -- all
     // three mean the same thing and meet here.
-    else if (tag === "s" || tag === "strike" || tag === "del") out += "~~" + inlineZuMd(k) + "~~";
-    else if (tag === "a") out += "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
+    else if (tag === "s" || tag === "strike" || tag === "del") md = "~~" + inlineZuMd(k) + "~~";
+    else if (tag === "a") md = "[" + inlineZuMd(k) + "](" + (k.getAttribute("href") || "") + ")";
     else {
       // span, font and friends -- which the browser creates on paste, and
       // which the colour button creates on purpose. Only a colour of ours
@@ -382,16 +499,18 @@ function inlineZuMd(knoten) {
       // what makes clearing a colour work: the browser leaves the span
       // standing with "currentcolor" in it, and a span with no colour of
       // ours is not written at all.
-      var farbe = farbeVon(k);
-      var inner = inlineZuMd(k);
-      out += farbe ? '<span style="color:' + farbe + '">' + inner + "</span>" : inner;
+      md = inlineZuMd(k);
     }
+    // A line break carries nothing and must not be wrapped in anything.
+    out += farbe && tag !== "br" ? '<span style="color:' + farbe + '">' + md + "</span>" : md;
   });
   return out;
 }
 
 // Elements that mean something in themselves rather than framing a block.
 var INLINE = /^(a|b|strong|i|em|s|strike|del|code|span|font)$/;
+
+var HASHES = { 1: "#", 2: "##", 3: "###" };
 
 function htmlToMd(wurzel) {
   var blocks = [];
@@ -439,6 +558,33 @@ function htmlToMd(wurzel) {
       return;
     }
     var tag = k.tagName.toLowerCase();
+    // A quote: read one level down and every line of what comes back put
+    // behind a marker. Markdown's own shape, so a reader that has never
+    // heard of this editor sees a quote -- which is the whole reason the
+    // markers are kept in the file rather than left to the layout.
+    //
+    // A line that is empty gets a bare ">" and not "> ": the marker alone
+    // is what keeps a quote running across the blank line between two
+    // paragraphs. The element comment, if there is one, goes AFTER the
+    // lot and unmarked -- it talks about the quote, it is not in it.
+    if (tag === "blockquote") {
+      var quoted = htmlToMd(k);
+      if (quoted) {
+        blocks.push(quoted.split("\n").map(function (line) {
+          return line ? "> " + line : ">";
+        }).join("\n") + marker(k));
+      }
+      return;
+    }
+    // A heading, back to its hashes. One line, like a list item: a
+    // heading that wrapped in the field is still one heading, and a line
+    // break inside it would make the file say two things.
+    var tief = /^h([1-3])$/.exec(tag);
+    if (tief) {
+      var words = inlineZuMd(k).replace(/\n/g, " ").trim();
+      if (words) blocks.push(HASHES[tief[1]] + " " + words + marker(k));
+      return;
+    }
     if (tag === "ul" || tag === "ol") {
       var lines = [];
       Array.prototype.forEach.call(k.children, function (li, i) {
@@ -487,6 +633,15 @@ function befehl(field, name) {
   }
   if (name === "together") {
     togetherToggle(field);
+    return;
+  }
+  if (name === "quote") {
+    quoteToggle(field);
+    return;
+  }
+  var level = /^level-([0-3])$/.exec(name);
+  if (level) {
+    levelSet(field, Number(level[1]));
     return;
   }
   var align = /^align-(left|center|right|fill)$/.exec(name);
@@ -541,14 +696,14 @@ function forceParagraph(field) {
   return paragraph;
 }
 
-// The block the cursor is in: a paragraph, a list item, a code block.
-// Those three are exactly the ones whose classes survive the way out into
-// the .md (htmlToMd), which is why a class goes nowhere else.
+// The block the cursor is in: a paragraph, a heading, a list item, a code
+// block. Those are exactly the ones whose classes survive the way out
+// into the .md (htmlToMd), which is why a class goes nowhere else.
 function blockAt(field) {
   var sel = window.getSelection();
   if (!sel || !sel.rangeCount) return null;
   var k = sel.getRangeAt(0).startContainer;
-  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
+  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV|H1|H2|H3)$/.test(k.tagName))) k = k.parentNode;
   if (!k) return null;
   return k === field ? forceParagraph(field) : k;
 }
@@ -561,12 +716,126 @@ function blocksInSelection(field) {
   if (!sel || !sel.rangeCount) return [];
   var range = sel.getRangeAt(0);
   var found = Array.prototype.filter.call(
-    field.querySelectorAll("p, li, .code-block"),
+    field.querySelectorAll("p, li, h1, h2, h3, .code-block"),
     function (el) { return range.intersectsNode(el); }
   );
   if (found.length) return found;
   var one = blockAt(field);
   return one ? [one] : [];
+}
+
+// The blocks the selection touches, lifted to the level the FIELD holds
+// them at. blocksInSelection answers with paragraphs and list items,
+// which is what a class goes on; a quote goes round whole things, and a
+// single list item cannot be quoted without becoming a list of its own.
+// So each one is walked up to the child of the field it belongs to, in
+// the order they stand there and each one once.
+function topBlocks(field) {
+  var tops = [];
+  blocksInSelection(field).forEach(function (block) {
+    var k = block;
+    while (k && k.parentNode && k.parentNode !== field) k = k.parentNode;
+    if (k && k.parentNode === field && tops.indexOf(k) === -1) tops.push(k);
+  });
+  return tops;
+}
+
+// What the block under the caret is: 1, 2 or 3 for a heading, 0 for an
+// ordinary paragraph, and null where the question does not apply -- in a
+// list item, in a code block, in source mode. The menu reads this to mark
+// the row that is in force (js/editor/index.js).
+function levelHere(field, node) {
+  var k = node && node.nodeType === 3 ? node.parentNode : node;
+  while (k && k !== field && k.nodeType === 1) {
+    var tag = k.tagName.toLowerCase();
+    var head = /^h([1-3])$/.exec(tag);
+    if (head) return Number(head[1]);
+    if (tag === "p") return 0;
+    if (tag === "li" || (k.classList && k.classList.contains("code-block"))) return null;
+    k = k.parentNode;
+  }
+  return null;
+}
+
+// Make the blocks a heading of that level, or an ordinary paragraph for 0.
+// Every block the selection touches that CAN be one: a list item cannot --
+// it would have to leave its list to become a heading, which is a
+// different slide -- and neither can a code block.
+//
+// The element is replaced rather than renamed, because there is no such
+// thing as renaming one. What rides along is what the file would
+// otherwise lose: the classes a block carries (reveal on a click, an
+// alignment) and the step number that goes with them. Pressing "heading"
+// on a paragraph that appears on a click gives a HEADING that appears on
+// a click, which is the only answer that is not a surprise.
+function levelSet(field, level) {
+  var want = level ? "h" + level : "p";
+  var made = null;
+  blocksInSelection(field).forEach(function (block) {
+    if (!/^(P|H1|H2|H3)$/.test(block.tagName)) return;
+    if (block.tagName.toLowerCase() === want) { made = block; return; }
+    var fresh = document.createElement(want);
+    while (block.firstChild) fresh.appendChild(block.firstChild);
+    if (block.className) fresh.className = block.className;
+    var index = block.getAttribute("data-fragment-index");
+    if (index !== null) fresh.setAttribute("data-fragment-index", index);
+    block.parentNode.replaceChild(fresh, block);
+    made = fresh;
+  });
+  if (made) caretInto(made);
+}
+
+function isQuote(el) {
+  return !!el && el.nodeType === 1 && el.tagName.toLowerCase() === "blockquote";
+}
+
+// Quote, or stop quoting. One press of the button for both, because they
+// are one question asked of what is selected: everything already quoted
+// means take it off, anything not yet means put it on.
+//
+// Putting it on, a quote among the selection is opened out first rather
+// than wrapped again. Pressing the button over a quote and the paragraph
+// under it should give ONE quote of the two -- which is what it looks
+// like it is going to do -- and not a quote with a quote inside it.
+function quoteToggle(field) {
+  var tops = topBlocks(field);
+  if (!tops.length) return;
+
+  if (tops.every(isQuote)) {
+    tops.forEach(function (quote) {
+      while (quote.firstChild) field.insertBefore(quote.firstChild, quote);
+      quote.remove();
+    });
+    return;
+  }
+
+  var pieces = [];
+  tops.forEach(function (block) {
+    if (!isQuote(block)) { pieces.push(block); return; }
+    Array.prototype.forEach.call(block.childNodes, function (child) { pieces.push(child); });
+  });
+  var quote = document.createElement("blockquote");
+  field.insertBefore(quote, tops[0]);
+  // appendChild MOVES: this is what empties the quotes that were opened
+  // out, and they are swept up afterwards.
+  pieces.forEach(function (piece) { quote.appendChild(piece); });
+  tops.forEach(function (block) {
+    if (isQuote(block) && !block.firstChild) block.remove();
+  });
+  caretInto(quote);
+}
+
+// The DOM surgery above loses the caret, and a field one has just pressed
+// a button in should still be the field one is typing in. To the end of
+// what was just made, the same place forceParagraph leaves it.
+function caretInto(el) {
+  var sel = window.getSelection();
+  if (!sel || !el) return;
+  var scope = document.createRange();
+  scope.selectNodeContents(el);
+  scope.collapse(false);
+  sel.removeAllRanges();
+  sel.addRange(scope);
 }
 
 // "Reveal one by one" applies to the paragraph or list item the cursor is
@@ -715,7 +984,7 @@ function fragmentHere(field, node) {
     if (!sel || !sel.rangeCount) return false;
     k = sel.getRangeAt(0).startContainer;
   }
-  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV)$/.test(k.tagName))) k = k.parentNode;
+  while (k && k !== field && !(k.nodeType === 1 && /^(P|LI|DIV|H1|H2|H3)$/.test(k.tagName))) k = k.parentNode;
   return !!(k && k !== field && k.classList && k.classList.contains("fragment"));
 }
 
@@ -764,4 +1033,4 @@ function farbe(field, value) {
   document.execCommand("foreColor", false, value || "currentColor");
 }
 
-export { isSimple, mdToHtml, htmlToMd, befehl, fragmentHere, togetherHere, normalizeSteps, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };
+export { isSimple, mdToHtml, htmlToMd, befehl, fragmentHere, togetherHere, levelHere, normalizeSteps, farbe, farbeVon, codeBlockHtml, FRAGMENT, ALIGNS };
